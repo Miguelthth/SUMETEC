@@ -12,7 +12,7 @@
 
   function serializarCampo(el){
     return {
-      tag: el.tagName, type: el.type || '',
+      id: el.id || '', name: el.name || '', tag: el.tagName, type: el.type || '',
       valor: el.isContentEditable ? el.textContent : el.value,
       marcado: el.type === 'checkbox' || el.type === 'radio' ? el.checked : undefined
     };
@@ -25,7 +25,7 @@
     const campos = [...document.querySelectorAll(selectorCampos)]
       .filter(el => !OMITIR.has(el.id))
       .map(serializarCampo);
-    return { schema: 1, buildDestino, campos, guardadoEn: Date.now() };
+    return { schema: 2, buildDestino, campos, guardadoEn: Date.now() };
   }
 
   function restaurarContexto(){
@@ -33,10 +33,11 @@
     if(!raw) return false;
     let contexto;
     try { contexto = JSON.parse(raw); } catch(_) { sessionStorage.removeItem(CLAVE); return false; }
-    if(contexto.schema !== 1 || contexto.buildDestino !== VERSION_CODIGO || !Array.isArray(contexto.campos)) return false;
+    if(![1,2].includes(contexto.schema) || contexto.buildDestino !== VERSION_CODIGO || !Array.isArray(contexto.campos)) return false;
     const campos = [...document.querySelectorAll(selectorCampos)].filter(el => !OMITIR.has(el.id));
+    const porId = new Map(campos.filter(el => el.id).map(el => [el.id, el]));
     contexto.campos.forEach((dato, i) => {
-      const el = campos[i];
+      const el = contexto.schema === 2 && dato.id ? porId.get(dato.id) : campos[i];
       if(!el || el.tagName !== dato.tag || (el.type || '') !== dato.type) return;
       if(el.isContentEditable) el.textContent = dato.valor;
       else if(el.type === 'checkbox' || el.type === 'radio') el.checked = !!dato.marcado;
@@ -91,7 +92,7 @@
     if(!('serviceWorker' in navigator)) return;
     if(restaurarContexto()) {
       capa(true);
-      requestAnimationFrame(() => setTimeout(() => capa(false), 250));
+      requestAnimationFrame(() => setTimeout(() => capa(false), 3000));
     }
     const registro = await navigator.serviceWorker.register('./sw.js');
     navigator.serviceWorker.addEventListener('controllerchange', () => {

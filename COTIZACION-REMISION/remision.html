@@ -207,6 +207,49 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .toast.ok{background:var(--green)}.toast.err{background:#C0392B}.toast.loading{background:#2471A3}
 .print-rpt{display:none}
 @page{size:letter portrait;margin:12mm 14mm 10mm 14mm}
+.mobile-nav,.mobile-action{display:none}
+@media(max-width:780px),(max-height:500px){
+  body{padding-bottom:calc(132px + env(safe-area-inset-bottom,0px))}
+  .tb>.btn,.tb>.tb-div,.tb>.tb-more{display:none!important}
+  .tb-brand{margin-right:auto}
+  #badgePendientes{margin-left:auto;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+  .mobile-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:850;background:#fff;border-top:1px solid var(--border);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -5px 18px rgba(11,45,74,.14)}
+  .mobile-nav button{min-width:0;min-height:50px;border:0;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font:inherit;border-radius:9px}
+  .mobile-nav button span{font-size:19px;line-height:1.2}
+  .mobile-nav button small{font-size:12px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .mobile-nav button[aria-current=page]{background:var(--green-light);color:var(--green)}
+  .mobile-nav button:focus-visible,.mobile-action button:focus-visible{outline:3px solid #76B82A;outline-offset:1px}
+  .mobile-action{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(128px,1.25fr);gap:8px;align-items:center;position:fixed;left:8px;right:8px;bottom:calc(68px + env(safe-area-inset-bottom,0px));z-index:840;background:var(--navy);color:#fff;border-radius:12px;padding:8px 10px;box-shadow:0 8px 24px rgba(11,45,74,.28)}
+  .mobile-action-total{min-width:0;display:flex;flex-direction:column}
+  .mobile-action-total span{font-size:12px;text-transform:uppercase;letter-spacing:.5px;opacity:.72}
+  .mobile-action-total strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mobile-action-pdf,.mobile-action-primary{min-height:44px;border:0;border-radius:9px;font:inherit;font-weight:800}
+  .mobile-action-pdf{background:rgba(255,255,255,.14);color:#fff;font-size:18px}
+  .mobile-action-pdf:disabled{opacity:.35}
+  .mobile-action-primary{background:#1C6E4A;color:#fff;padding:8px;font-size:12px}
+  .items-table tbody tr{grid-template-columns:44px minmax(0,1fr);gap:8px 10px;padding:12px}
+  .td-n{grid-column:1}.td-cl,.items-table tbody td.td-cl{grid-column:2!important;padding-left:0!important}
+  .td-desc,.td-c,.td-del{grid-column:1/-1}.td-r{grid-column:1}.items-table tbody td.td-imp{grid-column:2}
+  .qty-stepper{display:grid;grid-template-columns:44px minmax(64px,1fr) 44px;gap:8px;align-items:center}
+  .qty-stepper button{width:44px;height:44px;border:1px solid var(--border);border-radius:10px;background:var(--green-light);color:var(--green);font-size:22px;font-weight:800}
+  .qty-stepper input{width:100%!important;min-height:44px!important;text-align:center!important}
+  .del-btn{width:44px;height:44px}
+  .btn,.ti{min-height:44px}
+  .ch{font-size:12px;letter-spacing:1.1px;flex-wrap:wrap}.ch .sbtn{min-height:44px;padding:8px 12px;font-size:12px}
+  .fr{grid-template-columns:1fr;gap:3px;margin-bottom:10px}.fl,.ci-lbl{font-size:12px}.doc-meta,.bt,.tw{font-size:12px}
+  .mx,[aria-label="Cerrar"]{min-width:44px;min-height:44px}
+  .cobro-head{display:grid!important;grid-template-columns:1fr auto;padding:12px 16px!important}
+  .cobro-actions{grid-column:1/-1;margin-left:0!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;width:100%}
+  .cobro-actions>div:last-child{grid-column:1/-1;text-align:center!important}.cobro-actions button{min-height:44px;padding:8px!important}
+  #pagosControles{padding:14px 16px 22px!important}#abonoArea>div:first-child{display:grid!important;grid-template-columns:minmax(0,1fr) auto}.monto-input-grande{min-width:0}
+  .ft-box{width:100%;max-width:100%;flex-direction:column;align-items:flex-start;gap:8px}.ft-contact{margin-left:0;padding-left:0;border-left:0;display:flex;flex-wrap:wrap;gap:8px 14px}
+  .rem-i,.cobro-row{align-items:flex-start;flex-wrap:wrap}.cobro-row .cobro-saldo{margin-left:auto}.modal .btn{min-height:44px;white-space:normal;text-align:center}
+}
+@media(max-width:480px){
+  .page{padding:0 6px}.doc-hd{padding:14px 12px;gap:8px}.logo-wrap{max-width:48%}.logo-wrap img{max-width:100%;height:auto!important}
+  .card,.lb{padding:14px 12px}.empresa-grid{grid-template-columns:1fr!important}.empresa-actions,.config-actions{display:grid!important;grid-template-columns:1fr!important}.empresa-actions .btn,.config-actions .btn{width:100%}
+  .doc-ft{padding:12px}.modal{padding:16px 14px}
+}
 @media print{
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   body{background:#fff}
@@ -252,7 +295,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   word-wrap: break-word !important;
 }
 
-@media(max-width:780px){
+@media(max-width:780px),(max-height:500px){
   /* Layouts de grilla */
   .cards,.lower{grid-template-columns:1fr}
   .card+.card,.lb+.lb{border-left:none;border-top:1px solid var(--border)}
@@ -260,12 +303,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   /* Página */
   .page{margin:10px auto 28px;padding:0 8px}
 
-  /* Toolbar: scroll horizontal en lugar de overflow */
-  .tb{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding:8px 12px;gap:5px;scrollbar-width:none}
-  .tb::-webkit-scrollbar{display:none}
-  .tb-brand{flex-shrink:0;font-size:13px}
-  .tb-div{flex-shrink:0}
-  .btn{flex-shrink:0;padding:9px 11px;font-size:12px;min-height:42px}
+  /* Toolbar compacto: las acciones diarias viven en la navegación inferior. */
+  .tb{overflow:visible;flex-wrap:wrap;padding:8px 12px;gap:5px;min-height:48px}
+  .tb-brand{font-size:13px}
+  .btn{padding:9px 11px;font-size:12px;min-height:42px}
 
   /* Encabezado del documento */
   .doc-hd{flex-direction:row;align-items:center;height:auto;padding:6mm 16px 3mm 16px;gap:12px}
@@ -442,6 +483,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .monto-input-grande:focus{border-color:var(--green)}
 .atajo-btn{flex:1;justify-content:center;font-size:13px;font-weight:600;padding:10px 6px}
 @keyframes wm-aparecer{from{opacity:0;transform:translate(-50%,-50%) rotate(-28deg) scale(1.3)}to{opacity:1;transform:translate(-50%,-50%) rotate(-28deg) scale(1)}}
+/* Ajustes finales: después de los estilos heredados para que ganen en móvil. */
+@media(max-width:780px),(max-height:500px){
+  .btn,.ti,.ci-val input,.fv input,.fv select,.fg input,.fg select,.fg textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{min-height:44px}
+  .items-table tbody tr{grid-template-columns:44px minmax(0,1fr);gap:8px 10px;padding:12px}
+  .td-n{grid-column:1}.td-cl,.items-table tbody td.td-cl{grid-column:2!important;padding-left:0!important}.td-desc,.td-c,.td-del{grid-column:1/-1}.td-r{grid-column:1}.items-table tbody td.td-imp{grid-column:2}
+  .qty-stepper{display:grid;grid-template-columns:44px minmax(64px,1fr) 44px;gap:8px;align-items:center}.qty-stepper button{width:44px;height:44px}.qty-stepper input{width:100%!important;min-height:44px!important;text-align:center!important}
+  .del-btn{width:44px;height:44px}.cobro-btn,.anular-btn,#btnRedondeo,#btnVerUtil,#btnAgregarFirma{min-height:44px}.ch .sbtn{min-height:44px}
+}
 </style>
 <!-- H5: jsPDF se sirve LOCAL (vendor/) para que los PDF funcionen sin internet y no
      dependan de un CDN externo. Si por algo falta el archivo local, cae al CDN. -->
@@ -501,6 +550,18 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   <button onclick="_cerrarMenuMas();abrirExcepciones()">⚠ Excepciones <span id="badgeExcepciones" style="display:none;background:#c0392b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">•</span></button>
   <button onclick="_cerrarMenuMas();abrirCatalogos()" id="btnTokenTab">⚙️ Configuración</button>
 </div>
+<div id="mobileAction" class="mobile-action no-print" aria-live="polite">
+  <div class="mobile-action-total"><span>Total</span><strong id="mobileActionTotal">$0.00 MXN</strong></div>
+  <button id="mobileActionPdf" class="mobile-action-pdf" type="button" aria-label="Descargar PDF" title="Descargar PDF" onclick="mobileDescargarPdf()" disabled>📄</button>
+  <button id="mobileActionPrimary" class="mobile-action-primary" type="button" onclick="mobileAccionPrincipal()">Registrar remisión</button>
+</div>
+<nav id="mobileNav" class="mobile-nav no-print" aria-label="Navegación principal">
+  <button id="mNavNueva" type="button" onclick="mobileNueva()"><span>＋</span><small>Nueva</small></button>
+  <button id="mNavHistorial" type="button" onclick="mobileHistorial()"><span>📋</span><small>Historial</small></button>
+  <button id="mNavCotizar" type="button" onclick="mobileCambiarModo()"><span>📄</span><small id="mNavModoTxt">Cotizar</small></button>
+  <button id="mNavCobros" type="button" onclick="verCobros()"><span>💰</span><small>Cobros</small></button>
+  <button id="mNavMas" type="button" onclick="_toggleMenuMas()"><span>☰</span><small>Más</small></button>
+</nav>
 <!-- Popup global de productos — fixed, escapa el recorte de la tabla -->
 <div id="ppGlobal" class="pp-global" onmousedown="event.preventDefault()">
   <input class="pp-search" id="ppSearch" type="text" placeholder="Buscar código o descripción…" oninput="_ppFiltrar(this.value)">
@@ -570,7 +631,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         <div class="doc-folio" id="folioBadge" contenteditable="true" spellcheck="false" title="Clic para editar"
              oninput="syncFolio(this.innerText.trim())"
              onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">REM-0001</div>
-        <button class="no-print" onclick="incrementarFolio()" title="Siguiente folio" aria-label="Siguiente folio" style="width:22px;height:22px;border-radius:50%;border:1.5px solid var(--green);background:var(--green-light);color:var(--green);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0">+</button>
+        <button class="no-print" onclick="incrementarFolio()" title="Siguiente folio" aria-label="Siguiente folio" style="width:44px;height:44px;border-radius:50%;border:1.5px solid var(--green);background:var(--green-light);color:var(--green);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0">+</button>
       </div>
       <div class="doc-meta">
         <div class="doc-meta-i"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span id="fechaDisp">—</span></div>
@@ -661,7 +722,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   </div>
   <!-- Firma del cliente — oculta por defecto, se abre con el botón -->
   <div style="padding:6px 32px 0;border-top:1px solid var(--border)" class="no-print">
-    <button onclick="toggleFirma()" style="background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;padding:4px 0;font-family:inherit">✍️ Agregar firma del cliente <span id="firmaToggleIcon">▼</span></button>
+    <button id="btnAgregarFirma" onclick="toggleFirma()" style="background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;padding:4px 0;font-family:inherit">✍️ Agregar firma del cliente <span id="firmaToggleIcon">▼</span></button>
   </div>
   <div id="firmaSection" style="padding:10px 32px 14px;display:none;align-items:flex-start;gap:18px;flex-wrap:wrap">
     <div style="flex:1;min-width:180px">
@@ -708,7 +769,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <div style="background:#fff;border-radius:16px;padding:20px;max-width:560px;width:calc(100% - 32px);display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <div style="font-weight:700;font-size:15px;color:var(--navy)">✍️ Firma del cliente</div>
-        <button style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)" onclick="closeOv('ovFirma')">✕</button>
+        <button aria-label="Cerrar" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)" onclick="closeOv('ovFirma')">✕</button>
       </div>
       <div style="font-size:12px;color:var(--muted)">Firma con el dedo sobre el recuadro blanco</div>
       <canvas id="firmaCanvas" style="border:2px solid var(--navy);border-radius:10px;width:100%;touch-action:none;background:#fff;cursor:crosshair" height="220"></canvas>
@@ -733,9 +794,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   </div>
 </div>
 <div id="pagosSection" class="no-print" style="margin-top:16px;background:var(--white);border-radius:var(--r);box-shadow:var(--sh2);overflow:hidden">
-  <div style="background:var(--navy-soft);padding:12px 28px;color:#fff;display:flex;align-items:center;gap:10px">
+  <div class="cobro-head" style="background:var(--navy-soft);padding:12px 28px;color:#fff;display:flex;align-items:center;gap:10px">
     <span id="cobroTitle" style="font-weight:700;font-size:13px;letter-spacing:.5px">💰 COBRO</span>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+    <div class="cobro-actions" style="margin-left:auto;display:flex;align-items:center;gap:12px">
       <!-- MC-04: Pendiente a la izquierda, Poner total a la derecha -->
       <button id="btnPendiente" onclick="setAtajoPendiente()" title="Registrar SIN pago, a crédito"
         style="background:rgba(255,255,255,.10);border:1.5px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">
@@ -926,17 +987,17 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   <div class="fg"><label>Nombre de la empresa</label><input id="e_nombre" type="text" placeholder="SUMETEC"></div>
   <div class="fg"><label>RFC</label><input id="e_rfc" type="text" placeholder="SUM-XXXXXX-XX0"></div>
   <div class="fg"><label>Dirección</label><input id="e_dir" type="text" placeholder="Calle, Ciudad, C.P."></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div class="fg"><label>Teléfono 1</label><input id="e_tel" type="text" placeholder="33 2000 1234"></div><div class="fg"><label>Teléfono 2</label><input id="e_tel2" type="text" placeholder="33 2000 5678"></div></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div class="fg"><label>Email</label><input id="e_email" type="text" placeholder="ventas@empresa.com"></div><div></div></div>
+  <div class="empresa-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div class="fg"><label>Teléfono 1</label><input id="e_tel" type="text" placeholder="33 2000 1234"></div><div class="fg"><label>Teléfono 2</label><input id="e_tel2" type="text" placeholder="33 2000 5678"></div></div>
+  <div class="empresa-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div class="fg"><label>Email</label><input id="e_email" type="text" placeholder="ventas@empresa.com"></div><div></div></div>
   <div class="fg"><label>Sitio web</label><input id="e_web" type="text" placeholder="www.empresa.com"></div>
   <div class="fg"><label>Slogan / Mensaje en pie de página</label><input id="e_slogan" type="text" placeholder="Suministramos soluciones, construimos confianza."></div>
 
   <div class="fg">
     <label>Tamaño del logo — <span id="logoHVal">80 px</span></label>
     <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
-      <button onclick="ajustarLogo(-10)" aria-label="Reducir tamaño del logo" style="width:32px;height:32px;border-radius:8px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0;font-family:inherit;line-height:1">−</button>
+      <button onclick="ajustarLogo(-10)" aria-label="Reducir tamaño del logo" style="width:44px;height:44px;border-radius:8px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0;font-family:inherit;line-height:1">−</button>
       <input id="e_logoH" type="range" min="40" max="200" value="80" style="flex:1;accent-color:var(--green)" oninput="ajustarLogo(0,this.value)">
-      <button onclick="ajustarLogo(10)" aria-label="Agrandar tamaño del logo" style="width:32px;height:32px;border-radius:8px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0;font-family:inherit;line-height:1">＋</button>
+      <button onclick="ajustarLogo(10)" aria-label="Agrandar tamaño del logo" style="width:44px;height:44px;border-radius:8px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0;font-family:inherit;line-height:1">＋</button>
     </div>
   </div>
   <button class="btn btn-p" style="width:100%;justify-content:center;padding:11px" onclick="guardarEmpresa()">💾 Guardar datos de empresa</button>
@@ -946,7 +1007,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <div style="font-weight:700;font-size:13px;margin-bottom:4px">🛟 Respaldo de datos</div>
     <div class="info-box" style="margin-bottom:10px">Descarga una copia de TODO (remisiones, cobros, colas pendientes y empresa) en un archivo. Si cambias de celular o se borra algo, lo restauras. El token NO se incluye (se vuelve a pegar).</div>
     <div id="ultimoRespaldoTxt" style="font-size:12px;font-weight:600;margin-bottom:10px"></div>
-    <div style="display:flex;gap:8px">
+    <div class="empresa-actions" style="display:flex;gap:8px">
       <button class="btn btn-o" style="flex:1;justify-content:center;font-size:15px" title="Descarga un archivo con TODO: remisiones, cobros y colas pendientes de este celular" onclick="exportarRespaldo()">⬇️ Exportar</button>
       <button class="btn btn-o" style="flex:1;justify-content:center;font-size:15px" title="Carga un archivo de respaldo exportado antes (reemplaza lo que hay en este celular)" onclick="document.getElementById('fileRestaurar').click()">📂 Restaurar</button>
     </div>
@@ -961,7 +1022,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
       Úsala para configurar un celular nuevo en segundos — solo carga este archivo
       y luego ingresa el token con el botón 🔑 Token.
     </div>
-    <div style="display:flex;gap:8px">
+    <div class="config-actions" style="display:flex;gap:8px">
       <button class="btn btn-o" style="flex:1;justify-content:center;font-size:15px" title="Descarga solo empresa + URL del servidor + logo (sin remisiones ni token) — para configurar un celular nuevo rápido" onclick="exportarConfiguracion()">📤 Exportar config</button>
       <button class="btn btn-o" style="flex:1;justify-content:center;font-size:15px" title="Carga un archivo de configuración exportado desde otro celular (empresa + servidor + logo)" onclick="document.getElementById('fileConfig').click()">📥 Importar config</button>
     </div>
@@ -2522,7 +2583,7 @@ function renderTable(){
     const isEmpty=(!it.qty||+it.qty===0)&&!it.clave&&!it.desc;
     if(isEmpty) tr.classList.add('tr-empty');
     tr.innerHTML=`<td class="td-n" data-label="#">${idx+1}</td>
-<td class="td-c" data-label="Cantidad"><input class="ti c" type="number" inputmode="numeric" min="0" value="${esc(it.qty)}" placeholder="0" data-id="${it._id}" data-f="qty" oninput="upd(this)" onclick="this.select()"></td>
+<td class="td-c" data-label="Cantidad"><div class="qty-stepper no-print"><button type="button" aria-label="Disminuir cantidad" onclick="ajustarCantidadMovil(${it._id},-1)">−</button><input class="ti c" type="number" inputmode="numeric" min="0" value="${esc(it.qty)}" placeholder="0" data-id="${it._id}" data-f="qty" oninput="upd(this)" onclick="this.select()"><button type="button" aria-label="Aumentar cantidad" onclick="ajustarCantidadMovil(${it._id},1)">＋</button></div></td>
 <td class="td-cl" data-label="Código" style="position:relative"><input class="ti cl" type="text" value="${esc(it.clave)}" placeholder="CÓDIGO" data-id="${it._id}" data-f="clave" oninput="upd(this);showPP(this)" onblur="hidePP(this)" onclick="this.select();showPP(this)"></td>
 <td class="td-desc" data-label="Descripción"><input class="ti" type="text" value="${esc(it.desc)}" placeholder="Descripción" data-id="${it._id}" data-f="desc" oninput="upd(this)"></td>
 <td class="td-r" data-label="Precio Unit." style="position:relative">
@@ -3069,6 +3130,7 @@ function calcTotals(){
     if(sd)sd.textContent=tot>0?fmt(tot)+' MXN':'$—';
   }
   autosave();
+  _syncMobileChrome();
 }
 // Propuesta 5 (2026-09-10), decisión de Miguel: la utilidad estimada NO se
 // ve de entrada -- se oculta tras este botón para que un cliente que vea la
@@ -3272,7 +3334,10 @@ async function registrarRemision(gpsParam){
     // DEVUELVE para que registrarTodo no siga a la pantalla de confirmación como si
     // la venta hubiera quedado guardada. Antes la remisión existía solo en memoria:
     // si el celular se cerraba antes de sincronizar, se perdía sin que nadie lo supiera.
-    toast('⚠️ Memoria llena — '+folio+' podría NO haberse guardado en este celular. No cierres la app hasta liberar espacio.','err',9000);
+    // No se permite enviar algo que el celular no pudo conservar: una respuesta
+    // perdida del servidor dejaría al vendedor sin forma fiable de recuperarla.
+    toast('⚠️ Memoria llena — '+folio+' no se envió. Libera espacio y vuelve a registrar.','err',9000);
+    return {ok:false,folio:folio};
   }
   guardar();renderPagos();updateObsBalance(rem);
   _desbloquearPDF(true);
@@ -4307,6 +4372,11 @@ async function abrirPagoRapido(id, folio, esLocal){
 function prPonertotal(){
   const rem=remisiones.find(r=>String(r.id)===String(_prId)||r.folio===_prFolio);
   if(rem){const inp=document.getElementById('prMonto');if(inp){inp.value=(rem.saldo||0).toFixed(2);_formatearMontoInput(inp);}}
+}
+function ajustarCantidadMovil(id,delta){
+  const it=items.find(x=>x._id===id);if(!it||_formBloqueado)return;
+  it.qty=Math.max(0,(+it.qty||0)+delta);
+  renderTable();calcTotals();
 }
 
 async function confirmarPagoRapido(){
@@ -6530,6 +6600,7 @@ function _desbloquearPDF(si){
   if(!btn)return;
   if(si){btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';btn.innerHTML='⬇️ Descargar PDF';}
   else{btn.disabled=true;btn.style.opacity='.45';btn.style.cursor='not-allowed';btn.innerHTML='🔒 PDF';}
+  _syncMobileChrome();
 }
 function _bloquearFormulario(){
   _formBloqueado=true;
@@ -6538,6 +6609,7 @@ function _bloquearFormulario(){
   const ar=document.querySelector('.add-row');if(ar){ar.disabled=true;ar.style.opacity='.35';}
   const br=document.getElementById('btnRegistrar');if(br){br.disabled=true;br.style.opacity='.5';br.innerHTML='🔒 Registrado';}
   const ivaTh=document.querySelector('.th-iva');if(ivaTh)ivaTh.style.pointerEvents='none';
+  _syncMobileChrome();
 }
 function _desbloquearFormulario(){
   _formBloqueado=false;
@@ -6546,6 +6618,7 @@ function _desbloquearFormulario(){
   const ar=document.querySelector('.add-row');if(ar){ar.disabled=false;ar.style.opacity='';}
   const br=document.getElementById('btnRegistrar');if(br){br.disabled=false;br.style.opacity='';br.innerHTML='✅ REGISTRAR';}
   const ivaTh=document.querySelector('.th-iva');if(ivaTh)ivaTh.style.pointerEvents='';
+  _syncMobileChrome();
 }
 // F1: valida que NO falten datos antes de descargar/generar el PDF.
 // Devuelve un string con el problema, o '' si todo está completo.
@@ -8098,6 +8171,38 @@ async function _procesarColaCotR(){
   _actualizarBadgeCot();
 }
 
+// ── Atajos móviles: delegan en las mismas rutas que ya protegen datos y PDFs ──
+function _mobileEsCotizacion(){
+  const sec=document.getElementById('secCot');
+  return !!sec&&sec.style.display!=='none';
+}
+function mobileNueva(){
+  if(_mobileEsCotizacion()){
+    const activos=_cotItems.some(it=>it.clave||it.desc||(+it.qty>0));
+    if(activos){popupConfirmar('La cotización en curso se descartará.','¿Nueva cotización?').then(ok=>{if(ok)_cotReset();});}
+    else _cotReset();
+  }else nuevaRem();
+}
+function mobileHistorial(){_mobileEsCotizacion()?verHistCot():verHist();}
+function mobileCambiarModo(){
+  if(_mobileEsCotizacion()){_activarModoRem();return;}
+  const conCaptura=items.some(it=>it.clave||it.desc||(+it.qty>0))||['c_nombre','c_dir','c_cp','c_tel'].some(id=>(document.getElementById(id)?.value||'').trim());
+  conCaptura?abrirCotizacion():_activarModoCot();
+}
+function mobileAccionPrincipal(){return _mobileEsCotizacion()?_confirmarAntesDeGenerarCot():registrarTodo();}
+function mobileDescargarPdf(){return _mobileEsCotizacion()?_descargarCotGenerada():descargarPDFSiRegistrado();}
+function _syncMobileChrome(){
+  const cot=_mobileEsCotizacion();
+  const label=document.getElementById('mNavModoTxt'),primary=document.getElementById('mobileActionPrimary');
+  const pdf=document.getElementById('mobileActionPdf'),total=document.getElementById('mobileActionTotal');
+  if(label)label.textContent=cot?'Remisiones':'Cotizar';
+  if(primary)primary.textContent=cot?'Generar cotización':'Registrar remisión';
+  if(total){const origen=document.getElementById(cot?'cot_tTot':'tTot');total.textContent=origen?.textContent||'$0.00 MXN';}
+  if(pdf){const origen=document.getElementById(cot?'btnDescargarCot':'btnDescargarPDF');pdf.disabled=!origen||origen.disabled;}
+  document.querySelectorAll('.mobile-nav button').forEach(b=>b.removeAttribute('aria-current'));
+  document.getElementById(cot?'mNavCotizar':'mNavNueva')?.setAttribute('aria-current','page');
+}
+
 // ── MODO SWITCH ───────────────────────────────────────────────────────────
 function abrirCotizacion(){
   // confirm() puede bloquearse en PWA/iframe — usamos modal propio
@@ -8139,6 +8244,7 @@ function _activarModoCot(){
       _cotReset();
     }
   }
+  _syncMobileChrome();
 }
 
 function _activarModoRem(){
@@ -8161,6 +8267,7 @@ function _ejecutarVolverRem(){
   // Limpiar modo edición de cotización al volver a remisiones
   _salirModoEdicionCot();
   nuevaRem();
+  _syncMobileChrome();
 }
 
 function _cotReset(){
@@ -8303,8 +8410,7 @@ function renderTableCot(){
       ?`<div style="font-size:10px;color:var(--green);cursor:pointer;white-space:nowrap" onclick="_cotUsarPrecioAnt(${it._id})">↩ $${it._precioAnt}</div>`:'';
     return `<tr id="cotrow-${it._id}">
       <td class="c td-n" data-label="#" style="color:var(--muted);font-size:11px">${idx+1}</td>
-      <td class="c td-c" data-label="Cantidad"><input class="ti" type="number" inputmode="numeric" value="${it.qty}" placeholder="0" min="0" style="width:60px;text-align:center"
-        onchange="_cotAct(${it._id},'qty',this.value)" oninput="calcTotalsCot()"></td>
+      <td class="c td-c" data-label="Cantidad"><div class="qty-stepper no-print"><button type="button" aria-label="Disminuir cantidad" onclick="ajustarCantidadCotMovil(${it._id},-1)">−</button><input class="ti" type="number" inputmode="numeric" value="${it.qty}" placeholder="0" min="0" onchange="_cotAct(${it._id},'qty',this.value)" oninput="calcTotalsCot()"><button type="button" aria-label="Aumentar cantidad" onclick="ajustarCantidadCotMovil(${it._id},1)">＋</button></div></td>
       <td class="td-cl" data-label="Código" style="position:relative"><input class="ti" type="text" value="${esc(it.clave)}" placeholder="Código"
         oninput="_cotPpFiltrar(event,${it._id})" onfocus="_cotPpFiltrar(event,${it._id})"
         onblur="setTimeout(_cotPpCerrar,250)"
@@ -8328,6 +8434,11 @@ function _cotAct(id,campo,val){
   const it=_cotItems.find(i=>i._id===id);if(!it)return;
   it[campo]=(campo==='qty'||campo==='precio'||campo==='iva')?+val:val;
   calcTotalsCot();
+}
+function ajustarCantidadCotMovil(id,delta){
+  const it=_cotItems.find(x=>x._id===id);if(!it)return;
+  it.qty=Math.max(0,(+it.qty||0)+delta);
+  renderTableCot();calcTotalsCot();
 }
 // Busca el último precio dado a 'cliente' para cada producto en el historial de cotizaciones.
 function _cotActualizarPreciosAnteriores(cliente){
@@ -8367,6 +8478,7 @@ function calcTotalsCot(){
   s('cot_tSub',n2(sub));s('cot_tIva',n2(iva));s('cot_tDesc',n2(desc));
   s('cot_tTot',n2(tot)+' MXN');s('cot_tWords','('+n2l(tot)+')');
   s('cot_rArts',String(arts));s('cot_rPzs',String(pzs));
+  _syncMobileChrome();
 }
 
 // ── IVA popup ─────────────────────────────────────────────────────────────
@@ -8643,10 +8755,12 @@ function _bloquearDescargaCot(){
   const b=document.getElementById('btnDescargarCot');
   if(b){b.disabled=true;b.style.opacity='.45';b.style.cursor='not-allowed';b.textContent='🔒 PDF';}
   _cotUltimaData=null;
+  _syncMobileChrome();
 }
 function _desbloquearDescargaCot(){
   const b=document.getElementById('btnDescargarCot');
   if(b){b.disabled=false;b.style.opacity='1';b.style.cursor='pointer';b.textContent='⬇️ PDF';}
+  _syncMobileChrome();
 }
 // Descarga/comparte el PDF de la última cotización generada (paso aparte de Generar).
 function _descargarCotGenerada(){
