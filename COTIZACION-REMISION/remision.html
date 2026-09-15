@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!--
 ═══════════════════════════════════════════════════════════════════════════
   📑 ÍNDICE — QUÉ EDITAR Y DÓNDE   (archivo: remision.html)
@@ -57,7 +57,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .tb-brand .ac{color:#4CAF82}
 .tb-div{width:1px;height:22px;background:rgba(255,255,255,.15)}
 .tb-more{position:relative;display:inline-flex}
-.menu-mas{display:none;position:fixed;background:#fff;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.28);min-width:190px;z-index:500;overflow:hidden;flex-direction:column}
+.menu-mas{display:none;position:fixed;background:#fff;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.28);min-width:264px;z-index:500;overflow:hidden;flex-direction:column}
 .menu-mas.open{display:flex}
 /* Fondo oscuro detrás del menú "Más" -- SOLO se activa en pantallas chicas
    (ver @media abajo). En desktop queda display:none siempre. */
@@ -65,6 +65,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .menu-mas button{display:block;width:100%;text-align:left;padding:11px 16px;border:none;background:none;font-family:inherit;font-size:13.5px;color:var(--text);cursor:pointer;white-space:nowrap}
 .menu-mas button:hover{background:var(--bg)}
 .menu-mas button+button{border-top:1px solid var(--border)}
+.menu-mas-h{padding:10px 16px 5px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
+.menu-mas-h:not(:first-child){margin-top:6px;border-top:8px solid var(--bg)}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--r2);font-size:12.5px;font-weight:500;cursor:pointer;border:none;transition:background .14s;font-family:inherit;white-space:nowrap}
 .btn-g{background:rgba(255,255,255,.1);color:#fff}.btn-g:hover{background:rgba(255,255,255,.2)}
 .btn-p{background:var(--green);color:#fff}.btn-p:hover{background:var(--green2)}
@@ -74,6 +76,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .btn-modal{background:var(--white);color:var(--navy);border:1px solid var(--navy)}
 .btn-modal:hover{background:var(--green-light)}
 .page{max-width:1080px;margin:28px auto 48px;padding:0 18px}
+@media(min-width:900px){
+  /* 2026-09-14: en escritorio, tabla de renglones a la izquierda; totales y
+     cobro fijos a la derecha sin scroll -- mismo documento, solo se acomoda
+     en dos columnas cuando hay espacio. */
+  .capture-layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start;max-width:1480px;margin:0 auto;padding:0 18px}
+  .capture-layout .page{max-width:none;margin:28px 0 24px;padding:0}
+  .capture-layout #pagosSection{margin-top:28px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto}
+}
 .doc{background:var(--white);border-radius:var(--r);box-shadow:var(--sh2);overflow:hidden}
 .doc-hd{padding:18px 36px 9px 36px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--border);gap:20px;overflow:hidden;height:106px}
 .logo-wrap{display:flex;align-items:center;flex:0 0 auto;overflow:hidden;height:100%}
@@ -227,9 +237,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   .mobile-action-pdf{background:rgba(255,255,255,.14);color:#fff;font-size:18px}
   .mobile-action-pdf:disabled{opacity:.35}
   .mobile-action-primary{background:#1C6E4A;color:#fff;padding:8px;font-size:12px}
-  .items-table tbody tr{grid-template-columns:44px minmax(0,1fr);gap:8px 10px;padding:12px}
-  .td-n{grid-column:1}.td-cl,.items-table tbody td.td-cl{grid-column:2!important;padding-left:0!important}
-  .td-desc,.td-c,.td-del{grid-column:1/-1}.td-r{grid-column:1}.items-table tbody td.td-imp{grid-column:2}
   .qty-stepper{display:grid;grid-template-columns:44px minmax(64px,1fr) 44px;gap:8px;align-items:center}
   .qty-stepper button{width:44px;height:44px;border:1px solid var(--border);border-radius:10px;background:var(--green-light);color:var(--green);font-size:22px;font-weight:800}
   .qty-stepper input{width:100%!important;min-height:44px!important;text-align:center!important}
@@ -344,7 +351,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
      propósito para regalarle ese espacio a Cantidad y sobre todo a Código
      (hay códigos largos de Tornimaster que se cortaban con las 3 columnas
      iguales de antes). */
-  .items-table tbody tr{display:grid;grid-template-columns:30px 58px 1fr;gap:4px 10px;padding:12px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:#fff}
+  .items-table tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;padding:12px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:#fff}
   .items-table tbody tr:hover{background:#fff}
   .items-table tbody td{display:block;padding:2px 0;font-size:13px;min-width:0}
   .items-table tbody td[data-label]::before{content:attr(data-label);display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:3px}
@@ -353,15 +360,26 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
      arriba que Cantidad/Código. Se quita el vertical del input SOLO aquí para
      que los tres queden a la misma altura; el horizontal se conserva. */
   .items-table tbody td input.ti{padding-top:0;padding-bottom:0}
-  .td-n{grid-column:1}
-  .td-c{grid-column:2}
-  .items-table tbody td.td-cl{grid-column:3;padding-left:6px}
+  /* Cliente en celular: Dirección/C.P./Teléfono empiezan colapsados -- el
+     nombre y los botones de acción siempre se ven; "▾ Más campos" abre el resto
+     para no ocupar media pantalla antes de llegar a los productos. */
+  .client-detail{display:none}
+  .client-detail.open{display:block}
+  #btnToggleClientDetail{display:inline-flex!important}
+  /* El número de renglón ya es implícito en el orden de las tarjetas -- se
+     oculta para regalarle su columna a Cantidad/Costo unitario. */
+  .td-n{display:none}
+  /* 2026-09-14: orden pedido por el cliente -- Código, Descripción, y luego
+     Cantidad + Costo unitario lado a lado en la misma línea (en vez de cada
+     uno en su propia línea) para que la tarjeta no crezca de alto. */
+  .items-table tbody td.td-cl{order:1;grid-column:1/-1;padding-left:0}
   .td-cl .ti.cl{font-size:13px}
-  .td-desc{grid-column:1/-1}
-  .td-r{grid-column:1/3;text-align:left}
-  .items-table .td-iva{grid-column:1/-1} /* visible solo en cotización -- en remisión sigue display:none (línea 143) */
-  .items-table tbody td.td-imp{grid-column:3;font-size:16px;font-weight:700;color:var(--green)}
-  .td-del{grid-column:1/-1;text-align:right;padding-top:8px;border-top:1px solid var(--border);margin-top:4px}
+  .td-desc{order:2;grid-column:1/-1}
+  .td-c{order:3;grid-column:1;align-self:end}
+  .td-r{order:4;grid-column:2;text-align:left;align-self:end}
+  .items-table .td-iva{order:5;grid-column:1/-1} /* visible solo en cotización -- en remisión sigue display:none (línea 143) */
+  .items-table tbody td.td-imp{order:6;grid-column:1/-1;font-size:16px;font-weight:700;color:var(--green)}
+  .td-del{order:7;grid-column:1/-1;text-align:right;padding-top:8px;border-top:1px solid var(--border);margin-top:4px}
 
   /* Áreas táctiles más grandes */
   .del-btn{width:36px;height:36px;font-size:15px}
@@ -442,6 +460,15 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   .cs{gap:10px}
 }
 /* ── Barra de conectividad ──────────────────────────────────── */
+/* ── Pestañas de modo + chip de estado (sustituyen los botones grandes de Cotización/Volver) ── */
+.tb-tabs{display:flex;align-items:flex-end;gap:18px;height:100%;margin-right:6px}
+.tb-tab{background:none;border:none;border-bottom:2px solid transparent;padding:0 2px 9px;font-family:inherit;font-size:13px;font-weight:500;color:rgba(255,255,255,.55);cursor:pointer;white-space:nowrap}
+.tb-tab.on{font-weight:700;color:#fff;border-bottom-color:#4CAF82}
+.tb-status{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:none;border-radius:20px;padding:5px 11px;font-family:inherit;font-size:11px;font-weight:600;color:rgba(255,255,255,.8);cursor:pointer;white-space:nowrap}
+.tb-status .dot{width:7px;height:7px;border-radius:50%;background:#4CAF82;display:block;flex-shrink:0}
+.tb-status.warn{background:#E67E22;color:#fff}.tb-status.warn .dot{background:#fff}
+.tb-status.err{background:#C0392B;color:#fff;box-shadow:0 0 0 3px rgba(192,57,43,.28)}.tb-status.err .dot{background:#fff}
+.tb-status.sync{background:rgba(36,113,163,.45);color:#fff}.tb-status.sync .dot{background:#cfe4f5}
 #netBar{display:none;position:sticky;top:54px;z-index:190;background:#C0392B;color:#fff;font-size:12px;font-weight:600;text-align:center;padding:6px 16px;letter-spacing:.3px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 #netBar.show{display:block}
 #netBar.warn{background:#E67E22}
@@ -486,8 +513,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 /* Ajustes finales: después de los estilos heredados para que ganen en móvil. */
 @media(max-width:780px),(max-height:500px){
   .btn,.ti,.ci-val input,.fv input,.fv select,.fg input,.fg select,.fg textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{min-height:44px}
-  .items-table tbody tr{grid-template-columns:44px minmax(0,1fr);gap:8px 10px;padding:12px}
-  .td-n{grid-column:1}.td-cl,.items-table tbody td.td-cl{grid-column:2!important;padding-left:0!important}.td-desc,.td-c,.td-del{grid-column:1/-1}.td-r{grid-column:1}.items-table tbody td.td-imp{grid-column:2}
   .qty-stepper{display:grid;grid-template-columns:44px minmax(64px,1fr) 44px;gap:8px;align-items:center}.qty-stepper button{width:44px;height:44px}.qty-stepper input{width:100%!important;min-height:44px!important;text-align:center!important}
   .del-btn{width:44px;height:44px}.cobro-btn,.anular-btn,#btnRedondeo,#btnVerUtil,#btnAgregarFirma{min-height:44px}.ch .sbtn{min-height:44px}
 }
@@ -512,17 +537,19 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
        visible sin abrir 📊 Negocio. Oculto si no hay nada por cobrar. -->
   <span id="headerVivo" style="display:none;font-size:12px;font-weight:700;color:#fff;background:rgba(192,57,43,.28);border-radius:20px;padding:5px 12px;white-space:nowrap"></span>
   <!-- Botones modo REMISIÓN (se ocultan en modo cotización) -->
+<div class="tb-tabs" id="tbTabs">
+    <button class="tb-tab on" id="tabRem" onclick="_activarModoRem()">Remisión</button>
+    <button class="tb-tab" id="tabCot" onclick="abrirCotizacion()">Cotización</button>
+  </div>
   <button class="btn btn-g" id="btnNueva" onclick="nuevaRem()" title="Nueva remisión">＋</button>
   <div class="tb-div" id="tbDiv1"></div>
   <button class="btn btn-o" id="btnHist" onclick="verHist()">📋 Historial</button>
-  <button class="btn btn-o" id="btnCotizacion" onclick="abrirCotizacion()" style="color:#4CAF82;border-color:rgba(76,175,130,.4)">📄 Cotización</button>
   <button class="btn btn-o" id="btnCobros" onclick="verCobros()" style="color:#ff8c69;border-color:rgba(255,140,105,.35)">💰 Cobros</button>
   <div class="tb-more" id="tbMasWrap">
     <button class="btn btn-o" id="btnMas" onclick="_toggleMenuMas()">☰ Más</button>
   </div>
   <div class="tb-div" id="tbDiv2"></div>
   <!-- Botón modo COTIZACIÓN: volver a remisiones (oculto por defecto) -->
-  <button class="btn btn-g" id="btnVolverRem" style="display:none;background:rgba(255,255,255,.15);gap:6px" onclick="_activarModoRem()">← Volver a Remisiones</button>
   <button class="btn btn-o" id="btnHistCot" style="display:none" onclick="verHistCot()">📋 Historial</button>
   <span id="badgeCot" style="display:none"></span>
   <div class="tb-div" id="tbDiv3" style="display:none"></div>
@@ -533,22 +560,25 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   <button class="btn btn-p" id="btnDescargarPDF" onclick="descargarPDFSiRegistrado()" style="opacity:.45;cursor:not-allowed" disabled>🔒 PDF</button>
   <!-- I-3: el botón "Generar cotización" de la barra se quitó -- ahora vive abajo, después de la tabla y los totales (#btnGenerarCotAbajo) -->
   <button class="btn btn-p" id="btnDescargarCot" style="display:none;opacity:.45;cursor:not-allowed" disabled onclick="_descargarCotGenerada()">🔒 PDF</button>
-  <span id="badgePendientes"></span>
+  <span id="badgePendientes" class="tb-status"></span>
 </div>
 <!-- Menú "☰ Más" -- fixed, fuera de .tb (que hace scroll horizontal en celular y
      recortaba el popup aunque sus coordenadas calculadas fueran correctas; mismo
      motivo por el que #ppGlobal ya vivía aquí afuera). -->
 <div id="menuMasBackdrop" class="no-print" onclick="_cerrarMenuMas()"></div>
 <div id="menuMas" class="menu-mas">
-  <button onclick="_cerrarMenuMas();window.print()">🖨️ Imprimir</button>
-  <button onclick="_cerrarMenuMas();verNegocio()">📊 Negocio</button>
-  <button onclick="_cerrarMenuMas();cierreDelDia()" title="Vendido/cobrado por método/pendiente -- solo de ESTE celular, no de todo el negocio">🧾 Cierre del día (este celular)</button>
-  <button onclick="_cerrarMenuMas();abrirCorteCaja()" title="Efectivo cobrado en ESTE celular en el turno -- no incluye fondo, retiros ni otros dispositivos">🧮 Corte de caja (este celular)</button>
+  <div class="menu-mas-h">Negocio</div>
+  <button onclick="_cerrarMenuMas();verNegocio()">📊 Resumen del negocio</button>
   <button onclick="_cerrarMenuMas();abrirCostosSubieron()" title="Productos cuyo costo real subió y su precio no">📈 Costos que subieron</button>
-  <button onclick="_cerrarMenuMas();abrirSimulador()" title="Simula margen/utilidad con un precio nuevo, sin tocar el catálogo real">💲 Simulador</button>
+  <button onclick="_cerrarMenuMas();abrirSimulador()" title="Simula margen/utilidad con un precio nuevo, sin tocar el catálogo real">💲 Simulador de precio</button>
+  <div class="menu-mas-h">Caja de este celular</div>
+  <button onclick="_cerrarMenuMas();cierreDelDia()" title="Vendido/cobrado por método/pendiente -- solo de ESTE celular, no de todo el negocio">🧾 Cierre del día</button>
+  <button onclick="_cerrarMenuMas();abrirCorteCaja()" title="Efectivo cobrado en ESTE celular en el turno -- no incluye fondo, retiros ni otros dispositivos">🧮 Corte de caja</button>
+  <div class="menu-mas-h">Ajustes</div>
   <button onclick="_cerrarMenuMas();abrirEmpresa()">🏢 Mi empresa</button>
-  <button onclick="_cerrarMenuMas();abrirExcepciones()">⚠ Excepciones <span id="badgeExcepciones" style="display:none;background:#c0392b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">•</span></button>
   <button onclick="_cerrarMenuMas();abrirCatalogos()" id="btnTokenTab">⚙️ Configuración</button>
+  <button onclick="_cerrarMenuMas();abrirExcepciones()">⚠ Excepciones <span id="badgeExcepciones" style="display:none;background:#c0392b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">•</span></button>
+  <button onclick="_cerrarMenuMas();window.print()">🖨️ Imprimir</button>
 </div>
 <div id="mobileAction" class="mobile-action no-print" aria-live="polite">
   <div class="mobile-action-total"><span>Total</span><strong id="mobileActionTotal">$0.00 MXN</strong></div>
@@ -610,6 +640,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <div style="font-size:10px;color:#6E6E73" id="prCliente">—</div>
   </div>
 </div>
+<div class="capture-layout" id="captureLayout">
 <div class="page"><div class="doc" id="documento">
   <div id="wmPagado" class="watermark-pagado" style="display:none">PAGADO</div>
   <div class="doc-hd">
@@ -641,7 +672,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   </div>
   <div class="cards">
     <div class="card">
-      <div class="ch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Datos del Cliente<button class="sbtn" onclick="toggleCPanel()">🔍 Buscar cliente</button><button class="sbtn" onclick="abrirMasDatosCliente()" title="RFC, contacto, correo, persona moral">➕ Más datos</button></div>
+      <div class="ch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Datos del Cliente<button class="sbtn" onclick="toggleCPanel()">🔍 Buscar cliente</button><button class="sbtn" onclick="abrirMasDatosCliente()" title="RFC, contacto, correo, persona moral">➕ Más datos</button><button class="sbtn" id="btnToggleClientDetail" onclick="toggleClientDetail()" style="display:none">▾ Más campos</button></div>
       <!-- H-2: RFC/contacto/correo/persona moral se capturan en el popup "Más datos"
            (no ensucian el formulario compacto), pero SÍ viajan con la remisión --
            guardarEnDrive() los lee de aquí para registrarDatosCliente(). -->
@@ -657,10 +688,12 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
       <div id="adeudoBox" style="display:none;margin:6px 0;padding:10px 12px;background:#fff8e1;border:1.5px solid #f59e0b;border-radius:8px;font-size:12px"></div>
       <div id="precargaWrap" class="no-print" style="display:none;margin:4px 0"><button onclick="abrirPrecarga()" style="width:100%;padding:9px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">📋 Precargar pedido habitual de este cliente</button></div>
       
+      <div class="client-detail" id="clientDetail">
       <div class="fr"><span class="fl">Dirección</span><div class="fv"><input id="c_dir" type="text" placeholder="—" oninput="autosave()"></div></div>
       <div class="fr"><span class="fl">C.P.</span><div class="fv"><input id="c_cp" type="text" placeholder="—" oninput="autosave()"></div></div>
       <div class="cs">
         <div class="ci"><div class="ci-icon">📞</div><div><div class="ci-lbl">Teléfono</div><div class="ci-val"><input id="c_tel" type="text" placeholder="—" oninput="autosave()"></div></div></div>
+      </div>
       </div>
     </div>
     <div class="card">
@@ -793,6 +826,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     </div>
   </div>
 </div>
+</div>
 <div id="pagosSection" class="no-print" style="margin-top:16px;background:var(--white);border-radius:var(--r);box-shadow:var(--sh2);overflow:hidden">
   <div class="cobro-head" style="background:var(--navy-soft);padding:12px 28px;color:#fff;display:flex;align-items:center;gap:10px">
     <span id="cobroTitle" style="font-weight:700;font-size:13px;letter-spacing:.5px">💰 COBRO</span>
@@ -834,6 +868,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
       <button class="btn btn-p" id="btnRegistrar" style="width:100%;justify-content:center;padding:16px;font-size:16px;font-weight:800;border-radius:12px;letter-spacing:.3px" onclick="registrarTodo()">✅ REGISTRAR</button>
     </div>
   </div>
+</div>
 </div>
 </div>
 
@@ -7289,13 +7324,20 @@ function actualizarBadgePendientes(){
   const total=_pendientesTotal();
   const b=document.getElementById('badgePendientes');
   if(b){
-    b.style.display='inline-flex'; b.style.cursor='pointer'; b.onclick=verEstado;
-    if(total>0){
-      b.textContent='⚠️ '+total+' sin enviar';
-      b.style.background='#E67E22'; b.title='Toca para ver qué falta y reintentar';
+    b.onclick=verEstado;
+    b.classList.remove('warn','err','sync');
+    if(TOKEN_INVALIDO_CONFIRMADO){
+      b.innerHTML='<span class="dot"></span>'+(total>0?total+' sin enviar':'Token inválido');
+      b.classList.add('err'); b.title='El servidor rechaza el token — toca para corregirlo';
+    }else if(!isOnline){
+      b.innerHTML='<span class="dot"></span>Sin red'+(total>0?' · '+total:'');
+      b.classList.add('warn'); b.title='Sin conexión — se guarda y se envía al volver la señal';
+    }else if(total>0){
+      b.innerHTML='<span class="dot"></span>Enviando '+total+'…';
+      b.classList.add('sync'); b.title='Toca para ver qué falta';
     }else{
-      b.textContent='✓ Al día';
-      b.style.background='#1C6E4A'; b.title='Todo enviado y sincronizado';
+      b.innerHTML='<span class="dot"></span>En línea';
+      b.title='Todo enviado y sincronizado';
     }
   }
   _revisarFallas();
@@ -7511,6 +7553,12 @@ function abrirExcepciones(){
 
 // Dropdown "☰ Más" del toolbar (Negocio, Cierre del día, Simulador, Mi empresa,
 // Configuración) — antes eran 5 botones sueltos en la barra.
+function toggleClientDetail(){
+  const d=document.getElementById('clientDetail'), b=document.getElementById('btnToggleClientDetail');
+  if(!d||!b)return;
+  const open=d.classList.toggle('open');
+  b.textContent=open?'▴ Menos campos':'▾ Más campos';
+}
 function _toggleMenuMas(){
   const m=document.getElementById('menuMas');if(!m)return;
   const bd=document.getElementById('menuMasBackdrop');
@@ -7526,7 +7574,7 @@ function _toggleMenuMas(){
   if(btn){
     const r=btn.getBoundingClientRect();
     m.style.top=(r.bottom+6)+'px';
-    m.style.left=Math.min(r.left,window.innerWidth-200)+'px';
+    m.style.left=Math.min(r.left,window.innerWidth-274)+'px';
   }
   m.classList.add('open');bd?.classList.add('open');
 }
@@ -8216,10 +8264,11 @@ function _activarModoCot(){
   // Ocultar botones de remisiones. I-4: 'badgePendientes' YA NO se oculta --
   // ya cuenta también la cola de cotizaciones (cola_cot_r, ver _pendientesTotal),
   // así que debe seguir visible en modo Cotizaciones para que el contador diga la verdad.
-  ['btnNueva','tbDiv1','btnHist','btnCotizacion','btnCobros','tbDiv2','btnDescargarPDF']
+  ['btnNueva','tbDiv1','btnHist','btnCobros','tbDiv2','btnDescargarPDF']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
-  // Mostrar botones de cotizaciones
-  document.getElementById('btnVolverRem').style.display='';
+  // Pestañas: activa Cotización
+  document.getElementById('tabRem')?.classList.remove('on');
+  document.getElementById('tabCot')?.classList.add('on');
   document.getElementById('tbDiv3').style.display='';
   document.getElementById('btnDescargarCot').style.display='';
   _bloquearDescargaCot(); // el PDF se desbloquea tras Generar
@@ -8256,10 +8305,11 @@ function _ejecutarVolverRem(){
   document.querySelector('.page').style.display='';
   const modoEl=document.getElementById('tbModo');if(modoEl)modoEl.textContent='Remisiones';
   // Restaurar botones de remisiones ('badgePendientes' ya no se toca -- ver nota en _activarModoCot)
-  ['btnNueva','tbDiv1','btnHist','btnCotizacion','btnCobros','tbDiv2','btnDescargarPDF']
+  ['btnNueva','tbDiv1','btnHist','btnCobros','tbDiv2','btnDescargarPDF']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
-  // Ocultar botones de cotizaciones
-  document.getElementById('btnVolverRem').style.display='none';
+  // Pestañas: activa Remisión
+  document.getElementById('tabCot')?.classList.remove('on');
+  document.getElementById('tabRem')?.classList.add('on');
   document.getElementById('tbDiv3').style.display='none';
   document.getElementById('btnDescargarCot').style.display='none';
   document.getElementById('btnHistCot').style.display='none';

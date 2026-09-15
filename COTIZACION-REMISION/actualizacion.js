@@ -33,7 +33,7 @@
     if(!raw) return false;
     let contexto;
     try { contexto = JSON.parse(raw); } catch(_) { sessionStorage.removeItem(CLAVE); return false; }
-    if(![1,2].includes(contexto.schema) || contexto.buildDestino !== VERSION_CODIGO || !Array.isArray(contexto.campos)) return false;
+    if(![1,2].includes(contexto.schema) || contexto.buildDestino !== VERSION_CODIGO || !Array.isArray(contexto.campos)) { sessionStorage.removeItem(CLAVE); return false; }
     const campos = [...document.querySelectorAll(selectorCampos)].filter(el => !OMITIR.has(el.id));
     const porId = new Map(campos.filter(el => el.id).map(el => [el.id, el]));
     contexto.campos.forEach((dato, i) => {
