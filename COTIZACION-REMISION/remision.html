@@ -89,9 +89,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .doc-hd{padding:18px 36px 9px 36px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--border);gap:20px;overflow:hidden;height:106px}
 .logo-wrap{display:flex;align-items:center;flex:0 0 auto;overflow:hidden;height:100%}
 .logo-wrap img{height:var(--logo-h);width:auto;display:block}
-.doc-right{text-align:right;flex-shrink:0;display:flex;flex-direction:column;justify-content:center}
+.doc-right{text-align:right;flex-shrink:0;min-width:max-content;display:flex;flex-direction:column;justify-content:center}
 .doc-tipo{font-size:18px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.3px}
-.doc-folio{font-size:22px;font-weight:800;color:var(--green);margin:3px 0 8px;cursor:pointer;border-radius:6px;padding:2px 6px;transition:background .12s;display:inline-block;min-width:60px}
+.doc-folio{font-size:22px;font-weight:800;color:var(--green);margin:3px 0 8px;cursor:pointer;border-radius:6px;padding:2px 6px;transition:background .12s;display:inline-block;min-width:60px;white-space:nowrap;flex-shrink:0}
 .doc-folio:hover{background:var(--green-light)}
 .doc-folio[contenteditable=true]:focus{outline:2px solid var(--green);background:var(--green-light)}
 .doc-meta{display:flex;gap:16px;justify-content:flex-end;font-size:11.5px;color:var(--muted)}
@@ -101,7 +101,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .card{padding:22px 32px 10px 32px;position:relative}
 .card+.card{border-left:1px solid var(--border)}
 .ch{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.8px;color:var(--green);margin-bottom:14px;display:flex;align-items:center;gap:6px}
-.ch .sbtn{margin-left:auto;padding:3px 10px;font-size:11px;background:var(--green-light);color:var(--green);border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit}
+.ch .sbtn{display:inline-flex;align-items:center;justify-content:center;padding:5px 11px;font-size:11px;background:var(--green-light);color:var(--green);border:none;border-radius:20px;cursor:pointer;font-weight:600;font-family:inherit;white-space:nowrap}
+#btnToggleClientDetail{font-size:14px!important;padding:5px 9px!important}
+#btnToggleClientDetail.falta-datos{color:#c0392b;background:#fee2e2}
 .ch .sbtn:hover{background:#caeada}
 .fr{display:grid;grid-template-columns:126px 1fr;gap:4px 8px;align-items:center;margin-bottom:6px}
 .fl{font-size:11.5px;color:var(--muted);font-weight:500}
@@ -147,6 +149,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .td-r{text-align:right}.td-imp{text-align:right;font-weight:600}
 .td-del{text-align:center}
 .ti{width:100%;border:none;background:transparent;font-family:inherit;font-size:13px;color:inherit;outline:none;padding:2px 4px;border-radius:4px}
+.qty-stepper{display:grid;grid-template-columns:30px minmax(46px,1fr) 30px;gap:5px;align-items:center}
+.qty-stepper button{width:30px;height:30px;border:1px solid var(--border);border-radius:6px;background:var(--green-light);color:var(--green);font-size:17px;font-weight:800;cursor:pointer;padding:0}
+.qty-stepper input{width:100%;text-align:center;font-size:15px;font-weight:700}
 .ti:focus{background:var(--bg);outline:2px solid var(--green)}
 .ti.r{text-align:right}.ti.c{text-align:center}
 .ti.cl{color:var(--green);font-weight:600;font-size:12px}
@@ -243,7 +248,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   .qty-stepper input{width:100%!important;min-height:44px!important;text-align:center!important}
   .del-btn{width:44px;height:44px}
   .btn,.ti{min-height:44px}
-  .ch{font-size:12px;letter-spacing:1.1px;flex-wrap:wrap}.ch .sbtn{min-height:44px;padding:8px 12px;font-size:12px}
+  .ch{font-size:12px;letter-spacing:1.1px;flex-wrap:wrap}.ch .sbtn{min-height:38px;padding:7px 12px;font-size:12px}#btnToggleClientDetail{min-height:38px!important;padding:7px 10px!important;font-size:15px!important}
   .fr{grid-template-columns:1fr;gap:3px;margin-bottom:10px}.fl,.ci-lbl{font-size:12px}.doc-meta,.bt,.tw{font-size:12px}
   .mx,[aria-label="Cerrar"]{min-width:44px;min-height:44px}
   .cobro-head{display:grid!important;grid-template-columns:1fr auto;padding:12px 16px!important}
@@ -251,8 +256,54 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   .cobro-actions>div:last-child{grid-column:1/-1;text-align:center!important}.cobro-actions button{min-height:44px;padding:8px!important}
   #pagosControles{padding:14px 16px 22px!important}#abonoArea>div:first-child{display:grid!important;grid-template-columns:minmax(0,1fr) auto}.monto-input-grande{min-width:0}
   .ft-box{width:100%;max-width:100%;flex-direction:column;align-items:flex-start;gap:8px}.ft-contact{margin-left:0;padding-left:0;border-left:0;display:flex;flex-wrap:wrap;gap:8px 14px}
-  .rem-i,.cobro-row{align-items:flex-start;flex-wrap:wrap}.cobro-row .cobro-saldo{margin-left:auto}.modal .btn{min-height:44px;white-space:normal;text-align:center}
+  /* Info a la izquierda, monto a la derecha, y los botones de accion (icono
+     solo) en su PROPIA fila -- así nunca se encima nada, sin importar cuánto
+     mida el folio/vencimiento en cada celular. */
+  /* cobro-row ahora es una pila simple (cabecera folio+iconos, cliente,
+     etiquetas, monto) -- ver .cobro-row-top más abajo para la cabecera. */
+  .cobro-row{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:0!important}
+  .cobro-saldo{text-align:right;font-weight:800}
+  /* Historial: folio + iconos en la misma fila de arriba (esquina sup. der.);
+     Cobros: mismo trato via .cobro-row-top en el JS. Todo compacto: menos
+     padding vertical entre lineas, iconos chicos. */
+  .rem-i{display:flex!important;flex-direction:column;align-items:stretch;row-gap:4px;padding:10px 12px!important}
+  .rem-i-hd,.cobro-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .rem-i-side{display:flex;justify-content:flex-end}
+  .rem-i-top{display:flex;align-items:center;gap:6px}
+  .rem-i-actions,.cobro-row-actions{display:flex;gap:5px;flex-shrink:0}
+  .rem-i-actions .btn,.cobro-row-actions .cobro-btn{width:26px;height:26px;min-height:26px!important;padding:0!important;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  .cobro-row{padding:10px 12px!important;row-gap:4px!important}
+  .modal .btn{min-height:44px;white-space:normal;text-align:center}
+  /* Firma: landscape forzado -- el celular sigue en vertical pero el
+     recuadro de firma ocupa toda la pantalla "acostado" para que el
+     cliente tenga espacio real para firmar con el dedo. */
+  /* Firma: modal casi de pantalla completa (SIN rotar -- rotar ocultaba el
+     texto y la firma se veía de lado) con un lienzo mucho más grande para
+     que el cliente tenga espacio real al firmar. */
+  #ovFirma{align-items:center!important;padding:8px!important}
+  #firmaModalBox{
+    width:96vw!important;height:88vh!important;max-width:none!important;max-height:none!important;
+    padding:14px!important;border-radius:14px!important;
+  }
+  #firmaCanvas{min-height:56vh!important}
+  .qty-stepper button{width:34px;height:34px;font-size:18px}
+  .qty-stepper{grid-template-columns:34px minmax(56px,1fr) 34px}
 }
+@media(orientation:landscape) and (max-width:900px){
+  #firmaModalBox{width:96vw!important;height:92vh!important;max-width:none!important;max-height:none!important;padding:10px!important}
+  #firmaCanvas{min-height:64vh!important}
+}
+@media(max-width:900px){
+  /* Boton manual 🔄 -- diseño horizontal propio (nada se gira/transforma):
+     cabecera compacta arriba, lienzo ancho y bajo, botones en fila abajo. */
+  #firmaModalBox.girado{
+    width:94vw!important;height:62vh!important;max-width:none!important;max-height:none!important;
+    padding:12px!important;gap:8px!important;flex-direction:column!important;
+  }
+  #firmaModalBox.girado #firmaCanvas{flex:1!important;width:100%!important;height:auto!important;min-height:0!important}
+  #firmaModalBox.girado .firma-btns{flex-direction:row!important}
+}
+
 @media(max-width:480px){
   .page{padding:0 6px}.doc-hd{padding:14px 12px;gap:8px}.logo-wrap{max-width:48%}.logo-wrap img{max-width:100%;height:auto!important}
   .card,.lb{padding:14px 12px}.empresa-grid{grid-template-columns:1fr!important}.empresa-actions,.config-actions{display:grid!important;grid-template-columns:1fr!important}.empresa-actions .btn,.config-actions .btn{width:100%}
@@ -320,7 +371,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   .doc-hd{flex-direction:row;align-items:center;height:auto;padding:6mm 16px 3mm 16px;gap:12px}
   .logo-wrap{height:50px;flex-shrink:0}
   .logo-wrap img{max-height:50px}
-  .doc-right{text-align:right;flex:1}
+  .doc-right{text-align:right;flex:1!important;padding-right:0!important}
   .doc-tipo{font-size:14px}
   .doc-folio{font-size:17px}
   .doc-meta{flex-direction:column;gap:2px;align-items:flex-end;font-size:10px}
@@ -331,10 +382,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
      botón, en pantallas chicas el menú se centra en la pantalla como un popup
      de verdad (mismo trato que los demás modales .ov de esta app) -- así no
      depende de ningún cálculo de posición que pueda volver a fallar. */
-  .menu-mas{top:50%!important;left:50%!important;right:auto!important;
-    transform:translate(-50%,-50%);width:min(260px,calc(100vw - 48px));min-width:unset}
+  .menu-mas{
+    top:0!important;bottom:calc(68px + env(safe-area-inset-bottom,0px))!important;left:0!important;right:0!important;
+    transform:none;width:auto!important;min-width:unset;max-height:none;height:auto;
+    overflow-y:auto;border-radius:0;padding:14px 12px;background:var(--bg);
+    box-shadow:none;z-index:300
+  }
   .menu-mas-grp button{padding:14px 16px;font-size:14px;min-height:48px}
-  #menuMasBackdrop.open{display:block}
+  #menuMasBackdrop{display:none!important}
 
   /* ── Tabla de renglones: tarjetas apiladas en vez de scroll horizontal ──────
      2026-07-21: en iPhone la tabla de 8 columnas no cabía -- código y
@@ -378,15 +433,16 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   .td-cl .ti.cl{font-size:13px;font-family:ui-monospace,monospace;text-align:left}
   .items-table tbody td.td-desc{order:2;grid-column:1/-1;text-align:left}
   .items-table tbody td.td-desc::before{display:none}
-  .items-table tbody td.td-c{order:3;grid-column:1;text-align:left;align-self:end}
-  .items-table tbody td.td-r{order:4;grid-column:2;text-align:left;align-self:end;padding-right:40px}
+  .items-table tbody td.td-c{order:3;grid-column:1;text-align:left;align-self:start}
+  .items-table tbody td.td-r{order:4;grid-column:2;text-align:left;align-self:start;padding-right:40px}
+  .items-table tbody td.td-r .ti{border:1px solid var(--border);border-radius:8px;height:34px;min-height:34px!important;text-align:right;padding:0 8px}
   .items-table .td-iva{order:5;grid-column:1/-1} /* visible solo en cotización -- en remisión sigue display:none (línea 143) */
   .items-table tbody td.td-imp{order:1;grid-column:2;text-align:right;align-self:center;font-size:17px;font-weight:800;color:var(--green)}
   .items-table tbody td.td-imp::before{display:none}
   .items-table tbody td.td-del{order:9;position:absolute;right:10px;bottom:10px;padding:0;border:none;margin:0;text-align:right;width:auto}
 
   /* Áreas táctiles más grandes */
-  .del-btn{width:36px;height:36px;font-size:15px}
+  .del-btn{width:30px;height:30px;min-height:30px!important;font-size:13px}
   .add-row{padding:14px;font-size:13px;min-height:48px}
   .ti{min-height:38px;font-size:16px}
   /* font-size:16px en inputs/selects evita que iOS Safari haga ZOOM automático al
@@ -445,10 +501,27 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   /* Modales */
   .ov{padding:6px;align-items:flex-end}
   .modal{padding:18px 14px;border-radius:16px 16px 0 0;max-height:92vh;max-width:100%}
+  /* Historial/Cobros: pagina completa (no popup) -- se quedan por encima del
+     contenido pero DEBAJO del menu de pestañas (z-index menor), que sigue
+     visible y funcional para cambiar de sección sin tener que cerrar nada. */
+  #ovHist,#ovCobros{
+    position:fixed;inset:0 0 calc(68px + env(safe-area-inset-bottom,0px)) 0;
+    background:var(--bg);backdrop-filter:none;padding:0;
+    align-items:stretch;justify-content:stretch;z-index:300;
+  }
+  #ovHist .modal,#ovCobros .modal{
+    width:100%;max-width:100%;height:100%;max-height:100%;
+    border-radius:0;box-shadow:none;padding:14px 12px calc(14px + env(safe-area-inset-bottom,0px));
+  }
   .modal-title{font-size:15px}
   .fg input,.fg select,.fg textarea{padding:12px;font-size:16px;min-height:46px}
   .mi{font-size:15px;padding:12px 12px;min-height:46px}
   .rem-i{padding:13px 12px}
+  /* El boton fijo de abajo (mobileActionPrimary) ya hace lo mismo -- ocultar los
+     inline para no duplicar la accion en pantallas chicas. */
+  #btnRegistrar,#btnGenerarCotAbajo{display:none!important}
+  body:has(#ovHist.open) .mobile-action,body:has(#ovHistCot.open) .mobile-action,
+  body:has(#ovCobros.open) .mobile-action,body:has(#menuMas.open) .mobile-action{display:none!important}
 
   /* Sección inferior */
   .obs-ta{font-size:13px;min-height:200px}
@@ -497,7 +570,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .cobro-row{display:flex;align-items:center;padding:13px 14px;background:#fff;border-radius:12px;cursor:pointer;border:1px solid var(--border);box-shadow:0 1px 3px rgba(11,45,74,.05);gap:10px;transition:all .12s;margin-bottom:8px}
 .cobro-row:hover{border-color:#C0392B;background:#FDECEA;box-shadow:0 2px 8px rgba(192,57,43,.1)}
 .cobro-saldo{font-weight:800;color:#C0392B;font-size:15px;white-space:nowrap}
-.cobro-btn{padding:7px 14px;background:#C0392B;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.cobro-btn{border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .cobro-btn:hover{background:#a93226}
 /* WhatsApp offline */
 .wa-btn{width:100%;justify-content:center;padding:11px;font-size:13px;font-weight:700;border-radius:10px;background:#25D366;color:#fff;border:none;margin-top:10px;gap:7px}
@@ -518,138 +591,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 /* Ajustes finales: después de los estilos heredados para que ganen en móvil. */
 @media(max-width:780px),(max-height:500px){
   .btn,.ti,.ci-val input,.fv input,.fv select,.fg input,.fg select,.fg textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{min-height:44px}
-  .qty-stepper{display:grid;grid-template-columns:44px minmax(64px,1fr) 44px;gap:8px;align-items:center}.qty-stepper button{width:44px;height:44px}.qty-stepper input{width:100%!important;min-height:44px!important;text-align:center!important}
+  .qty-stepper{display:grid;grid-template-columns:34px minmax(56px,1fr) 34px;gap:8px;align-items:center}.qty-stepper button{width:34px;height:34px}.qty-stepper input{width:100%!important;min-height:38px!important;text-align:center!important}
   .del-btn{width:44px;height:44px}.cobro-btn,.anular-btn,#btnRedondeo,#btnVerUtil,#btnAgregarFirma{min-height:44px}.ch .sbtn{min-height:44px}
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   FASE 1 MÓVIL — 2026-09-15
-   Puerto literal de la propuesta (pantallas 1a / 1b / barra de acción).
-   Solo estilos, solo en pantallas ≤780px. Escritorio e impresión intactos.
-   Cubre: encabezado con segmentado de modo, tarjeta de partida, barra de
-   acción fija y pestañas inferiores.
-   ═══════════════════════════════════════════════════════════════════════════ */
-@media(max-width:780px),(max-height:500px){
-  body{padding-bottom:calc(186px + env(safe-area-inset-bottom,0px))}
-
-  /* ── Encabezado: marca · chip de estado · segmentado Remisión/Cotización ── */
-  .tb{padding:8px 14px 10px;gap:8px;align-items:center;flex-wrap:wrap}
-  .tb-brand{font-size:14px;font-weight:700}
-  .tb-tabs{order:3;width:100%;height:auto;margin:0;gap:3px;align-items:stretch;
-    background:rgba(255,255,255,.09);border-radius:11px;padding:3px}
-  .tb-tab{flex:1;min-height:40px;padding:0;border:none;border-radius:9px;
-    font-size:13.5px;font-weight:700;color:rgba(255,255,255,.7)}
-  .tb-tab.on{background:#fff;color:var(--navy);border-bottom-color:transparent}
-  #badgePendientes{order:2;margin-left:auto;max-width:44vw;font-size:10.5px;font-weight:700;
-    border-radius:999px;padding:5px 10px;background:rgba(76,175,130,.14);
-    border:1px solid rgba(76,175,130,.35);color:#4CAF82}
-
-  /* ── Tarjeta de partida: cantidad | descripción+código+precio | importe ──
-     Misma estructura de celdas (data-label), solo cambia la rejilla. */
-  .items-table tbody tr{grid-template-columns:56px minmax(0,1fr) auto;gap:4px 10px;
-    padding:12px 13px 12px 10px;border-left:3px solid var(--green);border-radius:13px;margin-bottom:9px}
-  .items-table tbody td.td-c{order:1;grid-column:1;grid-row:1/span 2;align-self:start;padding:0}
-  .items-table tbody td.td-c::before{display:none}
-  .td-c .qty-stepper{display:grid!important;grid-template-columns:24px 24px;gap:4px;width:52px}
-  .td-c .qty-stepper input{grid-column:1/-1;width:52px!important;height:46px;min-height:46px;
-    border:none!important;border-radius:11px;background:var(--green-light)!important;
-    color:var(--green);font-size:17px;font-weight:800;text-align:center;padding:0!important}
-  .td-c .qty-stepper button{width:24px;height:30px;min-width:0;padding:0;font-size:15px;
-    border-radius:8px;background:var(--bg);color:var(--navy);border:1px solid var(--border)}
-  .items-table tbody td.td-desc{order:2;grid-column:2;grid-row:1;align-self:center}
-  .items-table tbody td.td-desc .ti{font-size:13.5px;font-weight:600;min-height:34px}
-  .items-table tbody td.td-imp{order:3;grid-column:3;grid-row:1;align-self:center;
-    font-size:16px;font-weight:800;color:var(--navy)}
-  .items-table tbody td.td-cl{order:4;grid-column:2;grid-row:2;align-self:start}
-  .items-table tbody td.td-cl .ti.cl{font-size:12px;color:var(--muted)}
-  .items-table tbody td.td-r{order:5;grid-column:3;grid-row:2;width:118px;
-    padding-right:34px;text-align:right;align-self:start}
-  .items-table tbody td.td-r::before{display:block;content:'$ c/u';font-size:9px}
-  .items-table tbody td.td-r .ti{text-align:right;font-size:13px;min-height:34px}
-  .items-table .td-iva{order:6;grid-column:2/-1;grid-row:3}
-  .items-table tbody td.td-del{right:8px;bottom:9px}
-
-  /* ── Barra de acción fija: total · PDF · acción principal ── */
-  .mobile-action{grid-template-columns:minmax(0,1fr) 52px minmax(116px,1.05fr);gap:10px;
-    left:0;right:0;bottom:calc(92px + env(safe-area-inset-bottom,0px));
-    background:#fff;border-top:1px solid var(--border);border-radius:0;padding:10px 16px;
-    box-shadow:0 -4px 16px rgba(11,45,74,.07)}
-  .mobile-action-total span{font-size:9.5px;font-weight:700;letter-spacing:1.4px;
-    color:var(--muted);opacity:1}
-  .mobile-action-total strong{font-size:17px;font-weight:800;color:var(--navy)}
-  .mobile-action-pdf{min-height:52px;border-radius:13px;background:#fff;color:var(--navy);
-    border:1.5px solid var(--border)}
-  .mobile-action-primary{min-height:52px;border-radius:13px;font-size:14.5px;font-weight:800;
-    padding:8px 10px;background:var(--green)}
-
-  /* ── Pestañas inferiores ── */
-  .mobile-nav{padding:8px 8px calc(22px + env(safe-area-inset-bottom,0px));gap:2px;
-    background:rgba(255,255,255,.97)}
-  .mobile-nav button{min-height:52px;border-radius:12px;gap:4px;color:#8A8A8E}
-  .mobile-nav button span{font-size:19px}
-  .mobile-nav button small{font-size:10.5px;font-weight:700}
-  .mobile-nav button[aria-current=page]{background:var(--green-light);color:var(--green)}
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   FASE 1.1 MÓVIL — 2026-09-15 (corrige el acomodo de la tarjeta de partida y
-   de los datos del cliente). Solo estilos, solo ≤780px.
-   ═══════════════════════════════════════════════════════════════════════════ */
-@media(max-width:780px),(max-height:500px){
-  /* ── Tarjeta de partida: 2 columnas · 3 renglones ──────────────────────
-     descripción | importe
-     código      | precio unitario
-     − cantidad + | ✎ ✕                                                   */
-  .items-table tbody tr{grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;
-    padding:12px 13px;border-left:3px solid var(--green);border-radius:13px}
-  .items-table tbody td.td-desc{order:1;grid-column:1;grid-row:1;align-self:center}
-  .items-table tbody td.td-desc .ti{font-size:14px;font-weight:600;min-height:36px}
-  .items-table tbody td.td-imp{order:2;grid-column:2;grid-row:1;align-self:center;
-    text-align:right;font-size:16px;font-weight:800;color:var(--navy);white-space:nowrap}
-  .items-table tbody td.td-cl{order:3;grid-column:1;grid-row:2;align-self:center}
-  .items-table tbody td.td-cl .ti.cl{font-size:12.5px;color:var(--muted);min-height:34px}
-  .items-table tbody td.td-r{order:4;grid-column:2;grid-row:2;width:122px;
-    padding-right:0;text-align:right;align-self:center}
-  .items-table tbody td.td-r::before{display:block;content:'Precio unitario';
-    font-size:9px;text-align:right}
-  .items-table tbody td.td-r .ti{text-align:right;font-size:13.5px;min-height:34px;padding-right:2px}
-  .items-table tbody td.td-r .no-print{justify-content:flex-end!important}
-  /* Cantidad: fila horizontal − [n] + de 44px, nunca vertical */
-  .items-table tbody td.td-c{order:5;grid-column:1;grid-row:3;align-self:center;padding:0}
-  .items-table tbody td.td-c::before{display:none}
-  .td-c .qty-stepper{display:grid!important;grid-template-columns:44px 64px 44px;
-    gap:6px;width:auto;align-items:center}
-  .td-c .qty-stepper button{width:44px;height:44px;min-width:44px;padding:0;font-size:20px;
-    font-weight:800;border-radius:11px;background:var(--bg);color:var(--navy);
-    border:1px solid var(--border)}
-  .td-c .qty-stepper input{width:64px!important;height:44px;min-height:44px;
-    border:none!important;border-radius:11px;background:var(--green-light)!important;
-    color:var(--green);font-size:17px;font-weight:800;text-align:center;padding:0!important}
-  /* Acciones de la tarjeta: editar y eliminar, mismo tamaño, abajo a la derecha */
-  .items-table tbody td.td-del{position:static;order:6;grid-column:2;grid-row:3;
-    display:flex;gap:8px;justify-content:flex-end;align-items:center;padding:0;width:auto}
-  .items-table tbody td.td-del::before{display:none}
-  .del-btn,.edit-btn{width:44px;height:44px;min-width:44px;border-radius:11px;font-size:16px;
-    display:inline-flex;align-items:center;justify-content:center;padding:0}
-  .edit-btn{border:1px solid var(--border);background:var(--white);color:var(--navy);
-    font-family:inherit;cursor:pointer}
-  .items-table .td-iva{order:7;grid-column:1/-1;grid-row:4}
-
-  /* ── Datos del cliente y detalles: campo con caja, etiqueta arriba ────── */
-  .card .ch{flex-wrap:wrap;row-gap:9px;align-items:center;margin-bottom:12px}
-  .card .ch .sbtn{flex:1 1 calc(50% - 5px);margin-left:0;min-height:42px;padding:0 10px;
-    font-size:12px;display:inline-flex;align-items:center;justify-content:center}
-  .card .fr{display:block;margin-bottom:11px}
-  .card .fl{display:block;font-size:10px;font-weight:700;letter-spacing:1.1px;
-    text-transform:uppercase;color:var(--muted);margin-bottom:5px}
-  .card .fv{display:block;font-size:15px}
-  .card .fv input,.card .fv select{width:100%;border:1.5px solid var(--border);
-    border-radius:11px;background:var(--white);padding:11px 12px;min-height:46px;font-size:16px}
-  .card .fv input:hover,.card .fv select:hover{background:var(--white)}
-  .card .cs{gap:10px;margin-top:10px;padding-top:12px}
-  .card .ci{flex:1 1 100%;align-items:center}
-  .card .ci-val input{width:100%;border:1.5px solid var(--border);border-radius:10px;
-    padding:9px 11px;background:var(--white)}
 }
 </style>
 <!-- H5: jsPDF se sirve LOCAL (vendor/) para que los PDF funcionen sin internet y no
@@ -727,9 +670,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   <button id="mobileActionPrimary" class="mobile-action-primary" type="button" onclick="mobileAccionPrincipal()">Registrar remisión</button>
 </div>
 <nav id="mobileNav" class="mobile-nav no-print" aria-label="Navegación principal">
-  <button id="mNavNueva" type="button" onclick="mobileNueva()"><span>＋</span><small>Nueva</small></button>
+  <button id="mNavNueva" type="button" onclick="mobileNueva()"><span style="font-size:22px;font-weight:800">＋</span><small>Nueva</small></button>
   <button id="mNavHistorial" type="button" onclick="mobileHistorial()"><span>📋</span><small>Historial</small></button>
-  <button id="mNavNegocio" type="button" onclick="verNegocio()"><span>📊</span><small>Negocio</small></button>
+  <button id="mNavCotizar" type="button" onclick="mobileIrRemisiones()"><span>📄</span><small>Remisiones</small></button>
   <button id="mNavCobros" type="button" onclick="verCobros()"><span>💰</span><small>Cobros</small></button>
   <button id="mNavMas" type="button" onclick="_toggleMenuMas()"><span>☰</span><small>Más</small></button>
 </nav>
@@ -799,11 +742,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 	
 	<div class="doc-right">
       <div class="doc-tipo">Remisión</div>
-      <div style="display:inline-flex;align-items:center;gap:6px">
+      <div style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;white-space:nowrap">
         <div class="doc-folio" id="folioBadge" contenteditable="true" spellcheck="false" title="Clic para editar"
              oninput="syncFolio(this.innerText.trim())"
              onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">REM-0001</div>
-        <button class="no-print" onclick="incrementarFolio()" title="Siguiente folio" aria-label="Siguiente folio" style="width:44px;height:44px;border-radius:50%;border:1.5px solid var(--green);background:var(--green-light);color:var(--green);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0">+</button>
+        <button class="no-print" onclick="incrementarFolio()" title="Siguiente folio" aria-label="Siguiente folio" style="width:20px;height:20px;border-radius:50%;border:1.5px solid var(--green);background:var(--green-light);color:var(--green);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0">+</button>
       </div>
       <div class="doc-meta">
         <div class="doc-meta-i"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span id="fechaDisp">—</span></div>
@@ -813,7 +756,15 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   </div>
   <div class="cards">
     <div class="card">
-      <div class="ch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Datos del Cliente<button class="sbtn" onclick="toggleCPanel()">🔍 Buscar cliente</button><button class="sbtn" onclick="abrirMasDatosCliente()" title="RFC, contacto, correo, persona moral">➕ Más datos</button><button class="sbtn" id="btnToggleClientDetail" onclick="toggleClientDetail()" style="display:none">▾ Más campos</button></div>
+      <div class="ch" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Datos del Cliente</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <button class="sbtn" onclick="toggleCPanel()" title="Buscar cliente">🔍 Buscar</button>
+          <button class="sbtn" onclick="abrirMasDatosCliente()" title="RFC, contacto, correo, persona moral">➕</button>
+          <button class="sbtn" id="btnToggleClientDetail" onclick="toggleClientDetail()" style="display:none">▾</button>
+        </div>
+      </div>
       <!-- H-2: RFC/contacto/correo/persona moral se capturan en el popup "Más datos"
            (no ensucian el formulario compacto), pero SÍ viajan con la remisión --
            guardarEnDrive() los lee de aquí para registrarDatosCliente(). -->
@@ -858,7 +809,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
       <th style="width:130px">Código</th>
       <th>Descripción <span id="btnModoRegalo" class="no-print" onclick="toggleModoRegalo(event)" title="Actívalo cuando vayas a dar un regalo: aparece la opción 🎁 bajo cada precio" style="float:right;cursor:pointer;font-size:10px;font-weight:700;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:11px;user-select:none">🎁 Regalo</span></th>
       <th class="r" style="width:120px">Precio Unit.</th>
-      <th class="c th-iva" style="width:80px" onclick="toggleIvaPopup(event)">IVA %<div class="iva-popup" id="ivaPopup"><div class="iva-opt sel" onclick="setIvaGlobal(0,event)">0%</div><div class="iva-opt" onclick="setIvaGlobal(8,event)">8%</div><div class="iva-opt" onclick="setIvaGlobal(16,event)">16%</div></div></th>
+      <th class="c th-iva" style="width:80px" onclick="toggleIvaPopup(event)">IVA %<div class="iva-popup" id="ivaPopup"><div class="iva-opt" onclick="setIvaGlobal(0,event)">0%</div><div class="iva-opt" onclick="setIvaGlobal(8,event)">8%</div><div class="iva-opt" onclick="setIvaGlobal(16,event)">16%</div></div></th>
       <th class="r" style="width:110px">Importe</th>
       <th class="no-print" style="width:36px"></th>
     </tr></thead>
@@ -880,7 +831,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <div class="lb">
       <div class="bt">💰 Totales</div>
       <div class="tl"><span class="tll">Subtotal</span><span class="tlv" id="tSub">$0.00</span></div>
-      <div class="tl"><span class="tll" style="cursor:pointer;user-select:none;position:relative" onclick="toggleIvaPopup2(event)">IVA <span id="ivaLbl" style="font-size:10px;color:var(--green);font-weight:600">0%</span><div class="iva-popup" id="ivaPopup2"><div class="iva-opt sel" onclick="setIvaGlobal(0,event)">0%</div><div class="iva-opt" onclick="setIvaGlobal(8,event)">8%</div><div class="iva-opt" onclick="setIvaGlobal(16,event)">16%</div></div></span><span class="tlv" id="tIva">$0.00</span></div>
+      <div class="tl"><span class="tll" id="ivaWrap" style="cursor:pointer;user-select:none;position:relative;font-size:14px;font-weight:700;color:var(--text)" onclick="toggleIvaPopup2(event)">IVA <span id="ivaLbl" style="font-size:14px;font-weight:700;color:#b45309">— elegir</span><div class="iva-popup" id="ivaPopup2"><div class="iva-opt" onclick="setIvaGlobal(0,event)">0%</div><div class="iva-opt" onclick="setIvaGlobal(8,event)">8%</div><div class="iva-opt" onclick="setIvaGlobal(16,event)">16%</div></div></span><span class="tlv" id="tIva">$0.00</span></div>
       <div class="tl"><span class="tll">Descuento</span><span class="tlv" id="tDesc">$0.00</span></div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
         <button id="btnRedondeo" onclick="toggleRedondeoRem()" class="no-print" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:6px;font-size:10px;color:var(--muted);cursor:pointer;padding:3px 9px;font-family:inherit">🔢 Redondear</button>
@@ -906,7 +857,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         <img id="firmaImg" style="display:none;max-height:62px;max-width:100%;object-fit:contain" alt="Firma">
       </div>
       <div style="display:flex;gap:8px;margin-top:6px" id="firmaBtns">
-        <button class="btn no-print" style="font-size:11px;padding:4px 10px;background:var(--green-light);color:var(--green);border:none;border-radius:6px" onclick="abrirFirma()">✍️ Firmar</button>
+        
         <button class="btn no-print" id="btnBorrarFirma" style="font-size:11px;padding:4px 10px;background:#fff0f0;color:#c0392b;border:none;border-radius:6px;display:none" onclick="borrarFirma()">🗑️ Borrar</button>
       </div>
     </div>
@@ -940,14 +891,17 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 
   <!-- Modal pad de firma -->
   <div class="ov" id="ovFirma" style="z-index:900">
-    <div style="background:#fff;border-radius:16px;padding:20px;max-width:560px;width:calc(100% - 32px);display:flex;flex-direction:column;gap:12px">
+    <div id="firmaModalBox" style="background:#fff;border-radius:16px;padding:20px;max-width:560px;width:calc(100% - 32px);display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <div style="font-weight:700;font-size:15px;color:var(--navy)">✍️ Firma del cliente</div>
-        <button aria-label="Cerrar" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)" onclick="closeOv('ovFirma')">✕</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button aria-label="Girar a horizontal" title="Girar a horizontal / vertical" style="background:var(--green-light);border:none;border-radius:8px;font-size:16px;cursor:pointer;color:var(--green);width:34px;height:34px" onclick="toggleGiroFirma()">🔄</button>
+          <button aria-label="Cerrar" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)" onclick="closeOv('ovFirma')">✕</button>
+        </div>
       </div>
       <div style="font-size:12px;color:var(--muted)">Firma con el dedo sobre el recuadro blanco</div>
-      <canvas id="firmaCanvas" style="border:2px solid var(--navy);border-radius:10px;width:100%;touch-action:none;background:#fff;cursor:crosshair" height="220"></canvas>
-      <div style="display:flex;gap:10px">
+      <canvas id="firmaCanvas" style="border:2px solid var(--navy);border-radius:10px;width:100%;flex:1;touch-action:none;background:#fff;cursor:crosshair" height="220"></canvas>
+      <div style="display:flex;gap:10px" class="firma-btns">
         <button class="btn btn-g" style="flex:1;justify-content:center;padding:12px;font-size:14px" onclick="limpiarFirmaCanvas()">🗑️ Limpiar</button>
         <button class="btn btn-p" style="flex:1;justify-content:center;padding:12px;font-size:14px;font-weight:700" onclick="confirmarFirma()">✅ Confirmar firma</button>
       </div>
@@ -1359,7 +1313,7 @@ let PRODUCTOS=[];
 // ordenado por fecha ascendente. Viene del historial de compras REAL del ERP
 // (services/publicar.py::csv_historial_precios), no de un CSV de proveedor.
 let HISTORIAL_PRECIOS=new Map();
-let items=[],remisiones=[],_id=1,saveTimer=null,cPanelOpen=false,ivaGlobal=0;
+let items=[],remisiones=[],_id=1,saveTimer=null,cPanelOpen=false,ivaGlobal=null;
 let remActualId=null;
 // Folio de la cotización de origen para la PRÓXIMA remisión nueva que se cree
 // (solo cuando viene de "Convertir a Remisión"). Se limpia en _limpiarFormulario
@@ -2748,7 +2702,7 @@ async function procesarColaPDF(){
 function addRow(d={}){if(_formBloqueado)return;items.push({_id:_id++,qty:'',clave:'',desc:'',precio:'',iva:ivaGlobal,...d});renderTable();calcTotals()}
 function delRow(id){items=items.filter(i=>i._id!==id);renderTable();calcTotals()}
 function toggleIvaPopup(e){e.stopPropagation();document.getElementById('ivaPopup').classList.toggle('open')}
-function setIvaGlobal(v,e){if(e)e.stopPropagation();ivaGlobal=v;items.forEach(it=>it.iva=v);const p2=document.getElementById('ivaPopup2');if(p2)p2.classList.remove('open');document.querySelectorAll('.iva-opt').forEach(o=>o.classList.toggle('sel',parseInt(o.textContent)===v));const lbl=document.getElementById('ivaLbl');if(lbl)lbl.textContent=v+'%';renderTable();calcTotals();}
+function setIvaGlobal(v,e){if(e)e.stopPropagation();ivaGlobal=v;items.forEach(it=>it.iva=v);const p2=document.getElementById('ivaPopup2');if(p2)p2.classList.remove('open');document.querySelectorAll('.iva-opt').forEach(o=>o.classList.toggle('sel',parseInt(o.textContent)===v));const lbl=document.getElementById('ivaLbl');if(lbl){lbl.textContent=v+'%';lbl.style.color='var(--green)';}renderTable();calcTotals();}
 function toggleIvaPopup2(e){e.stopPropagation();document.getElementById('ivaPopup2').classList.toggle('open');}
 document.addEventListener('click',function(){const p=document.getElementById('ivaPopup');if(p)p.classList.remove('open');const p2=document.getElementById('ivaPopup2');if(p2)p2.classList.remove('open');});
 function renderTable(){
@@ -2774,7 +2728,7 @@ function renderTable(){
 </td>
 <td class="td-c td-iva" data-label="IVA">${it.regalo?'—':(it.iva||0)+'%'}</td>
 <td class="td-imp" data-label="Importe" id="imp${it._id}">${_impCellHtml(it)}</td>
-<td class="td-del no-print"><button class="edit-btn no-print" aria-label="Editar partida" onclick="abrirPartidaMovil(${it._id})">✎</button><button class="del-btn" aria-label="Eliminar producto" onclick="delRow(${it._id})">✕</button></td>`;
+<td class="td-del no-print"><button class="del-btn" aria-label="Eliminar producto" onclick="delRow(${it._id})">✕</button></td>`;
     if(it.regalo) tr.style.background='#F2FBF6';
     if(_formBloqueado){
       tr.querySelectorAll('.ti').forEach(el=>el.disabled=true);
@@ -3390,7 +3344,7 @@ function guardarYRegistrar(){
   if(activos.length){registrarRemision();}
   else{guardar();toast('Borrador guardado','ok');}
 }
-function autosave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>guardarSeguro('r_draft',JSON.stringify(snap())),700)}
+function autosave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>guardarSeguro('r_draft',JSON.stringify(snap())),700);_actualizarIndicadorDatosCliente();}
 function loadDraft(){
   // Siempre empieza limpio — los datos guardados están en Historial
   localStorage.removeItem('r_draft');
@@ -4359,6 +4313,7 @@ function _venceEn(fechaTxt,condicionesPago){
   return Math.round((f-hoy)/86400000); // negativo = ya vencido
 }
 function verCobros(){
+  _cerrarOverlaysMobile?.();
   bajarCobros(); // intenta refrescar desde el servidor (si hay señal); re-renderiza al volver
   const todas=_cobrosCombinados();
   const filtroOrigen=document.getElementById('cobrosFiltroOrigen');
@@ -4387,19 +4342,20 @@ function verCobros(){
         (!c._local?'<span class="estado-badge" style="background:#e0e7ff;color:#3730a3">📱 otro dispositivo</span>':'')+_tagVenc;
       const idCobro=c.id||c.folio;
       const esLocal=!!c._local;
-      const accion=`<button class="cobro-btn" onclick="event.stopPropagation();abrirPagoRapido('${idCobro}','${c.folio}',${esLocal})">💰 Cobrar</button>`;
-      const wa=`<button class="cobro-btn" style="background:#25D366" title="Recordatorio por WhatsApp" onclick="event.stopPropagation();cobrarWA('${escAttr(c.folio)}')">📲</button>`;
+      const accion=`<button class="cobro-btn" title="Cobrar" style="background:#e8f5ef;color:#1C6E4A;border:1px solid #a7f3d0" onclick="event.stopPropagation();abrirPagoRapido('${idCobro}','${c.folio}',${esLocal})">💰</button>`;
+      const wa=`<button class="cobro-btn" style="background:#e6f9ee;color:#128c4a;border:1px solid #bbf0d1" title="Recordatorio por WhatsApp" onclick="event.stopPropagation();cobrarWA('${escAttr(c.folio)}')">📲</button>`;
       const traza=!String(c.folio||'').startsWith('TMP-')
-        ?`<button class="cobro-btn" style="background:#7c3aed" title="Trazabilidad" onclick="event.stopPropagation();abrirTrazabilidad('${escAttr(c.folio)}')">🔎</button>`
+        ?`<button class="cobro-btn" style="background:#f3f0ff;color:#5b21b6;border:1px solid #ddd6fe" title="Trazabilidad" onclick="event.stopPropagation();abrirTrazabilidad('${escAttr(c.folio)}')">🔎</button>`
         :'';
       return `
       <div class="cobro-row">
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:700;color:var(--navy);font-size:13px">${c.folio} ${tags}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.cliente)} · ${c.fecha}</div>
+        <div class="cobro-row-top">
+          <div style="font-weight:700;color:var(--navy);font-size:13px">${c.folio}</div>
+          <div class="cobro-row-actions">${wa}${accion}${traza}</div>
         </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.cliente)} · ${c.fecha}</div>
+        ${tags?`<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px">${tags}</div>`:''}
         <div class="cobro-saldo">${fmt(c.saldo)} MXN</div>
-        ${wa}${accion}${traza}
       </div>`;
     }).join('');
   }
@@ -4764,7 +4720,7 @@ function renderRems(list){
     const tieneItems=!esServidor&&r.data&&(r.data.items||[]).length>0;
     const etiqueta=(esServidor?'<span style="font-size:9px;background:#e0e7ff;color:#3730a3;border-radius:4px;padding:1px 5px;font-weight:600">☁️ servidor</span>':'')+_origenBadge(r.origen);
     const accionCobrar=r.estado!=='pagado'&&r.estado!=='cancelada'
-      ?`<button class="btn" style="padding:4px 8px;font-size:11px;background:#e8f5ef;color:#1C6E4A;border:1px solid #a7f3d0;border-radius:6px" onclick="event.stopPropagation();abrirPagoRapido('${r.id||r.folio}','${r.folio}',${!esServidor})">💰 Cobrar</button>`
+      ?`<button class="btn" title="Cobrar" style="padding:4px 8px;font-size:11px;background:#e8f5ef;color:#1C6E4A;border:1px solid #a7f3d0;border-radius:6px" onclick="event.stopPropagation();abrirPagoRapido('${r.id||r.folio}','${r.folio}',${!esServidor})">💰</button>`
       :'';
     const accionModificar=tieneItems&&r.estado!=='cancelada'
       ?`<button class="btn" style="padding:4px 8px;font-size:11px;background:#e0f0ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:6px" onclick="event.stopPropagation();modificarRem('${r.id}')" title="Modificar">✏️</button>`
@@ -4783,16 +4739,18 @@ function renderRems(list){
     const cantStr=cant!==null?(cant+' art.'):'';
     const detSuffix=[cantStr,r.fecha].filter(Boolean).join(' &middot; ');
     return`<div class="rem-i" ${onclick} style="${esServidor?'cursor:default':''}">
+      <div class="rem-i-hd">
+        <div class="rem-fo">${r.folio}</div>
+        <div class="rem-i-actions">${accionCobrar}${accionModificar}${accionCancelar}${accionTraza}</div>
+      </div>
+      ${etiqueta?`<div style="margin-top:2px">${etiqueta}</div>`:''}
       <div style="flex:1;min-width:0">
-        <div class="rem-fo">${r.folio} ${etiqueta}</div>
         <div class="rem-cl"><span style="cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();filtrarPorCliente('${escAttr(r.cliente)}');verHist()">${esc(r.cliente)}</span></div>
         <div style="font-size:10.5px;color:var(--muted);margin-top:1px"><span style="color:${saldoColor};font-weight:600">${saldoLabel}</span>${detSuffix?' &middot; '+detSuffix:''}</div>
         ${_pipelineHTML(r)}
       </div>
-      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-        ${_estadoBadge(r)}
-        <div class="rem-to">${fmt(r.total)} MXN</div>
-        ${accionCobrar}${accionModificar}${accionCancelar}${accionTraza}
+      <div class="rem-i-side">
+        <div class="rem-i-top">${_estadoBadge(r)}<div class="rem-to">${fmt(r.total)} MXN</div></div>
       </div>
     </div>`;
   }).join('');
@@ -5250,9 +5208,9 @@ function _limpiarFormulario(){
   // abrir una remisión nueva podía precargar artículos equivocados.
   _precargaItems=[];
   _actualizarBtnPrecarga('');
-  ivaGlobal=0; // Bug 11: resetear IVA a 0 en cada nueva remisión
-  document.querySelectorAll('.iva-opt').forEach(o=>o.classList.toggle('sel',parseInt(o.textContent)===0));
-  const lbl=document.getElementById('ivaLbl');if(lbl)lbl.textContent='0%';
+  ivaGlobal=null; // ahora arranca SIN elegir -- el usuario decide, no se asume 0%
+  document.querySelectorAll('.iva-opt').forEach(o=>o.classList.remove('sel'));
+  const lbl=document.getElementById('ivaLbl');if(lbl){lbl.textContent='— elegir';lbl.style.color='#b45309';}
   ['c_nombre','c_dir','c_cp','c_tel','c_rfc','c_email','c_contacto','c_persona_moral','obs'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
   const da=document.getElementById('d_asesor');if(da)da.selectedIndex=0;
   _mostrarTelAsesor('d_asesor','d_asesor_tel');
@@ -6860,6 +6818,12 @@ async function registrarTodo(){
     popupAlerta(_falta+'\n\n(Si un producto es cortesía, márcalo como 🎁 Regalo.)','📋 No se puede registrar todavía');
     return;
   }
+  if(ivaGlobal===null){
+    const wrap=document.getElementById('ivaWrap');
+    if(wrap){wrap.style.background='#FFE8E8';setTimeout(()=>{wrap.style.background=''},3000);}
+    toast('Elige el IVA (0%, 8% o 16%) antes de registrar','err',4000);
+    return;
+  }
 
   // 2026-09-10 (hallazgo 2, auditoría Cotizador): si se va a registrar un pago (pagado
   // completo o abono con monto), el método de pago YA NO puede quedar vacío y caer en
@@ -7698,12 +7662,19 @@ function toggleClientDetail(){
   const d=document.getElementById('clientDetail'), b=document.getElementById('btnToggleClientDetail');
   if(!d||!b)return;
   const open=d.classList.toggle('open');
-  b.textContent=open?'▴ Menos campos':'▾ Más campos';
+  b.textContent=open?'▴':'▾';
+}
+// Flecha "Mas campos" en rojo si Direccion/CP/Telefono estan vacios.
+function _actualizarIndicadorDatosCliente(){
+  const b=document.getElementById('btnToggleClientDetail');if(!b)return;
+  const falta=['c_dir','c_cp','c_tel'].some(id=>!(document.getElementById(id)?.value||'').trim());
+  b.classList.toggle('falta-datos',falta);
 }
 function _toggleMenuMas(){
   const m=document.getElementById('menuMas');if(!m)return;
   const bd=document.getElementById('menuMasBackdrop');
   if(m.classList.contains('open')){m.classList.remove('open');bd?.classList.remove('open');return;}
+  closeOv('ovHist');closeOv('ovHistCot');closeOv('ovCobros');
   // Bug iPhone (2026-07-21): la barra de arriba hace scroll horizontal en celular
   // (overflow-x:auto), y eso recorta cualquier hijo position:absolute que se
   // salga de su caja -- el menú "Más" quedaba invisible. En desktop (donde SÍ
@@ -7725,7 +7696,8 @@ function _cerrarMenuMas(){
 }
 document.addEventListener('click', e=>{
   const wrap=document.getElementById('tbMasWrap');
-  if(wrap && !wrap.contains(e.target)) _cerrarMenuMas();
+  const navBtn=document.getElementById('mNavMas');
+  if(wrap && !wrap.contains(e.target) && e.target!==navBtn && !navBtn?.contains(e.target)) _cerrarMenuMas();
 });
 function verRemisionDesdePago(){
   const id=_prId;
@@ -7880,13 +7852,36 @@ function toggleFirma(){
   sec.style.display=visible?'none':'flex';
   if(ico)ico.textContent=visible?'▼':'▲';
 }
+function toggleGiroFirma(){
+  const box=document.getElementById('firmaModalBox');if(!box)return;
+  box.classList.toggle('girado');
+  requestAnimationFrame(()=>{
+    const canvas=document.getElementById('firmaCanvas');
+    const prevImg=_firmaData;
+    canvas.width=canvas.clientWidth||500;
+    canvas.height=canvas.clientHeight||220;
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    _dibujarLineaFirma(ctx,canvas);
+    ctx.strokeStyle='#0B2D4A';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+    if(prevImg){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height);img.src=prevImg;}
+  });
+}function _dibujarLineaFirma(ctx,canvas){
+  ctx.save();
+  ctx.strokeStyle='#C7CDD6';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
+  const y=canvas.height*0.78;
+  ctx.beginPath();ctx.moveTo(canvas.width*0.06,y);ctx.lineTo(canvas.width*0.94,y);ctx.stroke();
+  ctx.restore();
+}
 function abrirFirma(){
   document.getElementById('ovFirma').classList.add('open');
   const canvas=document.getElementById('firmaCanvas');
-  // Ajustar width real al tamaño display
+  // Ajustar ancho y alto reales al tamaño mostrado.
   canvas.width=canvas.offsetWidth||500;
+  canvas.height=canvas.offsetHeight||220;
   const ctx=canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  _dibujarLineaFirma(ctx,canvas);
   ctx.strokeStyle='#0B2D4A';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
   // Si ya hay firma, mostrarla
   if(_firmaData){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height);img.src=_firmaData;}
@@ -7905,7 +7900,7 @@ function abrirFirma(){
 function limpiarFirmaCanvas(){
   const canvas=document.getElementById('firmaCanvas');
   const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);_dibujarLineaFirma(ctx,canvas);
 }
 function confirmarFirma(){
   const canvas=document.getElementById('firmaCanvas');
@@ -8366,119 +8361,30 @@ function _mobileEsCotizacion(){
   return !!sec&&sec.style.display!=='none';
 }
 function mobileNueva(){
+  _cerrarOverlaysMobile();
   if(_mobileEsCotizacion()){
     const activos=_cotItems.some(it=>it.clave||it.desc||(+it.qty>0));
     if(activos){popupConfirmar('La cotización en curso se descartará.','¿Nueva cotización?').then(ok=>{if(ok)_cotReset();});}
     else _cotReset();
   }else nuevaRem();
 }
-function mobileHistorial(){_mobileEsCotizacion()?verHistCot():verHist();}
-function mobileCambiarModo(){
-  if(_mobileEsCotizacion()){_activarModoRem();return;}
-  const conCaptura=items.some(it=>it.clave||it.desc||(+it.qty>0))||['c_nombre','c_dir','c_cp','c_tel'].some(id=>(document.getElementById(id)?.value||'').trim());
-  conCaptura?abrirCotizacion():_activarModoCot();
+function _cerrarOverlaysMobile(){closeOv('ovHist');closeOv('ovHistCot');closeOv('ovCobros');_cerrarMenuMas();}
+function mobileHistorial(){_cerrarOverlaysMobile();_mobileEsCotizacion()?verHistCot():verHist();}
+function mobileIrRemisiones(){
+  _cerrarOverlaysMobile();
+  if(_mobileEsCotizacion())_activarModoRem();
 }
 function mobileAccionPrincipal(){return _mobileEsCotizacion()?_confirmarAntesDeGenerarCot():registrarTodo();}
 function mobileDescargarPdf(){return _mobileEsCotizacion()?_descargarCotGenerada():descargarPDFSiRegistrado();}
-/* ═══════════════════════════════════════════════════════════════════════════
-   FASE 1.1 — HOJA DE EDICIÓN DE PARTIDA (celular)
-   Abre con el botón ✎ de cada tarjeta. No duplica lógica: escribe en items
-   igual que upd() y cierra con renderTable() + calcTotals() + autosave().
-   ═══════════════════════════════════════════════════════════════════════════ */
-let _partidaEnEdicion=null;
-function _partidaSheetEl(){
-  let ov=document.getElementById('ovPartida');
-  if(ov) return ov;
-  ov=document.createElement('div');
-  ov.id='ovPartida';ov.className='no-print';
-  ov.style.cssText='display:none;position:fixed;inset:0;z-index:960;background:rgba(11,45,74,.45);align-items:flex-end';
-  ov.innerHTML='<div style="width:100%;background:#fff;border-radius:22px 22px 0 0;padding:10px 16px calc(26px + env(safe-area-inset-bottom,0px));max-height:86vh;overflow-y:auto">'
-    +'<div style="width:44px;height:5px;border-radius:99px;background:#D8DCDE;margin:0 auto 14px"></div>'
-    +'<div style="display:flex;align-items:center;margin-bottom:12px"><div id="pzTitulo" style="font-size:16px;font-weight:800;color:var(--navy)">Partida</div>'
-    +'<button type="button" onclick="cerrarPartidaMovil()" style="margin-left:auto;width:40px;height:40px;border:none;border-radius:11px;background:var(--bg);color:var(--muted);font-size:15px;font-family:inherit">✕</button></div>'
-    +'<label style="display:block;font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Código</label>'
-    +'<input id="pzClave" type="text" placeholder="CÓDIGO" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:12px;padding:12px;font-family:ui-monospace,monospace;font-size:16px;min-height:48px;margin-bottom:11px">'
-    +'<label style="display:block;font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Descripción</label>'
-    +'<input id="pzDesc" type="text" placeholder="Descripción" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:12px;padding:12px;font-family:inherit;font-size:16px;font-weight:600;min-height:48px;margin-bottom:11px">'
-    +'<div style="display:flex;gap:9px;margin-bottom:11px">'
-      +'<div style="flex:1;min-width:0;border:1.5px solid var(--border);border-radius:12px;padding:8px 10px">'
-        +'<div style="font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Cantidad</div>'
-        +'<div style="display:grid;grid-template-columns:40px minmax(0,1fr) 40px;gap:5px;align-items:center">'
-          +'<button type="button" onclick="_pzPaso(-1)" style="width:40px;height:44px;border:1px solid var(--border);border-radius:11px;background:var(--bg);color:var(--navy);font-size:20px;font-weight:800;font-family:inherit">−</button>'
-          +'<input id="pzQty" type="number" inputmode="numeric" min="0" style="width:100%;box-sizing:border-box;height:44px;border:none;border-radius:11px;background:var(--green-light);color:var(--green);font-size:18px;font-weight:800;text-align:center;font-family:inherit" oninput="_pzCalc()">'
-          +'<button type="button" onclick="_pzPaso(1)" style="width:40px;height:44px;border:1px solid var(--border);border-radius:11px;background:var(--green-light);color:var(--green);font-size:20px;font-weight:800;font-family:inherit">＋</button>'
-        +'</div></div>'
-      +'<div style="flex:1;min-width:0;border:1.5px solid var(--border);border-radius:12px;padding:8px 10px">'
-        +'<div style="font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Precio unitario</div>'
-        +'<input id="pzPrecio" type="number" inputmode="decimal" min="0" step="0.01" style="width:100%;box-sizing:border-box;height:44px;border:none;font-family:inherit;font-size:18px;font-weight:800;color:var(--navy)" oninput="_pzCalc()">'
-      +'</div></div>'
-    +'<div id="pzIvas" style="display:flex;gap:7px;margin-bottom:12px"></div>'
-    +'<div style="background:var(--bg);border-radius:12px;padding:12px 13px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
-      +'<span style="font-size:12.5px;font-weight:600;color:var(--muted)">Importe</span><span id="pzImporte" style="font-size:20px;font-weight:800;color:var(--navy)">$0.00</span></div>'
-    +'<div id="pzUtil" style="font-size:11.5px;font-weight:600;color:var(--green);padding:0 2px 12px;min-height:16px"></div>'
-    +'<div style="display:flex;gap:9px">'
-      +'<button type="button" onclick="_pzQuitar()" style="flex:none;padding:0 18px;min-height:54px;border:1.5px solid var(--border);border-radius:13px;background:#fff;color:#c0392b;font-family:inherit;font-size:14px;font-weight:700">Quitar</button>'
-      +'<button type="button" onclick="_pzGuardar()" style="flex:1;min-height:54px;border:none;border-radius:13px;background:var(--green);color:#fff;font-family:inherit;font-size:16px;font-weight:800">Guardar partida</button>'
-    +'</div></div>';
-  ov.addEventListener('click',function(e){if(e.target===ov)cerrarPartidaMovil();});
-  document.body.appendChild(ov);
-  return ov;
-}
-function abrirPartidaMovil(id){
-  const it=items.find(i=>i._id===id);if(!it)return;
-  if(typeof _formBloqueado!=='undefined'&&_formBloqueado){toast('La remisión ya está registrada — usa Editar remisión','warn');return;}
-  _partidaEnEdicion=id;
-  const ov=_partidaSheetEl();
-  const idx=items.findIndex(i=>i._id===id);
-  document.getElementById('pzTitulo').textContent='Partida '+(idx+1);
-  document.getElementById('pzClave').value=it.clave||'';
-  document.getElementById('pzDesc').value=it.desc||'';
-  document.getElementById('pzQty').value=(it.qty===''||it.qty==null)?'':it.qty;
-  document.getElementById('pzPrecio').value=(it.precio===''||it.precio==null)?'':it.precio;
-  _pzIvas(+it.iva||0);
-  _pzCalc();
-  ov.style.display='flex';
-}
-function cerrarPartidaMovil(){const ov=document.getElementById('ovPartida');if(ov)ov.style.display='none';_partidaEnEdicion=null;}
-function _pzIvas(sel){
-  const c=document.getElementById('pzIvas');if(!c)return;
-  c.dataset.iva=sel;
-  c.innerHTML=[0,8,16].map(function(v){return '<button type="button" onclick="_pzSetIva('+v+')" style="flex:1;min-height:44px;border-radius:11px;font-family:inherit;font-size:13px;font-weight:700;border:1.5px solid '+(v===sel?'var(--green);background:var(--green);color:#fff':'var(--border);background:#fff;color:var(--muted)')+'">IVA '+v+'%</button>';}).join('');
-}
-function _pzSetIva(v){_pzIvas(v);_pzCalc();}
-function _pzPaso(d){const el=document.getElementById('pzQty');el.value=Math.max(0,(+el.value||0)+d);_pzCalc();}
-function _pzCalc(){
-  const q=+document.getElementById('pzQty').value||0,p=+document.getElementById('pzPrecio').value||0;
-  document.getElementById('pzImporte').textContent=fmt(q*p);
-  const it=items.find(i=>i._id===_partidaEnEdicion);
-  const cst=(it&&typeof costoEfectivo==='function')?costoEfectivo(it):0;
-  const u=document.getElementById('pzUtil');
-  u.textContent=(cst>0&&p>0)?('Costo '+fmt(cst)+' · utilidad '+fmt((p-cst)*q)+' ('+(((p-cst)/p)*100).toFixed(1)+'%)'):'';
-  u.style.color=(cst>0&&p>0&&((p-cst)/p*100)<30)?'#c0392b':'var(--green)';
-}
-function _pzGuardar(){
-  const it=items.find(i=>i._id===_partidaEnEdicion);if(!it){cerrarPartidaMovil();return;}
-  const q=document.getElementById('pzQty').value,p=document.getElementById('pzPrecio').value;
-  it.clave=document.getElementById('pzClave').value;
-  it.desc=document.getElementById('pzDesc').value;
-  it.qty=q===''?'':+q;
-  it.precio=p===''?'':+p;
-  it.iva=+document.getElementById('pzIvas').dataset.iva||0;
-  renderTable();calcTotals();autosave();
-  cerrarPartidaMovil();
-  toast('Partida actualizada','ok',1800);
-}
-function _pzQuitar(){const id=_partidaEnEdicion;cerrarPartidaMovil();if(id!=null)delRow(id);}
 function _syncMobileChrome(){
   const cot=_mobileEsCotizacion();
   const label=document.getElementById('mNavModoTxt'),primary=document.getElementById('mobileActionPrimary');
   const pdf=document.getElementById('mobileActionPdf'),total=document.getElementById('mobileActionTotal');
-  if(label)label.textContent=cot?'Remisiones':'Cotizar'; // FASE 1: el modo vive en el segmentado del encabezado
   if(primary)primary.textContent=cot?'Generar cotización':'Registrar remisión';
   if(total){const origen=document.getElementById(cot?'cot_tTot':'tTot');total.textContent=origen?.textContent||'$0.00 MXN';}
   if(pdf){const origen=document.getElementById(cot?'btnDescargarCot':'btnDescargarPDF');pdf.disabled=!origen||origen.disabled;}
   document.querySelectorAll('.mobile-nav button').forEach(b=>b.removeAttribute('aria-current'));
-  document.getElementById('mNavNueva')?.setAttribute('aria-current','page');
+  document.getElementById(cot?'mNavCotizar':'mNavNueva')?.setAttribute('aria-current','page');
 }
 
 // ── MODO SWITCH ───────────────────────────────────────────────────────────
