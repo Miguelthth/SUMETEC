@@ -10,15 +10,48 @@ const COLAS = {
 const $ = s => document.querySelector(s);
 const leer = k => JSON.parse(localStorage.getItem(k) || '[]');
 
+let _enviandoDireccion = false;
 function estado() {
   // Los conteos de Inventario se suman al chip pero NO viven en COLAS: un
   // conteo sin enviar no mueve efectivo y no debe bloquear el corte (ver
   // corte.js::_pendientesSinEnviarDireccion_ e inventario.js).
   const pendientes = Object.values(COLAS).reduce((total, k) => total + leer(k).length, 0) +
     (typeof _pendientesInventario_ === 'function' ? _pendientesInventario_() : 0);
-  $('#estado').textContent = pendientes
-    ? `${pendientes} pendientes`
-    : (navigator.onLine ? 'Al día' : 'Sin conexión');
+  const chip = $('#estado');
+  const texto = $('#estado-texto');
+  chip.classList.remove('chip-en-linea', 'chip-pendientes', 'chip-sin-red', 'chip-enviando');
+  if (_enviandoDireccion) {
+    texto.textContent = `Enviando ${pendientes}…`;
+    chip.classList.add('chip-enviando');
+  } else if (!navigator.onLine) {
+    texto.textContent = pendientes ? `Sin red · ${pendientes}` : 'Sin red';
+    chip.classList.add('chip-sin-red');
+  } else if (pendientes) {
+    texto.textContent = `${pendientes} pendiente(s)`;
+    chip.classList.add('chip-pendientes');
+  } else {
+    texto.textContent = 'En línea';
+    chip.classList.add('chip-en-linea');
+  }
+}
+
+// El chip es también el botón de "enviar ahora" (antes solo vivía en un
+// botón grande dentro de Caja) -- mismo enviarMovimientosDireccion de
+// siempre, solo que ahora es alcanzable desde cualquier pantalla.
+async function enviarPendientesDireccion() {
+  const pendientes = Object.values(COLAS).reduce((total, k) => total + leer(k).length, 0);
+  if (!pendientes) return;
+  if (!navigator.onLine) { if (typeof toast === 'function') toast('Sin conexión: se enviarán solos cuando vuelva.'); return; }
+  try {
+    const pin = await pedirPinDireccion();
+    _enviandoDireccion = true; estado();
+    const n = await enviarMovimientosDireccion(pin);
+    _enviandoDireccion = false; estado();
+    if (typeof toast === 'function') toast(n ? `${n} movimiento(s) siguen pendientes.` : 'Todos los movimientos se enviaron.');
+  } catch (err) {
+    _enviandoDireccion = false; estado();
+    if (typeof toast === 'function') toast(err.message); else alert(err.message);
+  }
 }
 
 // Sección visible ahora mismo (hallazgo DIR-02, 2026-09-09). El resumen pide
@@ -89,9 +122,32 @@ try {
 } catch (_) {}
 
 document.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => vista(b.dataset.vista));
+$('#estado').onclick = () => enviarPendientesDireccion();
 $('#enlazar').onclick = e => { e.preventDefault(); vincular().catch(x => alert(x.message)); };
 window.addEventListener('online', estado);
 window.addEventListener('offline', estado);
+
+// Menú "☰ Más": agrupa tema/versión/vincular y "enviar pendientes", que
+// antes vivían sueltos en la barra o como botón grande dentro de Caja.
+{
+  const btnMasMenu = $('#btnMasMenu');
+  const masMenu = $('#masMenu');
+  btnMasMenu.onclick = () => {
+    const abrir = masMenu.hidden;
+    masMenu.hidden = !abrir;
+    masMenu.style.display = abrir ? 'flex' : 'none';
+    btnMasMenu.setAttribute('aria-expanded', String(abrir));
+  };
+  document.addEventListener('click', e => {
+    if (masMenu.hidden || masMenu.contains(e.target) || btnMasMenu.contains(e.target)) return;
+    masMenu.hidden = true;
+    masMenu.style.display = 'none';
+    btnMasMenu.setAttribute('aria-expanded', 'false');
+  });
+  $('#menuEnviarPendientes').onclick = () => { masMenu.hidden = true; masMenu.style.display = 'none'; enviarPendientesDireccion(); };
+  $('#menuVincular').onclick = () => { masMenu.hidden = true; masMenu.style.display = 'none'; $('#vincular').showModal(); };
+}
+
 vista('resumen');
 estado();
 // Hallazgo 2026-09-10 (Miguel: "me dijo código incorrecto pero me dejó
@@ -148,6 +204,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!huboControlador) { huboControlador = true; return; }
     localStorage.setItem('direccion_ultima_actualizacion', String(Date.now()));
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('sumetec_direccion_actualizacion')) return;
     if (hayTrabajoSinGuardarDireccion()) { recargaPendiente = true; return; }
     window.location.reload();
   });
@@ -181,7 +238,8 @@ function _mostrarVersionInstalada() {
   const u = ultima
     ? new Date(ultima).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
     : 'Aún no se ha detectado una actualización nueva en este dispositivo.';
-  alert(`Act. software: ${codigo ? codigo + ' · ' : ''}${v}\nÚltima actualización: ${u}`);
+  const msg = `Act. software: ${codigo ? codigo + ' · ' : ''}${v} — Última actualización: ${u}`;
+  if (typeof toast === 'function') toast(msg, 6000); else alert(msg);
 }
 
 function hayTrabajoSinGuardarDireccion() {

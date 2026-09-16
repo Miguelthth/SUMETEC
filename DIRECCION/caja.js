@@ -26,25 +26,39 @@ function validarMovimientoDireccion(d) {
   };
 }
 
+// Etiquetas legibles para la persona que captura -- el valor que viaja al
+// servidor sigue siendo la clave interna (option value), sin tocar
+// validarMovimientoDireccion ni el ERP del otro lado.
+const _ETIQUETA_CLASE_CAJA = {
+  APORTE_SOCIO: 'Aporte de socio', RETIRO_SOCIO: 'Retiro de socio',
+  DEPOSITO_BANCO: 'Depósito a banco', DEVOLUCION_CLIENTE: 'Devolución a cliente',
+  ENTRADA_AJUSTE: 'Entrada (ajuste)', SALIDA_AJUSTE: 'Salida (ajuste)'
+};
+function _etiquetaClaseCaja(clase) { return _ETIQUETA_CLASE_CAJA[clase] || clase; }
+
 function formularioCajaDireccion() {
   return `<h1>Caja</h1>
 <p class="text-muted">Movimientos físicos del cajón. No son ventas ni gastos.</p>
 <form id="form-caja" class="card"><div class="card-body" style="display:grid;gap:10px">
   <label class="form-label" for="caja-clase">Movimiento
-    <select id="caja-clase" name="clase" class="form-select">${CLASES_CAJA_DIRECCION.map(x => `<option>${x}</option>`).join('')}</select>
+    <select id="caja-clase" name="clase" class="form-select">${CLASES_CAJA_DIRECCION.map(x => `<option value="${x}">${_etiquetaClaseCaja(x)}</option>`).join('')}</select>
   </label>
-  <label class="form-label" for="caja-fecha">Fecha<input id="caja-fecha" class="form-control" name="fecha" type="date" required></label>
   <label class="form-label" for="caja-monto">Monto<input id="caja-monto" class="form-control" name="monto" type="number" min="0.01" step="0.01" required></label>
-  <label class="form-label" for="caja-metodo">Método
-    <select id="caja-metodo" name="metodo" class="form-select"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option></select>
-  </label>
-  <label class="form-label" for="caja-socio">Socio (aporte/retiro)<input id="caja-socio" class="form-control" name="cuentaSocio" value="JOSE MIGUEL"></label>
-  <label class="form-label" for="caja-referencia">Referencia (si aplica)<input id="caja-referencia" class="form-control" name="referencia"></label>
   <label class="form-label" for="caja-concepto">Concepto / explicación<textarea id="caja-concepto" class="form-control" name="concepto" required></textarea></label>
+  <button type="button" class="btn-mas-campos" id="btn-mas-campos-caja" aria-expanded="false" aria-controls="campos-mas-caja">
+    <span class="toggle-texto">▾ Más campos</span><span class="resumen-campos" id="resumen-campos-caja"></span>
+  </button>
+  <div class="campos-mas" id="campos-mas-caja">
+    <label class="form-label" for="caja-fecha">Fecha<input id="caja-fecha" class="form-control" name="fecha" type="date" required></label>
+    <label class="form-label" for="caja-metodo">Método
+      <select id="caja-metodo" name="metodo" class="form-select"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option></select>
+    </label>
+    <label class="form-label" for="caja-socio" id="campo-socio">Socio (aporte/retiro)<input id="caja-socio" class="form-control" name="cuentaSocio" value="JOSE MIGUEL"></label>
+    <label class="form-label" for="caja-referencia">Referencia (si aplica)<input id="caja-referencia" class="form-control" name="referencia"></label>
+  </div>
   <button class="btn btn-success btn-bloque"><i class="bi bi-check-circle"></i> Guardar movimiento</button>
 </div></form>
 <p id="resultado-caja" class="text-muted" role="status"></p>
-<button id="enviar-movimientos" type="button" class="btn btn-primary btn-bloque"><i class="bi bi-cloud-arrow-up"></i> Enviar movimientos pendientes</button>
 <section id="lista-caja" class="card"><div id="lista-caja-cuerpo" class="card-body">
   <h2>Movimientos de hoy</h2>
   <p class="text-muted">Toca "Ver movimientos" para consultarlos.</p>
@@ -174,11 +188,16 @@ function renderMovimientosCaja(movs) {
   if (!movs.length) return '<p>Sin movimientos capturados hoy.</p>';
   const filas = movs.map(m => {
     const corregible = !m.anulado && m.tipo !== 'ANULACION';
-    const ref = m.tipo === 'ANULACION' ? `corrige ${m.anulaA}` : (m.referencia || '—');
+    const ref = m.tipo === 'ANULACION' ? `corrige ${m.anulaA}` : (m.referencia || m.cuentaSocio || '—');
     const boton = corregible ? `<button type="button" class="anular" data-id="${m.id}">Corregir</button>` : '';
-    return `<li data-id="${m.id}"><span>${m.signo}${_dineroCaja(m.monto)}</span> ` +
-      `<strong>${m.tipo}</strong> · ${m.metodo} · ${m.origen} · ${ref}` +
-      `${m.anulado ? ' · <em>anulado</em>' : ''} ${boton}</li>`;
+    const clasePos = m.signo === '+' ? 'pos' : 'neg';
+    return `<li data-id="${m.id}" class="${m.anulado ? 'anulado' : ''}">` +
+      `<div class="mov-info"><div class="mov-linea1">` +
+      `<span class="mov-monto ${clasePos}">${m.signo}${_dineroCaja(m.monto)}</span>` +
+      `<span class="mov-tipo">${_etiquetaClaseCaja(m.tipo)}</span>` +
+      `${m.anulado ? '<span class="mov-anulado-tag">ANULADO</span>' : ''}</div>` +
+      `<span class="mov-linea2">${m.metodo} · ${m.hora ? String(m.hora).slice(11, 16) : m.origen} · ${ref}</span>` +
+      `</div>${boton}</li>`;
   }).join('');
   return `<ul>${filas}</ul>`;
 }
@@ -187,6 +206,36 @@ function activarCajaDireccion() {
   const f = document.querySelector('#form-caja');
   if (!f) return;
   f.fecha.value = _fechaLocalDireccion_();
+
+  // Campos secundarios colapsados en celular (siempre visibles en
+  // escritorio, ver estilos.css @media min-width:640px): solo Movimiento,
+  // Monto y Concepto quedan siempre a la vista. Ningún campo se elimina.
+  const btnMas = document.querySelector('#btn-mas-campos-caja');
+  const camposMas = document.querySelector('#campos-mas-caja');
+  const campoSocio = document.querySelector('#campo-socio');
+  const resumenCampos = document.querySelector('#resumen-campos-caja');
+
+  function actualizarResumenCampos() {
+    if (!resumenCampos) return;
+    const partes = [f.metodo.value.toLowerCase()];
+    if (campoSocio && campoSocio.style.display !== 'none') partes.push(f.cuentaSocio.value);
+    resumenCampos.textContent = partes.filter(Boolean).join(' · ');
+  }
+  function actualizarCampoSocio() {
+    const necesitaSocio = ['APORTE_SOCIO', 'RETIRO_SOCIO'].includes(f.clase.value);
+    if (campoSocio) campoSocio.style.display = necesitaSocio ? '' : 'none';
+    actualizarResumenCampos();
+  }
+  f.clase.onchange = actualizarCampoSocio;
+  f.metodo.onchange = actualizarResumenCampos;
+  f.cuentaSocio.oninput = actualizarResumenCampos;
+  actualizarCampoSocio();
+
+  if (btnMas && camposMas) btnMas.onclick = () => {
+    const abierto = camposMas.classList.toggle('abierto');
+    btnMas.setAttribute('aria-expanded', String(abierto));
+    btnMas.querySelector('.toggle-texto').textContent = abierto ? '▴ Menos campos' : '▾ Más campos';
+  };
 
   f.onsubmit = async e => {
     e.preventDefault();
@@ -215,19 +264,6 @@ function activarCajaDireccion() {
     }
   };
 
-  const enviarBtn = document.querySelector('#enviar-movimientos');
-  if (enviarBtn) enviarBtn.onclick = async () => {
-    try {
-      const pin = await pedirPinDireccion();
-      const n = await enviarMovimientosDireccion(pin);
-      document.querySelector('#resultado-caja').textContent = n
-        ? `${n} movimiento(s) siguen pendientes de enviar.`
-        : 'Todos los movimientos en cola se enviaron.';
-    } catch (err) {
-      document.querySelector('#resultado-caja').textContent = err.message;
-    }
-  };
-
   const lista = document.querySelector('#lista-caja-cuerpo');
 
   async function refrescarLista(pin) {
@@ -241,7 +277,7 @@ function activarCajaDireccion() {
           await anularMovimientoDireccion(pin, b.dataset.id, motivo);
           await refrescarLista(pin);
         } catch (err) {
-          alert(err.message);
+          if (typeof toast === 'function') toast(err.message); else alert(err.message);
         }
       });
     } catch (err) {
@@ -258,4 +294,12 @@ function activarCajaDireccion() {
       // PIN cancelado -- no hacer nada.
     }
   };
+
+  // Si el PIN sigue vigente en memoria (sesión reciente), no tiene sentido
+  // que Miguel tenga que tocar "Ver movimientos" y esperar un PIN que ya
+  // dio hace un minuto -- se carga sola. Sin PIN vigente, se queda como
+  // estaba: pedirlo es cosa de un toque, no de adivinar si vale la pena.
+  if (typeof _pinVigente === 'function' && _pinVigente()) {
+    pedirPinDireccion().then(refrescarLista).catch(() => {});
+  }
 }

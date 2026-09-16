@@ -1,4 +1,4 @@
-const CACHE = 'sumetec-rem-e65a9cfd86';
+const CACHE = 'sumetec-rem-428bc5c1ec';
 const PREFIJO = 'sumetec-rem-';
 // Assets pesados (jsPDF ~400 KB) en su PROPIA caché, versionada aparte del shell.
 // Antes vivían dentro de CACHE: como ese nombre es un hash del shell, cambiar una

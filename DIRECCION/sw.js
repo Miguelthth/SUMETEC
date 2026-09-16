@@ -5,25 +5,30 @@
 // fuentes del tema (~220 KB) casi nunca cambian -- solo si el ERP cambia de
 // marca. Si compartieran una sola caché, arreglar una coma en caja.js
 // forzaría a redescargar las fuentes completas en el siguiente uso.
-const CACHE = 'sumetec-direccion-a08bd5d04e';
+const CACHE = 'sumetec-direccion-fb48dbae11';
 const CACHE_ASSETS = 'sumetec-direccion-assets-089af8bd65';
 const PREFIJO = 'sumetec-direccion-';
-const SHELL = [
-  './', './direccion.html', './app.js', './caja.js',
-  './corte.js', './dashboard.js', './inventario.js', './seguridad.js', './estilos.css',
-  './manifest.json', './version.js',
-  // Tema visual del ERP (2026-09-11, generar_tema.py) -- sin esto, el
-  // teléfono sin señal cargaría la app con las tarjetas/botones/letra rotos.
-  './sumetec-tema.css', './tema-inicial.js'
-];
+// Inventario queda explícito además del manifiesto para documentar que la
+// pantalla de conteo es indispensable también sin señal.
+const SHELL = ['./version.js', './inventario.js'];
+const MANIFIESTO_PRECACHE = './precache-manifest.json';
 const ARCHIVOS_ASSETS = [
   './fonts/ibm-plex-sans-variable.woff2', './fonts/ibm-plex-mono-400.woff2',
   './fonts/ibm-plex-mono-500.woff2', './fonts/ibm-plex-mono-600.woff2',
   './fonts/bootstrap-icons.woff2'
 ];
 
+async function precachearShell() {
+  const cache = await caches.open(CACHE);
+  const r = await fetch(MANIFIESTO_PRECACHE, { cache: 'reload' });
+  if (!r.ok) throw Error('no se pudo leer precache-manifest.json');
+  const manifiesto = await r.json();
+  if (!Array.isArray(manifiesto.files)) throw Error('precache-manifest.json inválido');
+  const rutas = [...new Set([MANIFIESTO_PRECACHE, ...SHELL, ...manifiesto.files.map(x => './' + x)])];
+  await Promise.all(rutas.map(async url => { const respuesta = await fetch(url, { cache: 'reload' }); if (!respuesta.ok) throw Error('shell incompleto: ' + url); await cache.put(url, respuesta); }));
+}
+
 self.addEventListener('install', e => {
-  self.skipWaiting();
   // addAll() usa fetch() por dentro, que respeta el Cache-Control del
   // hosting -- si el navegador tenía una copia vieja en su caché HTTP
   // normal, el SW "se instalaba bien" pero guardaba el contenido de
@@ -32,9 +37,7 @@ self.addEventListener('install', e => {
   // propósito) y solo si de verdad faltan -- son pesadas y casi nunca
   // cambian, no hay que insistir en bajarlas de nuevo en cada instalación.
   e.waitUntil(Promise.all([
-    caches.open(CACHE).then(c => Promise.all(
-      SHELL.map(url => fetch(url, { cache: 'reload' }).then(r => c.put(url, r)))
-    )),
+    precachearShell(),
     caches.open(CACHE_ASSETS).then(c => Promise.all(
       ARCHIVOS_ASSETS.map(url => c.match(url).then(hit => hit || c.add(url)))
     ))
@@ -42,14 +45,14 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(
-    // Solo borra cachés DE ESTA APP -- CacheStorage es por origen, no por
-    // scope; si Dirección comparte origen con otra PWA de SUMETEC, borrar
-    // "todo lo que no sea mi CACHE" le borraría el offline a la otra.
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k.startsWith(PREFIJO) && k !== CACHE && k !== CACHE_ASSETS).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+  e.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('message', e => {
+  if (e.data?.type === 'ACTIVAR_ACTUALIZACION') self.skipWaiting();
+  if (e.data?.type === 'CONFIRMAR_ARRANQUE') e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(k => k.startsWith(PREFIJO) && k !== CACHE && k !== CACHE_ASSETS).map(k => caches.delete(k)))
+  ));
 });
 
 self.addEventListener('fetch', e => {
@@ -70,6 +73,40 @@ self.addEventListener('fetch', e => {
         })
         .catch(() => caches.match('./direccion.html'))
     );
+    return;
+  }
+
+  // version.js: RED PRIMERO, caché como fallback (2026-09-12).
+  // Es el único archivo del SHELL que NO entra en el hash del CACHE --
+  // build_deploy.py lo excluye a propósito porque lleva la hora del build, así
+  // que incluirlo haría que el hash cambiara en cada corrida y nunca se
+  // estabilizara. Servido caché-primero (como el resto del shell), esa
+  // exclusión tenía una consecuencia fea, encontrada en el Cotizador el
+  // 2026-09-12: un deploy que solo cambia version.js deja sw.js idéntico byte
+  // a byte, el navegador no instala nada, y se sigue sirviendo la copia vieja.
+  // La pantalla de versión —justo la que se usa para verificar si la
+  // actualización llegó— quedaba congelada en la fecha anterior.
+  // { cache: 'reload' } por la misma razón del punto 4 del checklist: sin eso
+  // GitHub Pages puede entregar la copia vieja de la caché HTTP del navegador.
+  if (/\/version\.js(\?|$)/.test(url)) {
+    e.respondWith(
+      fetch(url, { cache: 'reload' })
+        .then(r => {
+          if (r.ok) {
+            const clone = r.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
+          }
+          return r;
+        })
+        // Sin señal: la última copia guardada. version.js solo alimenta la
+        // etiqueta de versión en pantalla, nunca un movimiento de dinero.
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  if (/\/release\.json(\?|$)/.test(url)) {
+    e.respondWith(fetch(url, { cache: 'reload' }).then(r => { if (r.ok) caches.open(CACHE).then(c => c.put(e.request, r.clone())); return r; }).catch(() => caches.match(e.request)));
     return;
   }
 

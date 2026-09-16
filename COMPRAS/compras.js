@@ -194,20 +194,20 @@ async function _actualizarSnapshotCompras_(pin) {
 
 function _filaLineaCompra() {
   return `<li class="linea">
-    <input placeholder="Código" class="codigo form-control mono">
-    <input placeholder="Descripción" class="descripcion form-control">
-    <input placeholder="Cantidad" type="number" min="0" step="0.01" class="cantidad form-control">
-    <input placeholder="Costo unitario" type="number" min="0" step="0.01" class="costo form-control">
-    <button type="button" class="quitar btn btn-outline-secondary"><i class="bi bi-x-lg"></i></button>
+    <input placeholder="Código" aria-label="Código del producto" class="codigo form-control mono">
+    <input placeholder="Descripción" aria-label="Descripción del producto" class="descripcion form-control">
+    <input placeholder="Cant." aria-label="Cantidad" type="number" min="0" step="0.01" class="cantidad form-control">
+    <input placeholder="Costo" aria-label="Costo unitario" type="number" min="0" step="0.01" class="costo form-control">
+    <button type="button" aria-label="Eliminar línea" class="quitar btn btn-outline-secondary"><i class="bi bi-x-lg"></i></button>
   </li>`;
 }
 
 function _filaPagoCompra() {
   return `<li class="pago">
-    <input placeholder="Fecha" type="date" class="fecha form-control">
-    <input placeholder="Monto" type="number" min="0.01" step="0.01" class="monto form-control">
-    <select class="metodo form-select"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option><option>CHEQUE</option></select>
-    <button type="button" class="quitar btn btn-outline-secondary"><i class="bi bi-x-lg"></i></button>
+    <input placeholder="Fecha" aria-label="Fecha del pago" type="date" class="fecha form-control">
+    <input placeholder="Monto" aria-label="Monto del pago" type="number" min="0.01" step="0.01" class="monto form-control">
+    <select aria-label="Método de pago" class="metodo form-select"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option><option>CHEQUE</option></select>
+    <button type="button" aria-label="Eliminar pago" class="quitar btn btn-outline-secondary"><i class="bi bi-x-lg"></i></button>
   </li>`;
 }
 
@@ -232,48 +232,99 @@ function _leerPagosCompra(ul) {
 function formularioComprasDireccion() {
   return `<h1>Compras</h1>
 <p class="text-muted">Queda "Pendiente de ERP" hasta que se revise e importe -- no mueve el stock teórico.</p>
-<form id="form-compra" class="card"><div class="card-body" style="display:grid;gap:10px">
-  <label class="form-label" for="compra-proveedor">Proveedor<input id="compra-proveedor" class="form-control" name="proveedor" required></label>
-  <label class="form-label" for="compra-fecha">Fecha<input id="compra-fecha" class="form-control" name="fecha" type="date" required></label>
-  <label class="form-label" for="compra-folio">Folio del proveedor<input id="compra-folio" class="form-control mono" name="folio"></label>
-
-  <label class="form-label" for="compra_foto"><i class="bi bi-camera"></i> Foto del ticket (opcional)<input type="file" id="compra_foto" class="form-control" accept="image/*" capture="environment" onchange="_onFotoCompraElegida_()"></label>
-  <img id="compraFotoPreview" style="display:none;max-height:160px;border-radius:var(--sm-r-sm);margin-top:8px;object-fit:contain">
-  <!-- Sin ícono: _onFotoCompraElegida_/_leerTicketCompraConIA_ (abajo) fijan
-       el texto completo del botón con .textContent -- un ícono aquí
-       desaparecería en cuanto cualquiera de esas dos lo tocara. -->
-  <button id="compraBtnOcr" type="button" class="btn btn-primary" style="width:100%;margin-top:8px;display:none" onclick="_leerTicketCompraConIA_()">🔍 Leer ticket</button>
-  <div id="compraOcrEstado" class="text-muted" style="font-size:12px;margin-top:4px"></div>
-
-  <label class="form-label" for="compra-evidencia">Evidencia
-    <select id="compra-evidencia" name="evidencia" class="form-select">${EVIDENCIAS_COMPRA_DIRECCION.map(x => `<option>${x}</option>`).join('')}</select>
-  </label>
-  <label class="form-label" for="compra-situacion">Situación de factura
-    <select id="compra-situacion" name="situacionFactura" class="form-select">${SITUACIONES_FACTURA_DIRECCION.map(x => `<option>${x}</option>`).join('')}</select>
-  </label>
-  <label class="form-label" for="compra-uuid">UUID CFDI (si ya está facturado)<input id="compra-uuid" class="form-control mono" name="uuidCfdi"></label>
-  <label class="form-label" for="compra-subtotal">Subtotal<input id="compra-subtotal" class="form-control" name="subtotal" type="number" min="0" step="0.01" required></label>
-  <label class="form-label" for="compra-iva">IVA<input id="compra-iva" class="form-control" name="iva" type="number" min="0" step="0.01" value="0"></label>
-  <label class="form-label" for="compra-total">Total<input id="compra-total" class="form-control" name="total" type="number" min="0.01" step="0.01" required></label>
-  <label class="form-label" for="compra-condicion">Condición<select id="compra-condicion" name="condicion" class="form-select"><option>CREDITO</option><option>CONTADO</option></select></label>
-  <fieldset>
-    <legend class="form-label">Líneas (opcional, se revisan en el ERP)</legend>
-    <ul id="lineas-compra"></ul>
-    <button type="button" id="agregar-linea" class="btn btn-outline-secondary"><i class="bi bi-plus-lg"></i> Agregar línea</button>
-  </fieldset>
-  <fieldset>
-    <legend class="form-label">Pagos (si ya se pagó algo desde el cajón)</legend>
-    <ul id="pagos-compra"></ul>
-    <button type="button" id="agregar-pago" class="btn btn-outline-secondary"><i class="bi bi-plus-lg"></i> Agregar pago</button>
-  </fieldset>
-  <button class="btn btn-success btn-bloque"><i class="bi bi-check-circle"></i> Guardar compra</button>
+<div class="compras-tabs" role="tablist">
+  <button type="button" class="compras-tab activa" data-panel="capturar" role="tab" aria-selected="true">Capturar</button>
+  <button type="button" class="compras-tab" data-panel="historial" role="tab" aria-selected="false">Historial</button>
+</div>
+<div id="panel-capturar" class="compras-panel">
+<form id="form-compra" class="card"><div class="card-body compras-form-grid">
+  <div class="compras-campos">
+    <div class="compras-foto-cta">
+      <label class="btn btn-primary btn-bloque" for="compra_foto"><i class="bi bi-camera"></i> Tomar foto y leer ticket</label>
+      <input type="file" id="compra_foto" class="visually-oculto" accept="image/*" capture="environment" onchange="_onFotoCompraElegida_()">
+      <p class="text-muted" style="font-size:12px;margin:6px 0 0">La IA llena proveedor, fecha, subtotal, IVA y total -- tú los revisas.</p>
+      <img id="compraFotoPreview" style="display:none;max-height:160px;border-radius:var(--sm-r-sm);margin-top:8px;object-fit:contain">
+      <!-- Sin ícono: _onFotoCompraElegida_/_leerTicketCompraConIA_ (abajo) fijan
+           el texto completo del botón con .textContent -- un ícono aquí
+           desaparecería en cuanto cualquiera de esas dos lo tocara. -->
+      <button id="compraBtnOcr" type="button" class="btn btn-primary" style="width:100%;margin-top:8px;display:none" onclick="_leerTicketCompraConIA_()">🔍 Leer ticket</button>
+      <div id="compraOcrEstado" class="text-muted" style="font-size:12px;margin-top:4px"></div>
+    </div>
+    <label class="form-label" for="compra-proveedor">Proveedor<input id="compra-proveedor" class="form-control" name="proveedor" required></label>
+    <label class="form-label" for="compra-fecha">Fecha<input id="compra-fecha" class="form-control" name="fecha" type="date" required></label>
+    <details id="mas-campos-compra" class="compras-detalles">
+      <summary>Más campos<span class="compras-detalles-resumen">Folio · Evidencia · Factura · UUID</span></summary>
+      <div class="compras-detalles-body">
+        <label class="form-label" for="compra-folio">Folio del proveedor<input id="compra-folio" class="form-control mono" name="folio"></label>
+        <label class="form-label" for="compra-evidencia">Evidencia
+          <select id="compra-evidencia" name="evidencia" class="form-select">${EVIDENCIAS_COMPRA_DIRECCION.map(x => `<option>${x}</option>`).join('')}</select>
+        </label>
+        <label class="form-label" for="compra-situacion">Situación de factura
+          <select id="compra-situacion" name="situacionFactura" class="form-select">${SITUACIONES_FACTURA_DIRECCION.map(x => `<option>${x}</option>`).join('')}</select>
+        </label>
+        <label class="form-label" id="compra-uuid-wrap" for="compra-uuid" style="display:none">UUID CFDI (documento facturado)<input id="compra-uuid" class="form-control mono" name="uuidCfdi"></label>
+      </div>
+    </details>
+    <details class="compras-detalles">
+      <summary>Líneas<span class="compras-detalles-resumen">opcional, se revisan en el ERP</span></summary>
+      <div class="compras-detalles-body">
+        <ul id="lineas-compra"></ul>
+        <button type="button" id="agregar-linea" class="btn btn-outline-secondary"><i class="bi bi-plus-lg"></i> Agregar línea</button>
+      </div>
+    </details>
+    <details class="compras-detalles">
+      <summary>Pagos<span class="compras-detalles-resumen">si ya se pagó algo desde el cajón</span></summary>
+      <div class="compras-detalles-body">
+        <ul id="pagos-compra"></ul>
+        <button type="button" id="agregar-pago" class="btn btn-outline-secondary"><i class="bi bi-plus-lg"></i> Agregar pago</button>
+      </div>
+    </details>
+  </div>
+  <div class="compras-resumen">
+    <label class="form-label" for="compra-subtotal">Subtotal<input id="compra-subtotal" class="form-control" name="subtotal" type="number" min="0" step="0.01" required></label>
+    <label class="form-label" for="compra-iva">IVA<input id="compra-iva" class="form-control" name="iva" type="number" min="0" step="0.01" value="0"></label>
+    <label class="form-label" for="compra-total">Total<input id="compra-total" class="form-control" name="total" type="number" min="0.01" step="0.01" required></label>
+    <label class="form-label" for="compra-condicion">Condición<select id="compra-condicion" name="condicion" class="form-select"><option>CREDITO</option><option>CONTADO</option></select></label>
+    <div id="compras-pagado-resta" class="text-muted" style="font-size:12px"></div>
+    <button class="btn btn-success btn-bloque"><i class="bi bi-check-circle"></i> Guardar compra</button>
+  </div>
 </div></form>
 <p id="resultado-compra" class="text-muted" role="status"></p>
 <button id="enviar-compras" type="button" class="btn btn-primary btn-bloque"><i class="bi bi-cloud-arrow-up"></i> Enviar compras pendientes</button>
+</div>
+<div id="panel-historial" class="compras-panel" hidden>
 <section aria-label="Historial reciente de compras" class="card"><div class="card-body">
-  <h2>Historial reciente</h2>
   <div id="historial-compras"></div>
-</div></section>`;
+</div></section>
+</div>`;
+}
+
+function _actualizarBotonEnviar_() {
+  const btn = document.querySelector('#enviar-compras');
+  if (!btn) return;
+  const pendientes = leer(COLAS.compras).length;
+  btn.classList.toggle('btn-primary', pendientes > 0);
+  btn.classList.toggle('btn-outline-secondary', pendientes === 0);
+}
+
+function _mostrarResultadoCompra_(msg, esError) {
+  const el = document.querySelector('#resultado-compra');
+  el.textContent = msg;
+  el.classList.toggle('text-rojo', !!esError);
+  el.classList.toggle('text-muted', !esError);
+}
+
+// Puro cálculo de lectura (lo ya capturado contra el total) -- no toca la
+// validación real, que sigue viviendo solo en nuevaCompraCampo.
+function _actualizarResumenPagos_() {
+  const el = document.querySelector('#compras-pagado-resta');
+  const f = document.querySelector('#form-compra');
+  const pagos = document.querySelector('#pagos-compra');
+  if (!el || !f || !pagos) return;
+  const pagado = _leerPagosCompra(pagos).reduce((a, p) => a + p.monto, 0);
+  if (!pagado) { el.textContent = ''; return; }
+  const total = Number(f.total.value || 0);
+  el.textContent = `Pagado $${pagado.toFixed(2)} · Resta $${Math.max(0, total - pagado).toFixed(2)}`;
 }
 
 function activarComprasDireccion() {
@@ -281,22 +332,53 @@ function activarComprasDireccion() {
   if (!f) return;
   f.fecha.value = _fechaLocalDireccion_();
   _renderHistorialComprasDireccion_();
+  _actualizarBotonEnviar_();
+
+  document.querySelectorAll('.compras-tab').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.compras-tab').forEach(b => {
+        b.classList.toggle('activa', b === btn);
+        b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+      });
+      document.querySelector('#panel-capturar').hidden = btn.dataset.panel !== 'capturar';
+      document.querySelector('#panel-historial').hidden = btn.dataset.panel !== 'historial';
+    };
+  });
+
+  // El UUID del CFDI solo aplica cuando ya está facturado -- mismo criterio
+  // que ya valida nuevaCompraCampo, aquí solo se refleja en la vista.
+  const situacion = document.querySelector('#compra-situacion');
+  const uuidWrap = document.querySelector('#compra-uuid-wrap');
+  const sincronizarUuid = () => { uuidWrap.style.display = situacion.value === 'FACTURADO' ? '' : 'none'; };
+  situacion.onchange = sincronizarUuid;
+  sincronizarUuid();
+
+  // Si falta un campo obligatorio dentro de un <details> cerrado (p.ej.
+  // Subtotal en "Más campos"), el navegador no puede enfocar su aviso
+  // nativo con el bloque oculto -- se abre antes de que lo intente.
+  f.addEventListener('invalid', e => {
+    const detalles = e.target.closest('details');
+    if (detalles) detalles.open = true;
+  }, true);
 
   const lineas = document.querySelector('#lineas-compra');
   const pagos = document.querySelector('#pagos-compra');
   // closest('.quitar'), no e.target.classList: el botón lleva un ícono
   // adentro (<i class="bi ...">) -- un toque justo sobre el ícono pone el
   // ícono como e.target, no el botón.
-  const quitar = e => { const b = e.target.closest('.quitar'); if (b) b.closest('li').remove(); };
+  const quitar = e => { const b = e.target.closest('.quitar'); if (b) b.closest('li').remove(); _actualizarResumenPagos_(); };
 
   document.querySelector('#agregar-linea').onclick = () => lineas.insertAdjacentHTML('beforeend', _filaLineaCompra());
-  document.querySelector('#agregar-pago').onclick = () => pagos.insertAdjacentHTML('beforeend', _filaPagoCompra());
+  document.querySelector('#agregar-pago').onclick = () => { pagos.insertAdjacentHTML('beforeend', _filaPagoCompra()); _actualizarResumenPagos_(); };
   lineas.onclick = quitar;
   pagos.onclick = quitar;
+  pagos.oninput = _actualizarResumenPagos_;
 
   f.subtotal.oninput = f.iva.oninput = () => {
     f.total.value = (Number(f.subtotal.value || 0) + Number(f.iva.value || 0)).toFixed(2);
+    _actualizarResumenPagos_();
   };
+  f.total.addEventListener('input', _actualizarResumenPagos_);
 
   f.onsubmit = e => {
     e.preventDefault();
@@ -308,31 +390,46 @@ function activarComprasDireccion() {
       // elegirla o al leerla con IA) -- nunca se manda el File crudo del
       // input, que FormData habría ignorado de todos modos por no tener
       // atributo `name`.
-      if (_compraFotoComprimidaB64) d.foto = _compraFotoComprimidaB64;
+      const huboFoto = !!_compraFotoComprimidaB64;
+      if (huboFoto) d.foto = _compraFotoComprimidaB64;
       nuevaCompraCampo(d);
-      document.querySelector('#resultado-compra').textContent =
-        'Compra guardada. Se enviará al vincular conexión, o pulsa "Enviar compras pendientes".';
+      _mostrarResultadoCompra_(
+        'Compra guardada. Se enviará al vincular conexión, o pulsa "Enviar compras pendientes".' + (huboFoto ? ' Ticket adjunto ✓.' : ''),
+        false
+      );
       f.reset();
       f.fecha.value = _fechaLocalDireccion_();
       lineas.innerHTML = '';
       pagos.innerHTML = '';
+      document.querySelectorAll('#form-compra details').forEach(d => { d.open = false; });
+      sincronizarUuid();
       _resetFotoCompra_();
       _renderHistorialComprasDireccion_();
+      _actualizarBotonEnviar_();
+      _actualizarResumenPagos_();
     } catch (err) {
-      document.querySelector('#resultado-compra').textContent = err.message;
+      _mostrarResultadoCompra_(err.message, true);
     }
   };
 
   document.querySelector('#enviar-compras').onclick = async () => {
     try {
+      _comprasEnviando = leer(COLAS.compras).length;
+      estado();
       const pin = await pedirPinDireccion();
       const n = await enviarComprasCampo(pin);
-      document.querySelector('#resultado-compra').textContent = n
+      _comprasUltimoError = '';
+      _mostrarResultadoCompra_(n
         ? `${n} compra(s) siguen pendientes de enviar.`
-        : 'Todas las compras en cola se enviaron.';
+        : 'Todas las compras en cola se enviaron.', false);
       _renderHistorialComprasDireccion_();
+      _actualizarBotonEnviar_();
     } catch (err) {
-      document.querySelector('#resultado-compra').textContent = err.message;
+      _comprasUltimoError = 'Error de PIN o token';
+      _mostrarResultadoCompra_(err.message, true);
+    } finally {
+      _comprasEnviando = 0;
+      estado();
     }
   };
 }

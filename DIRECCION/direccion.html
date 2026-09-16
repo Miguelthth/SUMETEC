@@ -5,29 +5,44 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#023561">
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="logos/sumetec-direccion.png" type="image/png">
+  <link rel="apple-touch-icon" href="logos/sumetec-direccion.png">
   <!-- tema-inicial.js va ANTES del CSS (elige día/noche sin parpadeo) --
        mismo tema del ERP, generado por 16.- IDENTIDAD-NEGOCIO/generar_tema.py.
        No editar sumetec-tema.css ni tema-inicial.js a mano. -->
   <script src="tema-inicial.js"></script>
   <link rel="stylesheet" href="sumetec-tema.css">
-  <link rel="stylesheet" href="estilos.css">
+  <link rel="stylesheet" href="actualizacion.css">
+  <link rel="stylesheet" href="estilos.css?v=20260914b">
   <title>SUMETEC Dirección</title>
 </head>
 <body>
   <header class="sm-barra">
     <i class="bi bi-shop" aria-hidden="true"></i>
     <span class="sm-barra-titulo">SUMETEC Dirección</span>
-    <span id="estado" class="sm-chip" style="margin-left:auto">Sin conexión</span>
-    <button type="button" class="btn-barra" onclick="alternarTemaSumetec()" aria-label="Cambiar a modo claro u oscuro"><i class="bi bi-moon-stars"></i></button>
-    <button type="button" class="btn-barra" id="badgeVersion" onclick="_mostrarVersionInstalada()" title="Ver actualización de software" aria-label="Ver actualización de software"><i class="bi bi-info-circle"></i></button>
+    <button type="button" id="estado" class="sm-chip sm-chip-boton" style="margin-left:auto"><span class="sm-chip-punto" aria-hidden="true"></span><span id="estado-texto">Sin conexión</span></button>
+    <button type="button" class="btn-barra" id="btnMasMenu" aria-haspopup="true" aria-expanded="false" aria-controls="masMenu" aria-label="Más opciones"><i class="bi bi-list"></i></button>
   </header>
+
+  <div id="masMenu" class="mas-menu" style="display:none" hidden>
+    <div class="mas-menu-grupo">
+      <span class="mas-menu-titulo">Este celular</span>
+      <button type="button" id="menuEnviarPendientes"><i class="bi bi-cloud-arrow-up"></i> Enviar movimientos pendientes</button>
+    </div>
+    <div class="mas-menu-grupo">
+      <span class="mas-menu-titulo">Ajustes</span>
+      <button type="button" onclick="alternarTemaSumetec()"><i class="bi bi-moon-stars"></i> Modo claro / oscuro</button>
+      <button type="button" onclick="_mostrarVersionInstalada()"><i class="bi bi-info-circle"></i> Actualización de software</button>
+      <button type="button" id="menuVincular"><i class="bi bi-phone"></i> Vincular otro teléfono</button>
+    </div>
+  </div>
 
   <div class="hoja">
     <nav class="sm-nav">
-      <button data-vista="resumen" class="btn-nav"><i class="bi bi-speedometer2"></i> Resumen</button>
-      <button data-vista="caja" class="btn-nav"><i class="bi bi-cash-stack"></i> Caja</button>
-      <button data-vista="corte" class="btn-nav"><i class="bi bi-safe"></i> Corte</button>
-      <button data-vista="inventario" class="btn-nav"><i class="bi bi-box-seam"></i> Inventario</button>
+      <button data-vista="resumen" class="btn-nav">Resumen</button>
+      <button data-vista="caja" class="btn-nav">Caja</button>
+      <button data-vista="corte" class="btn-nav">Corte</button>
+      <button data-vista="inventario" class="btn-nav">Inventario</button>
     </nav>
     <main id="app"></main>
   </div>
@@ -67,5 +82,7 @@
   <script src="dashboard.js"></script>
   <script src="inventario.js"></script>
   <script src="app.js"></script>
+  <div id="sumetecActualizacion" role="status" aria-live="assertive"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje">⚙</span><strong>Actualizando SUMETEC</strong><p>Espera un momento…</p></div></div>
+  <script src="actualizacion.js"></script>
 </body>
 </html>

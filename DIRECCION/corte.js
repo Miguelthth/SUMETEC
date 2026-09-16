@@ -101,6 +101,7 @@ function formularioCorteDireccion() {
   return `<h1>Corte</h1>
 <p class="text-muted">Compara únicamente el efectivo contado contra los movimientos de efectivo del día.</p>
 <p class="text-aviso">Revisa también Compras: sus pendientes sin enviar ya no se ven desde aquí.</p>
+<div class="corte-layout">
 <form id="form-corte" class="card"><div class="card-body" style="display:grid;gap:10px">
   <label class="form-label" for="corte-fecha">Fecha<input id="corte-fecha" class="form-control" name="fecha" type="date" required></label>
   <label class="form-label" for="corte-fondo">Fondo inicial<input id="corte-fondo" class="form-control" name="fondo" type="number" min="0" step="0.01" value="0"></label>
@@ -117,8 +118,15 @@ function formularioCorteDireccion() {
     <button class="btn btn-success"><i class="bi bi-check-circle"></i> Cerrar corte</button>
   </div>
 </div></form>
-<div id="resultado-corte" class="card" style="padding:12px 14px" role="status"></div>`;
+<div id="resultado-corte" class="card" style="padding:12px 14px" role="status"></div>
+</div>`;
 }
+
+// Umbral desde el que una diferencia pide confirmación explícita antes de
+// cerrar (plan de mejoras 2026-09-14): un corte descuadrado por unos
+// centavos es normal; uno descuadrado por cientos de pesos merece una
+// pausa, no un guardado de un solo toque.
+const UMBRAL_CONFIRMAR_DIFERENCIA = 100;
 
 // Separada de la lectura del DOM para poder probarla sin navegador: dado
 // [{valor, cantidad}, ...] regresa el total en efectivo -- exactamente lo
@@ -248,6 +256,15 @@ function activarCorteDireccion() {
       }
       const pin = await pedirPinDireccion();
       const p = await previa(pin);
+      const cSinGuardar = calcularCorte({
+        fondo: f.fondo.value, entradasEfectivo: p.entradasEfectivo,
+        salidasEfectivo: p.salidasEfectivo, contado: f.contado.value
+      });
+      if (Math.abs(cSinGuardar.diferencia) >= UMBRAL_CONFIRMAR_DIFERENCIA) {
+        const sigue = confirm(`${_etiquetaDiferencia(cSinGuardar.diferencia)} ` +
+          `$${Math.abs(cSinGuardar.diferencia).toFixed(2)}. ¿Cerrar el corte de todas formas?`);
+        if (!sigue) return;
+      }
       const r = await cerrarCorteDireccion(pin, {
         fecha: f.fecha.value, fondo: f.fondo.value, contado: f.contado.value,
         hashResumen: p.hashResumen || ''

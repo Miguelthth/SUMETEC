@@ -5,11 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#023561">
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="logos/sumetec-compras.png" type="image/png">
+  <link rel="apple-touch-icon" href="logos/sumetec-compras.png">
   <!-- tema-inicial.js va ANTES del CSS (elige día/noche sin parpadeo) --
        mismo tema del ERP, generado por 16.- IDENTIDAD-NEGOCIO/generar_tema.py.
        No editar sumetec-tema.css ni tema-inicial.js a mano. -->
   <script src="tema-inicial.js"></script>
   <link rel="stylesheet" href="sumetec-tema.css">
+  <link rel="stylesheet" href="actualizacion.css">
   <link rel="stylesheet" href="estilos.css">
   <title>SUMETEC Compras</title>
 </head>
@@ -56,5 +59,7 @@
   <script src="seguridad.js"></script>
   <script src="compras.js"></script>
   <script src="app.js"></script>
+  <div id="sumetecActualizacion" role="status" aria-live="assertive"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje">⚙</span><strong>Actualizando SUMETEC</strong><p>Espera un momento…</p></div></div>
+  <script src="actualizacion.js"></script>
 </body>
 </html>

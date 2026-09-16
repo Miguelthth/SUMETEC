@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SUMETEC – Gastos</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="logos/sumetec-gastos.png" type="image/png">
+<link rel="apple-touch-icon" href="logos/sumetec-gastos.png">
 <meta name="theme-color" content="#023561">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,6 +18,7 @@
      sin agregar un control nuevo a la barra de Gastos. -->
 <script src="tema-inicial.js"></script>
 <link rel="stylesheet" href="sumetec-tema.css">
+<link rel="stylesheet" href="actualizacion.css">
 <style>
 /* Todos los tokens (--sm-glass-*, --sm-bg, --sm-navy, etc.) y la letra IBM
    Plex vienen de sumetec-tema.css (F5b, 2026-09-11) -- ANTES este bloque
@@ -25,12 +28,12 @@
    distinta a la de Dirección/Compras) -- se conservan tal cual, solo
    cambiaron los colores fijos por los tokens del tema. */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;background:var(--sm-bg);color:var(--sm-ink);padding-bottom:80px}
+body{font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;background:var(--sm-bg);color:var(--sm-ink);padding-bottom:max(80px,env(safe-area-inset-bottom))}
 
 header{
   position:relative;isolation:isolate;overflow:hidden;
   background:var(--sm-glass-nav-fondo);color:#fff;padding:14px 16px;
-  display:flex;align-items:center;justify-content:space-between;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
   border-bottom:1px solid var(--sm-glass-nav-borde);
   -webkit-backdrop-filter:blur(var(--sm-glass-nav-blur)) saturate(150%);
   backdrop-filter:blur(var(--sm-glass-nav-blur)) saturate(150%);
@@ -77,12 +80,31 @@ header.sm-liquid-activa::after,.card.sm-liquid-activa::after,.btn.sm-liquid-acti
 .card.sm-liquid-activa{transform:translateY(-2px);box-shadow:0 12px 24px var(--sm-glass-superficie-sombra), inset 0 1px 0 rgb(255 255 255 / .55)}
 
 select,input{width:100%;padding:8px;border:1px solid var(--sm-border-soft);border-radius:6px;font-size:14px;font-family:inherit;margin-top:4px;background:var(--sm-surface);color:var(--sm-ink)}
+select,input:not([type=radio]){min-height:44px}
+input[type=radio]{width:24px;height:24px}
+.sm-header-meta{margin-left:auto;display:flex;gap:8px}
+.sm-header-chip{padding:2px 8px;border:0;border-radius:10px;background:rgba(255,255,255,.2);color:#fff;font-size:11px;font-family:inherit;cursor:pointer}
+.gasto-bloque{padding:0;margin:0 0 16px;border:0}
+.gasto-bloque legend{padding:0;margin-bottom:8px;font-size:14px;font-weight:700}
+.gasto-modos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:6px 0}
+.gasto-modo{display:flex;align-items:center;gap:6px;min-height:48px;cursor:pointer;font-size:12.5px}
+.gasto-resumen{margin-top:10px;font-size:13px;padding:8px;background:var(--sm-surface-2);border-radius:6px}
+.gasto-acciones{margin-top:12px}
+.gasto-reciente{min-width:0;overflow:hidden}
+.gasto-foto-preview{display:none;max-width:100%;width:100%;max-height:240px;border:1px solid var(--sm-border-soft);border-radius:6px;margin-top:8px;object-fit:contain}
 /* En el teléfono, Safari acerca la pantalla si el campo mide menos de 16px. */
 @media (pointer: coarse){select,input{font-size:16px}}
+@media (pointer: coarse){.sm-header-chip{min-width:44px;min-height:44px;padding:8px;font-size:14px}}
+@media (max-width:600px){.gasto-modos{grid-template-columns:1fr}}
 .fila-producto{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--sm-line)}
 .fila-producto .info{flex:1}
 .fila-producto .codigo{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--sm-muted)}
 .fila-producto input[type=number]{width:80px;text-align:right}
+.pendiente-item{align-items:flex-start;gap:10px;padding:12px}
+.pendiente-item .info{min-width:0;overflow-wrap:anywhere}
+.pendiente-acciones{display:flex;gap:8px}
+.pendiente-accion{width:44px;min-width:44px;height:44px;min-height:44px;padding:0}
+@media (max-width:360px){.pendiente-item{display:grid;grid-template-columns:1fr}.pendiente-acciones{justify-content:flex-end}}
 #tokenGate{display:none;position:fixed;inset:0;z-index:999;background:color-mix(in srgb, var(--sm-navy) 92%, transparent);align-items:center;justify-content:center}
 #tokenGate .card{width:280px}
 .toast{
@@ -95,6 +117,24 @@ select,input{width:100%;padding:8px;border:1px solid var(--sm-border-soft);borde
 .toast.show{display:block}
 #badgePendientes{cursor:pointer}
 .ia-tocado{background:color-mix(in srgb, var(--sm-aviso) 16%, var(--sm-surface));border-color:var(--sm-aviso)}
+.sm-status-chip{display:inline-flex;align-items:center;gap:5px}
+.sm-status-dot{width:7px;height:7px;border-radius:50%;background:#3ecf7e;display:inline-block;flex:none}
+.sm-status-chip.offline .sm-status-dot{background:#e0a233}
+.sm-status-chip.sending .sm-status-dot{background:#4a9de0}
+.sm-status-chip.stuck .sm-status-dot{background:#e0524a;box-shadow:0 0 0 3px rgb(224 82 74 / .3)}
+.gasto-mas-toggle{width:100%;margin-top:10px;height:38px;border:1px dashed var(--sm-border-soft);border-radius:6px;background:transparent;color:var(--sm-muted);font-size:12.5px;font-weight:600;cursor:pointer}
+.gasto-ocr-principal{width:100%;height:48px;border-radius:8px;margin-bottom:6px;font-size:14px}
+.gasto-ocr-ayuda{font-size:11px;color:var(--sm-muted);text-align:center;margin-bottom:14px}
+.gasto-reciente-fila{cursor:pointer;position:relative}
+.gasto-reciente-dup{font-size:11px;color:var(--sm-green);font-weight:600;border:1px solid var(--sm-border-soft);border-radius:5px;padding:2px 7px;flex:none;margin-left:8px}
+.gasto-evidencia-extra{display:none}
+@media (min-width:900px){
+  .gastos-layout{display:grid;grid-template-columns:1.3fr 0.9fr;gap:0 16px;align-items:start}
+  .gastos-layout .card{margin:12px}
+  .gastos-col-lateral{position:sticky;top:12px}
+  .gasto-mas-toggle{display:none}
+  .gasto-evidencia-extra{display:block!important}
+}
 
 @media (prefers-reduced-motion: reduce){
   .card,.btn,header::after,.card::after,.btn::after{transition:none!important}
@@ -118,14 +158,24 @@ select,input{width:100%;padding:8px;border:1px solid var(--sm-border-soft);borde
   .btn.danger{background:var(--sm-chart-4)}
   .toast{background:var(--sm-ink)}
 }
+@media (max-width: 600px){
+  header{flex-wrap:wrap;padding:max(8px,env(safe-area-inset-top)) 10px 8px;min-height:56px}
+  header h1{font-size:15px}
+  .sm-header-chip{min-width:44px;min-height:44px;padding:8px;border:1px solid rgb(255 255 255 / .38);border-radius:8px}
+  .card{margin:8px;padding:12px}
+  select,input{font-size:16px}
+  .btn,button{min-height:48px}
+}
 </style>
 </head>
 <body>
 
 <header>
   <h1 id="tituloApp">💰 Gastos — SUMETEC</h1>
-  <span id="badgePendientes" onclick="verColaPendiente()" style="font-size:11px;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px"></span>
-  <span id="badgeVersion" onclick="_mostrarVersionInstalada()" style="font-size:11px;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;cursor:pointer" title="Ver actualización de software">ℹ️</span>
+  <div class="sm-header-meta">
+    <button id="badgePendientes" class="sm-header-chip sm-status-chip" type="button" onclick="verColaPendiente()" aria-label="Ver estado y pendientes de envío"><span class="sm-status-dot"></span><span id="badgePendientesTexto">En línea</span></button>
+    <button id="badgeVersion" class="sm-header-chip" type="button" onclick="_mostrarVersionInstalada()" title="Ver actualización de software" aria-label="Ver versión instalada">ℹ️</button>
+  </div>
 </header>
 
 <div id="app"></div>
@@ -533,37 +583,64 @@ function renderGastos() {
   const opcionesTipo = TIPOS_GASTO.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
   const opcionesForma = FORMAS_PAGO.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
   const recientes = leerSeguro('gastos_recientes', []);
-  const filasRecientes = recientes.length ? recientes.slice(0, 5).map(g => `
-    <div class="fila-producto">
+  const proveedorRecordado = leerSeguro('gasto_ultimo_proveedor', '');
+  const hoyStr = _fechaLocal_();
+  const gastosHoy = recientes.filter(g => g.fecha === hoyStr);
+  const totalHoyHtml = gastosHoy.length
+    ? `<div style="font-size:12px;color:var(--sm-green);font-weight:600;margin-bottom:8px">Hoy: $${gastosHoy.reduce((s, g) => s + (+g.total || 0), 0).toFixed(2)} · ${gastosHoy.length} gasto${gastosHoy.length > 1 ? 's' : ''}</div>`
+    : '';
+  const filasRecientes = recientes.length ? recientes.slice(0, 5).map((g, i) => `
+    <div class="fila-producto gasto-reciente gasto-reciente-fila" onclick="_duplicarGastoReciente_(${i})">
       <div class="info">
         <div>${esc(g.concepto)}</div>
         <div class="codigo">${esc(g.tipoGasto || '')} · ${esc(g.fecha)}</div>
       </div>
       <strong>$${(+g.total || 0).toFixed(2)}</strong>
+      <span class="gasto-reciente-dup" onclick="event.stopPropagation();_duplicarGastoReciente_(${i})">Duplicar</span>
     </div>`).join('') : '<p style="font-size:13px;color:var(--sm-muted);padding:4px 0">Sin gastos capturados todavía en este celular.</p>';
 
   document.getElementById('app').innerHTML = `
     ${_htmlConteoHuerfano_()}
     ${_htmlAntiguedadListasGasto_()}
+    <div class="gastos-layout">
     <div class="card">
+      <div class="gasto-bloque">
+      <input type="file" id="gas_foto" accept="image/*" capture="environment" onchange="_onFotoGastoElegida_()" style="display:none">
+      <button id="gasBtnOcrTop" class="btn gasto-ocr-principal" type="button" onclick="document.getElementById('gas_foto').click()">📷 Tomar foto y leer ticket</button>
+      <div class="gasto-ocr-ayuda">La IA llena fecha, total, IVA y proveedor — tú los revisas antes de guardar.</div>
+      <img id="gasFotoPreview" class="gasto-foto-preview" alt="Vista previa de la foto del ticket">
+      <button id="gasBtnOcr" class="btn secondary" type="button" style="width:100%;margin-top:8px;display:none" onclick="_leerTicketConIA_()">🔍 Leer ticket otra vez</button>
+      <div id="gasOcrEstado" style="font-size:12px;color:var(--sm-muted);margin-top:4px"></div>
+      </div>
+      <fieldset class="gasto-bloque gasto-datos">
+        <legend>1. Datos del gasto</legend>
       <label style="font-size:13px;font-weight:600">Fecha</label>
       <input type="date" id="gas_fecha" value="${_fechaLocal_()}">
       <label style="font-size:13px;font-weight:600;margin-top:8px;display:block">Concepto</label>
       <input type="text" id="gas_concepto" placeholder="Ej. Gasolina de la camioneta">
-      <label style="font-size:13px;font-weight:600;margin-top:8px;display:block">Tipo de gasto</label>
-      <select id="gas_tipo"><option value="">— elige —</option>${opcionesTipo}</select>
-      <label style="font-size:13px;font-weight:600;margin-top:8px;display:block">Forma de pago</label>
-      <select id="gas_forma"><option value="">— elige —</option>${opcionesForma}</select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div>
+          <label style="font-size:13px;font-weight:600;display:block">Tipo de gasto</label>
+          <select id="gas_tipo"><option value="">— elige —</option>${opcionesTipo}</select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:600;display:block">Forma de pago</label>
+          <select id="gas_forma"><option value="">— elige —</option>${opcionesForma}</select>
+        </div>
+      </div>
+      </fieldset>
 
+      <fieldset class="gasto-bloque gasto-importes">
+        <legend>2. Importe</legend>
       <label style="font-size:13px;font-weight:600;margin-top:12px;display:block">¿Cómo lo vas a capturar?</label>
-      <div style="display:flex;gap:12px;padding:6px 0;font-size:12.5px">
-        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+      <div class="gasto-modos" role="radiogroup" aria-label="Forma de capturar el importe">
+        <label class="gasto-modo">
           <input type="radio" name="gasModo" value="A" checked onchange="_cambiarModoGasto_('A')"> Base + IVA
         </label>
-        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+        <label class="gasto-modo">
           <input type="radio" name="gasModo" value="B" onchange="_cambiarModoGasto_('B')"> Total con IVA
         </label>
-        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+        <label class="gasto-modo">
           <input type="radio" name="gasModo" value="C" onchange="_cambiarModoGasto_('C')"> Total + IVA exacto
         </label>
       </div>
@@ -591,29 +668,70 @@ function renderGastos() {
         <input type="number" step="0.01" min="0" id="gas_ivaC" inputmode="decimal" oninput="_actualizarPreviewGasto_()">
       </div>
 
-      <div id="gasPreview" style="margin-top:10px;font-size:13px;padding:8px;background:var(--sm-surface-2);border-radius:6px"></div>
+      <div id="gasPreview" class="gasto-resumen"></div>
+      </fieldset>
 
-      <label style="font-size:12px;color:var(--sm-muted);margin-top:10px;display:block">📷 Foto del ticket (opcional)</label>
-      <input type="file" id="gas_foto" accept="image/*" capture="environment" onchange="_onFotoGastoElegida_()">
-      <img id="gasFotoPreview" style="display:none;max-height:160px;border-radius:6px;margin-top:8px;object-fit:contain">
-      <button id="gasBtnOcr" class="btn secondary" type="button" style="width:100%;margin-top:8px;display:none" onclick="_leerTicketConIA_()">🔍 Leer ticket</button>
-      <div id="gasOcrEstado" style="font-size:12px;color:var(--sm-muted);margin-top:4px"></div>
-
+      <fieldset class="gasto-bloque gasto-evidencia">
+        <legend>3. Datos opcionales</legend>
+      <button type="button" class="gasto-mas-toggle" onclick="_toggleMasCamposGasto_(this)">▾ Más campos (opcional)</button>
+      <div id="gasMasCampos" class="gasto-evidencia-extra">
       <label style="font-size:12px;color:var(--sm-muted);margin-top:10px;display:block">Proveedor (opcional)</label>
-      <input type="text" id="gas_proveedor" placeholder="Ej. Tornimaster">
+      <input type="text" id="gas_proveedor" placeholder="Ej. Tornimaster" value="${esc(proveedorRecordado)}">
+      ${proveedorRecordado ? '<div style="font-size:10.5px;color:var(--sm-muted);margin-top:2px">💡 tu último proveedor — bórralo si es otro</div>' : ''}
 
       <label style="font-size:12px;color:var(--sm-muted);margin-top:10px;display:block">🧾 UUID del CFDI (opcional, si ya tienes la factura)</label>
       <input type="text" id="gas_uuid_cfdi" placeholder="folio fiscal del XML">
+      </div>
+      </fieldset>
 
-      <button class="btn" style="width:100%;margin-top:12px" onclick="_guardarGasto_()">Guardar gasto</button>
+      <div class="gasto-bloque gasto-acciones">
+        <button id="gasGuardar" class="btn" type="button" style="width:100%" onclick="_guardarGasto_()">Guardar gasto</button>
+      </div>
     </div>
+    <div class="gastos-col-lateral">
     <div class="card">
       <strong style="font-size:13px">Últimos gastos capturados aquí</strong>
+      ${totalHoyHtml}
       ${filasRecientes}
       <button class="btn secondary" style="width:100%;margin-top:10px" onclick="verColaPendiente()">📋 Ver cola pendiente de envío</button>
       <button class="btn secondary" style="width:100%;margin-top:8px" onclick="exportarGastosCSV()">⬇️ Exportar gastos (.csv)</button>
+    </div>
+    </div>
     </div>`;
   _cambiarModoGasto_('A');
+}
+
+function _toggleMasCamposGasto_(btn) {
+  const panel = document.getElementById('gasMasCampos');
+  if (!panel) return;
+  const abierto = panel.style.display !== 'none';
+  panel.style.display = abierto ? 'none' : 'block';
+  btn.textContent = abierto ? '▾ Más campos (opcional)' : '▴ Menos campos';
+}
+
+// Mejora: copiar un gasto reciente para no recapturar concepto/tipo/forma en
+// gastos que se repiten seguido (gasolina, casetas). El total se pasa a modo
+// B (Total con IVA) porque gastos_recientes solo guarda el total, no el
+// desglose monto/IVA original -- el usuario confirma la tasa de IVA.
+function _duplicarGastoReciente_(indice) {
+  const recientes = leerSeguro('gastos_recientes', []);
+  const g = recientes[indice];
+  if (!g) return;
+  const elConcepto = document.getElementById('gas_concepto');
+  const elTipo = document.getElementById('gas_tipo');
+  const elForma = document.getElementById('gas_forma');
+  const elFecha = document.getElementById('gas_fecha');
+  if (elConcepto) elConcepto.value = g.concepto || '';
+  if (elTipo && g.tipoGasto) elTipo.value = g.tipoGasto;
+  if (elForma && g.formaPago) elForma.value = g.formaPago;
+  if (elFecha) elFecha.value = _fechaLocal_();
+  const radioB = document.querySelector('input[name="gasModo"][value="B"]');
+  if (radioB) { radioB.checked = true; _cambiarModoGasto_('B'); }
+  const elTotal = document.getElementById('gas_totalBC');
+  if (elTotal) elTotal.value = (+g.total || 0).toFixed(2);
+  _actualizarPreviewGasto_();
+  toast('Datos copiados de tu gasto anterior — revisa el importe y el IVA.', 4000);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ── Estatus de Evidencia (plan OCR Fase 2, 2026-08-27) ────────────────────────
@@ -700,8 +818,12 @@ function _onFotoGastoElegida_() {
     btnOcr.style.display = 'block';
     const online = navigator.onLine;
     btnOcr.disabled = !online;
-    btnOcr.textContent = online ? '🔍 Leer ticket' : '🔍 Leer ticket (sin señal)';
+    btnOcr.textContent = online ? '🔍 Leer ticket otra vez' : '🔍 Leer ticket (sin señal)';
   }
+  // El botón principal ya es "Tomar foto y leer ticket" -- elegir la foto
+  // desde ahí dispara la lectura sola, sin un segundo toque. "Leer ticket
+  // otra vez" queda visible solo para reintentar si la primera lectura falló.
+  if (navigator.onLine) _leerTicketConIA_();
 }
 
 // Marca un campo como "tocado por la IA" (fondo suave) -- la marca desaparece
@@ -804,8 +926,7 @@ async function _guardarGasto_() {
   if (r.errores && r.errores.length) { toast(r.errores[0]); return; }
   // Mejora (2026-09-02): un total grande suele ser un cero de más al teclear
   // -- una sola confirmación explícita, no bloquea gastos grandes reales.
-  if (r.total >= UMBRAL_GASTO_ATIPICO &&
-      !confirm('El total es $' + r.total.toFixed(2) + ', ¿es correcto?')) return;
+  if (r.total >= UMBRAL_GASTO_ATIPICO && !confirm(_mensajeConfirmacionAtipico_(r.total, tipoGasto))) return;
 
   const fotoInput = document.getElementById('gas_foto');
   const fotoFile = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
@@ -825,6 +946,7 @@ async function _guardarGasto_() {
     proveedor, estatusEvidencia,
     device: _leerVendedorCompartido(),
   };
+  if (proveedor) guardarSeguro('gasto_ultimo_proveedor', proveedor);
   const guardadoEnCola = _encolarGasto_(payload);
 
   const recientes = leerSeguro('gastos_recientes', []);
@@ -873,6 +995,17 @@ function _encolarGasto_(payload) {
   return true;
 }
 
+// Mejora: si hay historial de este tipo de gasto en el celular, compara
+// contra su promedio -- "¿es correcto?" a secas no ayuda a detectar un cero
+// de más si no sabes de memoria cuánto sueles gastar en eso.
+function _mensajeConfirmacionAtipico_(total, tipoGasto) {
+  const recientes = leerSeguro('gastos_recientes', []);
+  const mismos = recientes.filter(g => g.tipoGasto === tipoGasto && (+g.total || 0) > 0);
+  if (!mismos.length) return 'El total es $' + total.toFixed(2) + ', ¿es correcto?';
+  const promedio = mismos.reduce((s, g) => s + (+g.total || 0), 0) / mismos.length;
+  return 'El total es $' + total.toFixed(2) + '. Los gastos de "' + tipoGasto + '" en este celular promedian $' + promedio.toFixed(2) + '. ¿Es correcto?';
+}
+
 let _procGastoEnCurso = false;
 async function procesarColaGastos() {
   if (_procGastoEnCurso || !navigator.onLine) return;
@@ -881,6 +1014,7 @@ async function procesarColaGastos() {
   const cola = leerSeguro('cola_gastos', []);
   if (!cola.length) return;
   _procGastoEnCurso = true;
+  actualizarBadgePendientes();
   try {
     for (const item of [...cola]) {
       try {
@@ -1069,6 +1203,7 @@ async function procesarColaConteo() {
   const cola = leerSeguro('cola_conteo', []);
   if (!cola.length) return;
   _procConteoEnCurso = true;
+  actualizarBadgePendientes();
   try {
     for (const item of [...cola]) {
       try {
@@ -1116,9 +1251,29 @@ function _bumpIntentoConteo(id) {
 // J-1: la campana ahora suma AMBAS colas (conteo + gastos) -- un pendiente es
 // un pendiente, sin importar de qué pestaña salió.
 function actualizarBadgePendientes() {
-  const n = leerSeguro('cola_conteo', []).length + leerSeguro('cola_gastos', []).length;
+  const colaC = leerSeguro('cola_conteo', []);
+  const colaG = leerSeguro('cola_gastos', []);
+  const todas = colaC.concat(colaG);
+  const n = todas.length;
+  const atascados = todas.filter(e => (e._try || 0) >= MAX_INTENTOS_AVISO).length;
   const el = document.getElementById('badgePendientes');
-  el.textContent = n ? n + ' pendiente' + (n > 1 ? 's' : '') + ' 👆' : '';
+  const txt = document.getElementById('badgePendientesTexto');
+  if (!el || !txt) return;
+  el.classList.remove('offline', 'sending', 'stuck');
+  if (atascados) {
+    el.classList.add('stuck');
+    txt.textContent = 'Atascado · ' + atascados;
+  } else if (!navigator.onLine) {
+    el.classList.add('offline');
+    txt.textContent = n ? ('Sin red · ' + n) : 'Sin red';
+  } else if (_procGastoEnCurso || _procConteoEnCurso) {
+    el.classList.add('sending');
+    txt.textContent = 'Enviando ' + n + '…';
+  } else if (n) {
+    txt.textContent = n + ' pendiente' + (n > 1 ? 's' : '');
+  } else {
+    txt.textContent = 'En línea';
+  }
 }
 
 // UI de la cola pendiente (F6 + mejora #8, unificada J-1): ve qué falta por
@@ -1136,13 +1291,15 @@ function verColaPendiente() {
       ? esc(e.concepto) + ' — $' + (Number(e.total) || 0).toFixed(2)
       : esc(e.categoria) + ' — ' + e.items.length + ' producto(s)';
     return `
-    <div class="fila-producto">
+    <div class="fila-producto pendiente-item">
       <div class="info">
         <div>${esGasto ? '💰' : '📋'} ${desc}</div>
         <div class="codigo">Fecha ${esc(e.fecha)} · intento ${e._try || 0}${atascado ? ' ⚠️ atascado' : ''}</div>
       </div>
-      <button class="btn secondary" style="width:auto;padding:6px 10px" onclick="_reenviarUno_('${e.id}','${e._cola}')">↻</button>
-      <button class="btn danger" style="width:auto;padding:6px 10px" onclick="_descartarUno_('${e.id}','${e._cola}')">🗑</button>
+      <div class="pendiente-acciones">
+        <button class="btn secondary pendiente-accion" type="button" aria-label="Reenviar pendiente" title="Reenviar" onclick="_reenviarUno_('${e.id}','${e._cola}')">↻</button>
+        <button class="btn danger pendiente-accion" type="button" aria-label="Descartar pendiente" title="Descartar" onclick="_descartarUno_('${e.id}','${e._cola}')">🗑</button>
+      </div>
     </div>`;
   }).join('');
   const volver = 'renderGastos()';
@@ -1173,6 +1330,7 @@ function _descartarUno_(id, tipoCola) {
 }
 
 window.addEventListener('online', function () { procesarColaConteo(); procesarColaGastos(); });
+window.addEventListener('offline', actualizarBadgePendientes);
 setInterval(function () { procesarColaConteo(); procesarColaGastos(); }, 30000);
 actualizarBadgePendientes();
 
@@ -1212,6 +1370,8 @@ actualizarBadgePendientes();
 </script>
 
 <script src="./version.js"></script>
+<div id="sumetecActualizacion" role="status" aria-live="assertive"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje">⚙</span><strong>Actualizando SUMETEC</strong><p>Espera un momento…</p></div></div>
+<script src="./actualizacion.js"></script>
 <script>
 // VERSION_DEPLOY y VERSION_CODIGO vienen de version.js (los escribe
 // build_deploy.py en cada corrida): la hora real del build y el mismo hash
@@ -1246,6 +1406,7 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!huboControlador) { huboControlador = true; return; }
       localStorage.setItem('inv_ultima_actualizacion', String(Date.now()));
+      if (sessionStorage.getItem('sumetec_gastos_actualizacion')) return;
       if (hayTrabajoSinGuardarGastos()) { recargaPendiente = true; return; }
       window.location.reload();
     });

@@ -8,39 +8,95 @@ body { max-width: 720px; margin: 0 auto; padding: 0 0 32px; }
 
 .hoja { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
 
-/* ── Menú de secciones ── */
-.sm-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+/* ── Menú de secciones: pestañas de texto, no botones de color ── */
+.sm-nav { display: flex; gap: 22px; flex-wrap: wrap; border-bottom: 1px solid var(--sm-line); }
 .btn-nav {
-  flex: 1 1 auto;
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-height: 44px; padding: 8px 10px;
-  font: inherit; font-size: 13px; font-weight: 600;
-  color: var(--sm-th-text);
-  background: var(--sm-control-fondo);
-  border: 1px solid var(--sm-glass-superficie-borde);
-  border-radius: var(--sm-r-sm);
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 6px 2px;
+  font: inherit; font-size: 13.5px; font-weight: 500;
+  color: var(--sm-muted);
+  background: none; border: none; border-bottom: 3px solid transparent;
+  border-radius: 0;
   cursor: pointer;
-  transition: background-color var(--sm-motion-standard) var(--sm-motion-ease),
-              color var(--sm-motion-standard) var(--sm-motion-ease);
+  transition: color var(--sm-motion-standard) var(--sm-motion-ease),
+              border-color var(--sm-motion-standard) var(--sm-motion-ease);
 }
-.btn-nav.activo { color: white; background: var(--sm-accent); border-color: var(--sm-accent); }
-:root[data-tema="oscuro"] .btn-nav.activo { color: var(--sm-bg); }
+.btn-nav.activo { color: var(--sm-ink); font-weight: 600; border-bottom-color: var(--sm-green); }
+
+/* ── Chip de estado permanente -- el texto se queda blanco (mismo que el
+   .sm-chip original, sobre el fondo translúcido de la barra); el color
+   de estado vive SOLO en el punto (currentColor lo hereda del span). ── */
+.sm-chip-boton { border: none; cursor: pointer; font: inherit; }
+.sm-chip-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; color: #eef0f2; }
+#estado.chip-en-linea .sm-chip-punto { color: #6fe093; }
+#estado.chip-pendientes .sm-chip-punto, #estado.chip-sin-red .sm-chip-punto { color: #ffce6b; }
+#estado.chip-enviando .sm-chip-punto { color: #8ec4ff; }
+
+/* ── Menú "☰ Más", agrupado por categoría ── */
+.mas-menu[hidden] { display: none; }
+.mas-menu {
+  position: fixed; top: 60px; right: 12px; z-index: 30;
+  width: 250px; max-width: calc(100vw - 24px);
+  background: var(--sm-surface); border: 1px solid var(--sm-line);
+  border-radius: var(--sm-r-md); box-shadow: var(--sm-shadow-sereno);
+  padding: 10px; display: flex; flex-direction: column; gap: 14px;
+}
+.mas-menu-grupo { display: flex; flex-direction: column; gap: 2px; }
+.mas-menu-titulo {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--sm-muted); padding: 4px 8px 2px;
+}
+.mas-menu-grupo button {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 8px; text-align: left;
+  font: inherit; font-size: 13.5px; color: var(--sm-ink);
+  background: none; border: none; border-radius: var(--sm-r-sm); cursor: pointer;
+}
+.mas-menu-grupo button:hover { background: var(--sm-control-fondo); }
 
 .fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ── Caja: campos secundarios colapsables en celular (siempre visibles en
+   escritorio -- ver .campos-mas / .btn-mas-campos en formularioCajaDireccion) ── */
+.btn-mas-campos {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 40px; padding: 6px 2px; margin: 0;
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--sm-accent);
+  background: none; border: none; border-top: 1px solid var(--sm-line); cursor: pointer;
+}
+.btn-mas-campos .resumen-campos { font-weight: 400; font-size: 11.5px; color: var(--sm-muted); }
+.campos-mas { display: none; flex-direction: column; gap: 10px; }
+.campos-mas.abierto { display: flex; }
+@media (min-width: 640px) {
+  .btn-mas-campos { display: none; }
+  .campos-mas { display: flex !important; }
+}
 
 /* ── Caja: lista de movimientos de hoy (renderMovimientosCaja, caja.js) ── */
 #lista-caja-cuerpo ul {
   list-style: none; padding: 0; margin: 10px 0 0;
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: 8px;
 }
 #lista-caja-cuerpo li {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
-  padding: 8px 10px; font-size: 13px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px; font-size: 13px;
   border: 1px solid var(--sm-line); border-radius: var(--sm-r-sm);
 }
-#lista-caja-cuerpo li > span:first-child { font-weight: 700; font-variant-numeric: tabular-nums; }
+#lista-caja-cuerpo li.anulado { opacity: .6; }
+#lista-caja-cuerpo li .mov-info { flex: 1; min-width: 0; }
+#lista-caja-cuerpo li .mov-linea1 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+#lista-caja-cuerpo li .mov-monto { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#lista-caja-cuerpo li .mov-monto.pos { color: var(--sm-green-texto); }
+#lista-caja-cuerpo li .mov-monto.neg { color: #b3261e; }
+#lista-caja-cuerpo li .mov-tipo { font-size: 13px; font-weight: 600; }
+#lista-caja-cuerpo li .mov-linea2 {
+  display: block; font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11.5px; color: var(--sm-muted); margin-top: 2px;
+}
+#lista-caja-cuerpo li .mov-anulado-tag { font-size: 11px; font-weight: 700; color: var(--sm-aviso); }
 #lista-caja-cuerpo button.anular {
-  margin-left: auto; min-height: 32px; padding: 4px 10px;
+  flex: none; min-height: 40px; padding: 4px 11px;
   font: inherit; font-size: 12px; font-weight: 600;
   color: var(--sm-accent); background: transparent;
   border: 1px solid var(--sm-border-soft); border-radius: var(--sm-r-sm);
@@ -96,10 +152,11 @@ body { max-width: 720px; margin: 0 auto; padding: 0 0 32px; }
 }
 
 #denominaciones-corte.billetero {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem;
   border: 0; padding: 0; margin: 0; list-style: none;
 }
 .denominacion {
+  min-width: 0;
   display: flex; align-items: stretch; gap: 2px;
   border-radius: var(--sm-r-sm); overflow: hidden;
   border: 1px solid var(--sm-line);
@@ -129,6 +186,31 @@ body { max-width: 720px; margin: 0 auto; padding: 0 0 32px; }
   padding: 2px;
 }
 @media (pointer: coarse) { .denominacion input.cant-denominacion { font-size: 16px; } }
+
+@media (max-width: 480px) {
+  #denominaciones-corte.billetero {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .billete-boton { flex: 0 0 44px; }
+}
+
+@media (max-width: 340px) {
+  #denominaciones-corte.billetero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Corte: dos columnas en escritorio -- billetero a la izquierda, arqueo
+   fijo (sticky) a la derecha; envuelve #form-corte + #resultado-corte sin
+   tocar su HTML/JS interno, mismo patrón que Remisiones. ── */
+@media (min-width: 900px) {
+  .corte-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+  #resultado-corte, .corte-layout #form-corte ~ #resultado-corte { position: sticky; top: 72px; }
+}
+
+/* ── Objetivos táctiles: 44px mínimo (Miguel captura de pie, con prisa) ── */
+#form-caja .form-control, #form-caja .form-select,
+#form-corte .form-control, #form-corte .form-select { min-height: 44px; }
 
 /* La barra se llena con los mismos colores, proporcional a cuánto pesa cada
    denominación en el total contado (_segmentosEfectivo, corte.js). */

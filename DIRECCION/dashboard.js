@@ -21,6 +21,10 @@ function renderDashboardDireccion(s) {
   const fecha = String(s.generadoEn || '').replace('T', ' ');
   return `<h1>Resumen</h1>
 <p class="oficial">Oficial al ${fecha}</p>
+<section class="prioridades-erp">
+  <h2>Qué necesita tu atención</h2>
+  ${_htmlPrioridadesDireccion_(s.prioridades)}
+</section>
 <section class="metricas">
   <article class="card"><div class="card-body">Ventas<strong class="num">${_dineroDireccion(s.ventas)}</strong></div></article>
   <article class="card"><div class="card-body">Cobrado<strong class="num">${_dineroDireccion(s.cobrado)}</strong></div></article>
@@ -28,10 +32,6 @@ function renderDashboardDireccion(s) {
   <article class="card"><div class="card-body">Gastos<strong class="num">${_dineroDireccion(s.gastos)}</strong></div></article>
   <article class="card"><div class="card-body">Compras<strong class="num">${_dineroDireccion(s.compras)}</strong></div></article>
   <article class="card"><div class="card-body">Cartera<strong class="num">${_dineroDireccion(s.cartera)}</strong></div></article>
-</section>
-<section class="prioridades-erp">
-  <h2>Qué necesita tu atención</h2>
-  ${_htmlPrioridadesDireccion_(s.prioridades)}
 </section>
 <section class="pendientes card">
   <div class="card-body">
@@ -113,6 +113,18 @@ async function activarDashboardDireccion() {
     document.querySelector('#app').innerHTML = renderDashboardDireccion(s);
   } catch (e) {
     if (typeof vistaActivaDireccion === 'function' && vistaActivaDireccion() !== 'resumen') return;
-    document.querySelector('#app').innerHTML = `<h1>Resumen</h1><p>${e.message}</p>`;
+    // Sin red (o el servidor no contestó): en vez de solo un mensaje de
+    // error, se muestra la última fotografía que sí se alcanzó a guardar
+    // (cargarDashboardDireccion ya la cachea en cada consulta exitosa),
+    // marcada como no oficial en este momento.
+    let cache = null;
+    try { cache = JSON.parse(localStorage.getItem('sumetec_direccion_snapshot_cache') || 'null'); } catch (_) {}
+    if (cache && cache.snapshot) {
+      const ts = String(cache.ts || '').replace('T', ' ').slice(0, 16);
+      document.querySelector('#app').innerHTML = renderDashboardDireccion(cache.snapshot) +
+        `<p class="text-aviso">${e.message} — mostrando la última consulta guardada en este teléfono (${ts || 'fecha desconocida'}).</p>`;
+    } else {
+      document.querySelector('#app').innerHTML = `<h1>Resumen</h1><p>${e.message}</p>`;
+    }
   }
 }

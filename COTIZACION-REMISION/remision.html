@@ -57,16 +57,17 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .tb-brand .ac{color:#4CAF82}
 .tb-div{width:1px;height:22px;background:rgba(255,255,255,.15)}
 .tb-more{position:relative;display:inline-flex}
-.menu-mas{display:none;position:fixed;background:#fff;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.28);min-width:264px;z-index:500;overflow:hidden;flex-direction:column}
+.menu-mas{display:none;position:fixed;background:var(--bg);border-radius:14px;padding:10px;box-shadow:0 12px 32px rgba(0,0,0,.28);min-width:264px;z-index:500;flex-direction:column;gap:10px}
+.menu-mas-grp{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(11,45,74,.05);overflow:hidden}
 .menu-mas.open{display:flex}
 /* Fondo oscuro detrás del menú "Más" -- SOLO se activa en pantallas chicas
    (ver @media abajo). En desktop queda display:none siempre. */
 #menuMasBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:499}
-.menu-mas button{display:block;width:100%;text-align:left;padding:11px 16px;border:none;background:none;font-family:inherit;font-size:13.5px;color:var(--text);cursor:pointer;white-space:nowrap}
-.menu-mas button:hover{background:var(--bg)}
-.menu-mas button+button{border-top:1px solid var(--border)}
-.menu-mas-h{padding:10px 16px 5px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
-.menu-mas-h:not(:first-child){margin-top:6px;border-top:8px solid var(--bg)}
+.menu-mas-grp button{display:block;width:100%;text-align:left;padding:14px 16px;border:none;background:none;font-family:inherit;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;min-height:54px}
+.menu-mas-grp button:hover{background:var(--bg)}
+.menu-mas-grp button+button{border-top:1px solid var(--border)}
+.menu-mas-h{padding:0 6px 8px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.8px;color:var(--muted)}
+
 .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--r2);font-size:12.5px;font-weight:500;cursor:pointer;border:none;transition:background .14s;font-family:inherit;white-space:nowrap}
 .btn-g{background:rgba(255,255,255,.1);color:#fff}.btn-g:hover{background:rgba(255,255,255,.2)}
 .btn-p{background:var(--green);color:#fff}.btn-p:hover{background:var(--green2)}
@@ -125,11 +126,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .sp-name{font-size:12.5px;font-weight:600;color:var(--text)}
 .sp-sub{font-size:11px;color:var(--muted)}
 /* Popup de productos — fixed para evitar recorte por tabla */
-.pp-global{display:none;position:fixed;background:#fff;border:2px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(11,45,74,.18);z-index:2000;width:min(420px,calc(100vw - 16px));max-height:480px;overflow-y:auto}
+.pp-global{display:none;position:fixed;background:#F4F7F6;padding:6px 8px;border:2px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(11,45,74,.18);z-index:2000;width:min(420px,calc(100vw - 16px));max-height:480px;overflow-y:auto}
 .pp-global.open{display:block}
-.pp-item{padding:5px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:grid;grid-template-columns:minmax(90px,140px) 1fr auto;align-items:center;gap:6px;transition:background .1s}
-.pp-item:last-child{border-bottom:none}
-.pp-item:hover,.pp-item:active{background:var(--green-light)}
+.pp-item{padding:9px 12px;cursor:pointer;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:6px;box-shadow:0 1px 3px rgba(11,45,74,.05);display:grid;grid-template-columns:minmax(90px,140px) 1fr auto;align-items:center;gap:6px;transition:all .12s}
+.pp-item:last-child{margin-bottom:0}
+.pp-item:hover,.pp-item:active{background:var(--green-light);border-color:var(--green)}
 .pp-cod{font-size:11.5px;font-weight:700;color:var(--green);font-family:monospace;word-break:break-all}
 .pp-desc{font-size:11.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pp-precio{font-size:11.5px;font-weight:600;color:var(--navy);white-space:nowrap}
@@ -197,12 +198,12 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .mx:hover{background:#FFE5E5;color:#C0392B}
 .mi{width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;outline:none;margin-bottom:12px}
 .mi:focus{border-color:var(--green)}
-.ml{display:flex;flex-direction:column;gap:7px}
-.rem-i{display:flex;align-items:center;padding:11px 13px;background:var(--bg);border-radius:9px;cursor:pointer;border:2px solid transparent;gap:9px;transition:all .12s}
-.rem-i:hover{border-color:var(--green);background:var(--green-light)}
-.rem-fo{font-weight:700;color:var(--navy);font-size:13px}
-.rem-cl{font-size:11px;color:var(--muted);margin-top:1px}
-.rem-to{font-weight:700;color:var(--green);font-size:13px;white-space:nowrap}
+.ml{display:flex;flex-direction:column;gap:8px;background:var(--bg);border-radius:12px;padding:8px}
+.rem-i{display:flex;align-items:center;padding:12px 13px;background:#fff;border-radius:12px;cursor:pointer;border:1px solid var(--border);box-shadow:0 1px 3px rgba(11,45,74,.05);gap:9px;transition:all .12s}
+.rem-i:hover{border-color:var(--green);background:var(--green-light);box-shadow:0 2px 8px rgba(11,45,74,.08)}
+.rem-fo{font-weight:700;color:var(--navy);font-size:13.5px}
+.rem-cl{font-size:11.5px;color:var(--muted);margin-top:3px}
+.rem-to{font-weight:700;color:var(--green);font-size:14px;white-space:nowrap}
 .rem-del{width:26px;height:26px;border-radius:6px;border:none;background:#FFE8E8;color:#C0392B;cursor:pointer;font-size:13px;flex-shrink:0}
 .rem-del:hover{background:#FFBDBD}
 .es{text-align:center;padding:32px;color:var(--muted)}
@@ -332,7 +333,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
      depende de ningún cálculo de posición que pueda volver a fallar. */
   .menu-mas{top:50%!important;left:50%!important;right:auto!important;
     transform:translate(-50%,-50%);width:min(260px,calc(100vw - 48px));min-width:unset}
-  .menu-mas button{padding:14px 16px;font-size:14px;min-height:48px}
+  .menu-mas-grp button{padding:14px 16px;font-size:14px;min-height:48px}
   #menuMasBackdrop.open{display:block}
 
   /* ── Tabla de renglones: tarjetas apiladas en vez de scroll horizontal ──────
@@ -351,7 +352,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
      propósito para regalarle ese espacio a Cantidad y sobre todo a Código
      (hay códigos largos de Tornimaster que se cortaban con las 3 columnas
      iguales de antes). */
-  .items-table tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;padding:12px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:#fff}
+  .items-table tbody tr{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 10px;padding:12px;margin-bottom:8px;border:1px solid var(--border);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(11,45,74,.05)}
   .items-table tbody tr:hover{background:#fff}
   .items-table tbody td{display:block;padding:2px 0;font-size:13px;min-width:0}
   .items-table tbody td[data-label]::before{content:attr(data-label);display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:3px}
@@ -368,18 +369,21 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   #btnToggleClientDetail{display:inline-flex!important}
   /* El número de renglón ya es implícito en el orden de las tarjetas -- se
      oculta para regalarle su columna a Cantidad/Costo unitario. */
-  .td-n{display:none}
+  .items-table tbody td.td-n{display:none}
   /* 2026-09-14: orden pedido por el cliente -- Código, Descripción, y luego
      Cantidad + Costo unitario lado a lado en la misma línea (en vez de cada
      uno en su propia línea) para que la tarjeta no crezca de alto. */
-  .items-table tbody td.td-cl{order:1;grid-column:1/-1;padding-left:0}
-  .td-cl .ti.cl{font-size:13px}
-  .td-desc{order:2;grid-column:1/-1}
-  .td-c{order:3;grid-column:1;align-self:end}
-  .td-r{order:4;grid-column:2;text-align:left;align-self:end}
+  .items-table tbody td.td-cl{order:1;grid-column:1;padding-left:0;text-align:left;align-self:center}
+  .items-table tbody td.td-cl::before{display:none}
+  .td-cl .ti.cl{font-size:13px;font-family:ui-monospace,monospace;text-align:left}
+  .items-table tbody td.td-desc{order:2;grid-column:1/-1;text-align:left}
+  .items-table tbody td.td-desc::before{display:none}
+  .items-table tbody td.td-c{order:3;grid-column:1;text-align:left;align-self:end}
+  .items-table tbody td.td-r{order:4;grid-column:2;text-align:left;align-self:end;padding-right:40px}
   .items-table .td-iva{order:5;grid-column:1/-1} /* visible solo en cotización -- en remisión sigue display:none (línea 143) */
-  .items-table tbody td.td-imp{order:6;grid-column:1/-1;font-size:16px;font-weight:700;color:var(--green)}
-  .td-del{order:7;grid-column:1/-1;text-align:right;padding-top:8px;border-top:1px solid var(--border);margin-top:4px}
+  .items-table tbody td.td-imp{order:1;grid-column:2;text-align:right;align-self:center;font-size:17px;font-weight:800;color:var(--green)}
+  .items-table tbody td.td-imp::before{display:none}
+  .items-table tbody td.td-del{order:9;position:absolute;right:10px;bottom:10px;padding:0;border:none;margin:0;text-align:right;width:auto}
 
   /* Áreas táctiles más grandes */
   .del-btn{width:36px;height:36px;font-size:15px}
@@ -481,16 +485,17 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .pago-completo{border-left:3px solid var(--green)}
 .pago-abono{border-left:3px solid #F59E0B}
 .pago-anulado{border-left:3px solid #E74C3C;opacity:.55}
-/* Badge pendientes */
-#badgePendientes{display:none;background:#E67E22;color:#fff;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
+/* Badge pendientes -- el display real lo gobierna .tb-status (chip permanente); esta
+   regla legacy con display:none quedaba con mas especificidad y lo tapaba siempre. */
+#badgePendientes{background:#E67E22;color:#fff;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
 .estado-badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap;flex-shrink:0}
 .badge-pagado{background:#E8F5EF;color:#1C6E4A}
 .badge-abono{background:#FFF8E1;color:#92400E}
 .badge-pendiente{background:#FDECEA;color:#C0392B}
 .badge-cancelada{background:#F3F4F6;color:#6B7280}
 .badge-sync{background:#FFF3E0;color:#E67E22;font-size:10px}
-.cobro-row{display:flex;align-items:center;padding:13px 14px;background:var(--bg);border-radius:9px;cursor:pointer;border:2px solid transparent;gap:10px;transition:all .12s;margin-bottom:7px}
-.cobro-row:hover{border-color:#C0392B;background:#FDECEA}
+.cobro-row{display:flex;align-items:center;padding:13px 14px;background:#fff;border-radius:12px;cursor:pointer;border:1px solid var(--border);box-shadow:0 1px 3px rgba(11,45,74,.05);gap:10px;transition:all .12s;margin-bottom:8px}
+.cobro-row:hover{border-color:#C0392B;background:#FDECEA;box-shadow:0 2px 8px rgba(192,57,43,.1)}
 .cobro-saldo{font-weight:800;color:#C0392B;font-size:15px;white-space:nowrap}
 .cobro-btn{padding:7px 14px;background:#C0392B;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .cobro-btn:hover{background:#a93226}
@@ -515,6 +520,136 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   .btn,.ti,.ci-val input,.fv input,.fv select,.fg input,.fg select,.fg textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{min-height:44px}
   .qty-stepper{display:grid;grid-template-columns:44px minmax(64px,1fr) 44px;gap:8px;align-items:center}.qty-stepper button{width:44px;height:44px}.qty-stepper input{width:100%!important;min-height:44px!important;text-align:center!important}
   .del-btn{width:44px;height:44px}.cobro-btn,.anular-btn,#btnRedondeo,#btnVerUtil,#btnAgregarFirma{min-height:44px}.ch .sbtn{min-height:44px}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FASE 1 MÓVIL — 2026-09-15
+   Puerto literal de la propuesta (pantallas 1a / 1b / barra de acción).
+   Solo estilos, solo en pantallas ≤780px. Escritorio e impresión intactos.
+   Cubre: encabezado con segmentado de modo, tarjeta de partida, barra de
+   acción fija y pestañas inferiores.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media(max-width:780px),(max-height:500px){
+  body{padding-bottom:calc(186px + env(safe-area-inset-bottom,0px))}
+
+  /* ── Encabezado: marca · chip de estado · segmentado Remisión/Cotización ── */
+  .tb{padding:8px 14px 10px;gap:8px;align-items:center;flex-wrap:wrap}
+  .tb-brand{font-size:14px;font-weight:700}
+  .tb-tabs{order:3;width:100%;height:auto;margin:0;gap:3px;align-items:stretch;
+    background:rgba(255,255,255,.09);border-radius:11px;padding:3px}
+  .tb-tab{flex:1;min-height:40px;padding:0;border:none;border-radius:9px;
+    font-size:13.5px;font-weight:700;color:rgba(255,255,255,.7)}
+  .tb-tab.on{background:#fff;color:var(--navy);border-bottom-color:transparent}
+  #badgePendientes{order:2;margin-left:auto;max-width:44vw;font-size:10.5px;font-weight:700;
+    border-radius:999px;padding:5px 10px;background:rgba(76,175,130,.14);
+    border:1px solid rgba(76,175,130,.35);color:#4CAF82}
+
+  /* ── Tarjeta de partida: cantidad | descripción+código+precio | importe ──
+     Misma estructura de celdas (data-label), solo cambia la rejilla. */
+  .items-table tbody tr{grid-template-columns:56px minmax(0,1fr) auto;gap:4px 10px;
+    padding:12px 13px 12px 10px;border-left:3px solid var(--green);border-radius:13px;margin-bottom:9px}
+  .items-table tbody td.td-c{order:1;grid-column:1;grid-row:1/span 2;align-self:start;padding:0}
+  .items-table tbody td.td-c::before{display:none}
+  .td-c .qty-stepper{display:grid!important;grid-template-columns:24px 24px;gap:4px;width:52px}
+  .td-c .qty-stepper input{grid-column:1/-1;width:52px!important;height:46px;min-height:46px;
+    border:none!important;border-radius:11px;background:var(--green-light)!important;
+    color:var(--green);font-size:17px;font-weight:800;text-align:center;padding:0!important}
+  .td-c .qty-stepper button{width:24px;height:30px;min-width:0;padding:0;font-size:15px;
+    border-radius:8px;background:var(--bg);color:var(--navy);border:1px solid var(--border)}
+  .items-table tbody td.td-desc{order:2;grid-column:2;grid-row:1;align-self:center}
+  .items-table tbody td.td-desc .ti{font-size:13.5px;font-weight:600;min-height:34px}
+  .items-table tbody td.td-imp{order:3;grid-column:3;grid-row:1;align-self:center;
+    font-size:16px;font-weight:800;color:var(--navy)}
+  .items-table tbody td.td-cl{order:4;grid-column:2;grid-row:2;align-self:start}
+  .items-table tbody td.td-cl .ti.cl{font-size:12px;color:var(--muted)}
+  .items-table tbody td.td-r{order:5;grid-column:3;grid-row:2;width:118px;
+    padding-right:34px;text-align:right;align-self:start}
+  .items-table tbody td.td-r::before{display:block;content:'$ c/u';font-size:9px}
+  .items-table tbody td.td-r .ti{text-align:right;font-size:13px;min-height:34px}
+  .items-table .td-iva{order:6;grid-column:2/-1;grid-row:3}
+  .items-table tbody td.td-del{right:8px;bottom:9px}
+
+  /* ── Barra de acción fija: total · PDF · acción principal ── */
+  .mobile-action{grid-template-columns:minmax(0,1fr) 52px minmax(116px,1.05fr);gap:10px;
+    left:0;right:0;bottom:calc(92px + env(safe-area-inset-bottom,0px));
+    background:#fff;border-top:1px solid var(--border);border-radius:0;padding:10px 16px;
+    box-shadow:0 -4px 16px rgba(11,45,74,.07)}
+  .mobile-action-total span{font-size:9.5px;font-weight:700;letter-spacing:1.4px;
+    color:var(--muted);opacity:1}
+  .mobile-action-total strong{font-size:17px;font-weight:800;color:var(--navy)}
+  .mobile-action-pdf{min-height:52px;border-radius:13px;background:#fff;color:var(--navy);
+    border:1.5px solid var(--border)}
+  .mobile-action-primary{min-height:52px;border-radius:13px;font-size:14.5px;font-weight:800;
+    padding:8px 10px;background:var(--green)}
+
+  /* ── Pestañas inferiores ── */
+  .mobile-nav{padding:8px 8px calc(22px + env(safe-area-inset-bottom,0px));gap:2px;
+    background:rgba(255,255,255,.97)}
+  .mobile-nav button{min-height:52px;border-radius:12px;gap:4px;color:#8A8A8E}
+  .mobile-nav button span{font-size:19px}
+  .mobile-nav button small{font-size:10.5px;font-weight:700}
+  .mobile-nav button[aria-current=page]{background:var(--green-light);color:var(--green)}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FASE 1.1 MÓVIL — 2026-09-15 (corrige el acomodo de la tarjeta de partida y
+   de los datos del cliente). Solo estilos, solo ≤780px.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media(max-width:780px),(max-height:500px){
+  /* ── Tarjeta de partida: 2 columnas · 3 renglones ──────────────────────
+     descripción | importe
+     código      | precio unitario
+     − cantidad + | ✎ ✕                                                   */
+  .items-table tbody tr{grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;
+    padding:12px 13px;border-left:3px solid var(--green);border-radius:13px}
+  .items-table tbody td.td-desc{order:1;grid-column:1;grid-row:1;align-self:center}
+  .items-table tbody td.td-desc .ti{font-size:14px;font-weight:600;min-height:36px}
+  .items-table tbody td.td-imp{order:2;grid-column:2;grid-row:1;align-self:center;
+    text-align:right;font-size:16px;font-weight:800;color:var(--navy);white-space:nowrap}
+  .items-table tbody td.td-cl{order:3;grid-column:1;grid-row:2;align-self:center}
+  .items-table tbody td.td-cl .ti.cl{font-size:12.5px;color:var(--muted);min-height:34px}
+  .items-table tbody td.td-r{order:4;grid-column:2;grid-row:2;width:122px;
+    padding-right:0;text-align:right;align-self:center}
+  .items-table tbody td.td-r::before{display:block;content:'Precio unitario';
+    font-size:9px;text-align:right}
+  .items-table tbody td.td-r .ti{text-align:right;font-size:13.5px;min-height:34px;padding-right:2px}
+  .items-table tbody td.td-r .no-print{justify-content:flex-end!important}
+  /* Cantidad: fila horizontal − [n] + de 44px, nunca vertical */
+  .items-table tbody td.td-c{order:5;grid-column:1;grid-row:3;align-self:center;padding:0}
+  .items-table tbody td.td-c::before{display:none}
+  .td-c .qty-stepper{display:grid!important;grid-template-columns:44px 64px 44px;
+    gap:6px;width:auto;align-items:center}
+  .td-c .qty-stepper button{width:44px;height:44px;min-width:44px;padding:0;font-size:20px;
+    font-weight:800;border-radius:11px;background:var(--bg);color:var(--navy);
+    border:1px solid var(--border)}
+  .td-c .qty-stepper input{width:64px!important;height:44px;min-height:44px;
+    border:none!important;border-radius:11px;background:var(--green-light)!important;
+    color:var(--green);font-size:17px;font-weight:800;text-align:center;padding:0!important}
+  /* Acciones de la tarjeta: editar y eliminar, mismo tamaño, abajo a la derecha */
+  .items-table tbody td.td-del{position:static;order:6;grid-column:2;grid-row:3;
+    display:flex;gap:8px;justify-content:flex-end;align-items:center;padding:0;width:auto}
+  .items-table tbody td.td-del::before{display:none}
+  .del-btn,.edit-btn{width:44px;height:44px;min-width:44px;border-radius:11px;font-size:16px;
+    display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .edit-btn{border:1px solid var(--border);background:var(--white);color:var(--navy);
+    font-family:inherit;cursor:pointer}
+  .items-table .td-iva{order:7;grid-column:1/-1;grid-row:4}
+
+  /* ── Datos del cliente y detalles: campo con caja, etiqueta arriba ────── */
+  .card .ch{flex-wrap:wrap;row-gap:9px;align-items:center;margin-bottom:12px}
+  .card .ch .sbtn{flex:1 1 calc(50% - 5px);margin-left:0;min-height:42px;padding:0 10px;
+    font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+  .card .fr{display:block;margin-bottom:11px}
+  .card .fl{display:block;font-size:10px;font-weight:700;letter-spacing:1.1px;
+    text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  .card .fv{display:block;font-size:15px}
+  .card .fv input,.card .fv select{width:100%;border:1.5px solid var(--border);
+    border-radius:11px;background:var(--white);padding:11px 12px;min-height:46px;font-size:16px}
+  .card .fv input:hover,.card .fv select:hover{background:var(--white)}
+  .card .cs{gap:10px;margin-top:10px;padding-top:12px}
+  .card .ci{flex:1 1 100%;align-items:center}
+  .card .ci-val input{width:100%;border:1.5px solid var(--border);border-radius:10px;
+    padding:9px 11px;background:var(--white)}
 }
 </style>
 <!-- H5: jsPDF se sirve LOCAL (vendor/) para que los PDF funcionen sin internet y no
@@ -567,18 +702,24 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
      motivo por el que #ppGlobal ya vivía aquí afuera). -->
 <div id="menuMasBackdrop" class="no-print" onclick="_cerrarMenuMas()"></div>
 <div id="menuMas" class="menu-mas">
+  <div class="menu-mas-grp">
   <div class="menu-mas-h">Negocio</div>
   <button onclick="_cerrarMenuMas();verNegocio()">📊 Resumen del negocio</button>
   <button onclick="_cerrarMenuMas();abrirCostosSubieron()" title="Productos cuyo costo real subió y su precio no">📈 Costos que subieron</button>
   <button onclick="_cerrarMenuMas();abrirSimulador()" title="Simula margen/utilidad con un precio nuevo, sin tocar el catálogo real">💲 Simulador de precio</button>
+  </div>
+  <div class="menu-mas-grp">
   <div class="menu-mas-h">Caja de este celular</div>
   <button onclick="_cerrarMenuMas();cierreDelDia()" title="Vendido/cobrado por método/pendiente -- solo de ESTE celular, no de todo el negocio">🧾 Cierre del día</button>
   <button onclick="_cerrarMenuMas();abrirCorteCaja()" title="Efectivo cobrado en ESTE celular en el turno -- no incluye fondo, retiros ni otros dispositivos">🧮 Corte de caja</button>
+  </div>
+  <div class="menu-mas-grp">
   <div class="menu-mas-h">Ajustes</div>
   <button onclick="_cerrarMenuMas();abrirEmpresa()">🏢 Mi empresa</button>
   <button onclick="_cerrarMenuMas();abrirCatalogos()" id="btnTokenTab">⚙️ Configuración</button>
   <button onclick="_cerrarMenuMas();abrirExcepciones()">⚠ Excepciones <span id="badgeExcepciones" style="display:none;background:#c0392b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">•</span></button>
   <button onclick="_cerrarMenuMas();window.print()">🖨️ Imprimir</button>
+  </div>
 </div>
 <div id="mobileAction" class="mobile-action no-print" aria-live="polite">
   <div class="mobile-action-total"><span>Total</span><strong id="mobileActionTotal">$0.00 MXN</strong></div>
@@ -588,7 +729,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 <nav id="mobileNav" class="mobile-nav no-print" aria-label="Navegación principal">
   <button id="mNavNueva" type="button" onclick="mobileNueva()"><span>＋</span><small>Nueva</small></button>
   <button id="mNavHistorial" type="button" onclick="mobileHistorial()"><span>📋</span><small>Historial</small></button>
-  <button id="mNavCotizar" type="button" onclick="mobileCambiarModo()"><span>📄</span><small id="mNavModoTxt">Cotizar</small></button>
+  <button id="mNavNegocio" type="button" onclick="verNegocio()"><span>📊</span><small>Negocio</small></button>
   <button id="mNavCobros" type="button" onclick="verCobros()"><span>💰</span><small>Cobros</small></button>
   <button id="mNavMas" type="button" onclick="_toggleMenuMas()"><span>☰</span><small>Más</small></button>
 </nav>
@@ -2633,7 +2774,7 @@ function renderTable(){
 </td>
 <td class="td-c td-iva" data-label="IVA">${it.regalo?'—':(it.iva||0)+'%'}</td>
 <td class="td-imp" data-label="Importe" id="imp${it._id}">${_impCellHtml(it)}</td>
-<td class="td-del no-print"><button class="del-btn" aria-label="Eliminar producto" onclick="delRow(${it._id})">✕</button></td>`;
+<td class="td-del no-print"><button class="edit-btn no-print" aria-label="Editar partida" onclick="abrirPartidaMovil(${it._id})">✎</button><button class="del-btn" aria-label="Eliminar producto" onclick="delRow(${it._id})">✕</button></td>`;
     if(it.regalo) tr.style.background='#F2FBF6';
     if(_formBloqueado){
       tr.querySelectorAll('.ti').forEach(el=>el.disabled=true);
@@ -8239,16 +8380,105 @@ function mobileCambiarModo(){
 }
 function mobileAccionPrincipal(){return _mobileEsCotizacion()?_confirmarAntesDeGenerarCot():registrarTodo();}
 function mobileDescargarPdf(){return _mobileEsCotizacion()?_descargarCotGenerada():descargarPDFSiRegistrado();}
+/* ═══════════════════════════════════════════════════════════════════════════
+   FASE 1.1 — HOJA DE EDICIÓN DE PARTIDA (celular)
+   Abre con el botón ✎ de cada tarjeta. No duplica lógica: escribe en items
+   igual que upd() y cierra con renderTable() + calcTotals() + autosave().
+   ═══════════════════════════════════════════════════════════════════════════ */
+let _partidaEnEdicion=null;
+function _partidaSheetEl(){
+  let ov=document.getElementById('ovPartida');
+  if(ov) return ov;
+  ov=document.createElement('div');
+  ov.id='ovPartida';ov.className='no-print';
+  ov.style.cssText='display:none;position:fixed;inset:0;z-index:960;background:rgba(11,45,74,.45);align-items:flex-end';
+  ov.innerHTML='<div style="width:100%;background:#fff;border-radius:22px 22px 0 0;padding:10px 16px calc(26px + env(safe-area-inset-bottom,0px));max-height:86vh;overflow-y:auto">'
+    +'<div style="width:44px;height:5px;border-radius:99px;background:#D8DCDE;margin:0 auto 14px"></div>'
+    +'<div style="display:flex;align-items:center;margin-bottom:12px"><div id="pzTitulo" style="font-size:16px;font-weight:800;color:var(--navy)">Partida</div>'
+    +'<button type="button" onclick="cerrarPartidaMovil()" style="margin-left:auto;width:40px;height:40px;border:none;border-radius:11px;background:var(--bg);color:var(--muted);font-size:15px;font-family:inherit">✕</button></div>'
+    +'<label style="display:block;font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Código</label>'
+    +'<input id="pzClave" type="text" placeholder="CÓDIGO" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:12px;padding:12px;font-family:ui-monospace,monospace;font-size:16px;min-height:48px;margin-bottom:11px">'
+    +'<label style="display:block;font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Descripción</label>'
+    +'<input id="pzDesc" type="text" placeholder="Descripción" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:12px;padding:12px;font-family:inherit;font-size:16px;font-weight:600;min-height:48px;margin-bottom:11px">'
+    +'<div style="display:flex;gap:9px;margin-bottom:11px">'
+      +'<div style="flex:1;min-width:0;border:1.5px solid var(--border);border-radius:12px;padding:8px 10px">'
+        +'<div style="font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Cantidad</div>'
+        +'<div style="display:grid;grid-template-columns:40px minmax(0,1fr) 40px;gap:5px;align-items:center">'
+          +'<button type="button" onclick="_pzPaso(-1)" style="width:40px;height:44px;border:1px solid var(--border);border-radius:11px;background:var(--bg);color:var(--navy);font-size:20px;font-weight:800;font-family:inherit">−</button>'
+          +'<input id="pzQty" type="number" inputmode="numeric" min="0" style="width:100%;box-sizing:border-box;height:44px;border:none;border-radius:11px;background:var(--green-light);color:var(--green);font-size:18px;font-weight:800;text-align:center;font-family:inherit" oninput="_pzCalc()">'
+          +'<button type="button" onclick="_pzPaso(1)" style="width:40px;height:44px;border:1px solid var(--border);border-radius:11px;background:var(--green-light);color:var(--green);font-size:20px;font-weight:800;font-family:inherit">＋</button>'
+        +'</div></div>'
+      +'<div style="flex:1;min-width:0;border:1.5px solid var(--border);border-radius:12px;padding:8px 10px">'
+        +'<div style="font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Precio unitario</div>'
+        +'<input id="pzPrecio" type="number" inputmode="decimal" min="0" step="0.01" style="width:100%;box-sizing:border-box;height:44px;border:none;font-family:inherit;font-size:18px;font-weight:800;color:var(--navy)" oninput="_pzCalc()">'
+      +'</div></div>'
+    +'<div id="pzIvas" style="display:flex;gap:7px;margin-bottom:12px"></div>'
+    +'<div style="background:var(--bg);border-radius:12px;padding:12px 13px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+      +'<span style="font-size:12.5px;font-weight:600;color:var(--muted)">Importe</span><span id="pzImporte" style="font-size:20px;font-weight:800;color:var(--navy)">$0.00</span></div>'
+    +'<div id="pzUtil" style="font-size:11.5px;font-weight:600;color:var(--green);padding:0 2px 12px;min-height:16px"></div>'
+    +'<div style="display:flex;gap:9px">'
+      +'<button type="button" onclick="_pzQuitar()" style="flex:none;padding:0 18px;min-height:54px;border:1.5px solid var(--border);border-radius:13px;background:#fff;color:#c0392b;font-family:inherit;font-size:14px;font-weight:700">Quitar</button>'
+      +'<button type="button" onclick="_pzGuardar()" style="flex:1;min-height:54px;border:none;border-radius:13px;background:var(--green);color:#fff;font-family:inherit;font-size:16px;font-weight:800">Guardar partida</button>'
+    +'</div></div>';
+  ov.addEventListener('click',function(e){if(e.target===ov)cerrarPartidaMovil();});
+  document.body.appendChild(ov);
+  return ov;
+}
+function abrirPartidaMovil(id){
+  const it=items.find(i=>i._id===id);if(!it)return;
+  if(typeof _formBloqueado!=='undefined'&&_formBloqueado){toast('La remisión ya está registrada — usa Editar remisión','warn');return;}
+  _partidaEnEdicion=id;
+  const ov=_partidaSheetEl();
+  const idx=items.findIndex(i=>i._id===id);
+  document.getElementById('pzTitulo').textContent='Partida '+(idx+1);
+  document.getElementById('pzClave').value=it.clave||'';
+  document.getElementById('pzDesc').value=it.desc||'';
+  document.getElementById('pzQty').value=(it.qty===''||it.qty==null)?'':it.qty;
+  document.getElementById('pzPrecio').value=(it.precio===''||it.precio==null)?'':it.precio;
+  _pzIvas(+it.iva||0);
+  _pzCalc();
+  ov.style.display='flex';
+}
+function cerrarPartidaMovil(){const ov=document.getElementById('ovPartida');if(ov)ov.style.display='none';_partidaEnEdicion=null;}
+function _pzIvas(sel){
+  const c=document.getElementById('pzIvas');if(!c)return;
+  c.dataset.iva=sel;
+  c.innerHTML=[0,8,16].map(function(v){return '<button type="button" onclick="_pzSetIva('+v+')" style="flex:1;min-height:44px;border-radius:11px;font-family:inherit;font-size:13px;font-weight:700;border:1.5px solid '+(v===sel?'var(--green);background:var(--green);color:#fff':'var(--border);background:#fff;color:var(--muted)')+'">IVA '+v+'%</button>';}).join('');
+}
+function _pzSetIva(v){_pzIvas(v);_pzCalc();}
+function _pzPaso(d){const el=document.getElementById('pzQty');el.value=Math.max(0,(+el.value||0)+d);_pzCalc();}
+function _pzCalc(){
+  const q=+document.getElementById('pzQty').value||0,p=+document.getElementById('pzPrecio').value||0;
+  document.getElementById('pzImporte').textContent=fmt(q*p);
+  const it=items.find(i=>i._id===_partidaEnEdicion);
+  const cst=(it&&typeof costoEfectivo==='function')?costoEfectivo(it):0;
+  const u=document.getElementById('pzUtil');
+  u.textContent=(cst>0&&p>0)?('Costo '+fmt(cst)+' · utilidad '+fmt((p-cst)*q)+' ('+(((p-cst)/p)*100).toFixed(1)+'%)'):'';
+  u.style.color=(cst>0&&p>0&&((p-cst)/p*100)<30)?'#c0392b':'var(--green)';
+}
+function _pzGuardar(){
+  const it=items.find(i=>i._id===_partidaEnEdicion);if(!it){cerrarPartidaMovil();return;}
+  const q=document.getElementById('pzQty').value,p=document.getElementById('pzPrecio').value;
+  it.clave=document.getElementById('pzClave').value;
+  it.desc=document.getElementById('pzDesc').value;
+  it.qty=q===''?'':+q;
+  it.precio=p===''?'':+p;
+  it.iva=+document.getElementById('pzIvas').dataset.iva||0;
+  renderTable();calcTotals();autosave();
+  cerrarPartidaMovil();
+  toast('Partida actualizada','ok',1800);
+}
+function _pzQuitar(){const id=_partidaEnEdicion;cerrarPartidaMovil();if(id!=null)delRow(id);}
 function _syncMobileChrome(){
   const cot=_mobileEsCotizacion();
   const label=document.getElementById('mNavModoTxt'),primary=document.getElementById('mobileActionPrimary');
   const pdf=document.getElementById('mobileActionPdf'),total=document.getElementById('mobileActionTotal');
-  if(label)label.textContent=cot?'Remisiones':'Cotizar';
+  if(label)label.textContent=cot?'Remisiones':'Cotizar'; // FASE 1: el modo vive en el segmentado del encabezado
   if(primary)primary.textContent=cot?'Generar cotización':'Registrar remisión';
   if(total){const origen=document.getElementById(cot?'cot_tTot':'tTot');total.textContent=origen?.textContent||'$0.00 MXN';}
   if(pdf){const origen=document.getElementById(cot?'btnDescargarCot':'btnDescargarPDF');pdf.disabled=!origen||origen.disabled;}
   document.querySelectorAll('.mobile-nav button').forEach(b=>b.removeAttribute('aria-current'));
-  document.getElementById(cot?'mNavCotizar':'mNavNueva')?.setAttribute('aria-current','page');
+  document.getElementById('mNavNueva')?.setAttribute('aria-current','page');
 }
 
 // ── MODO SWITCH ───────────────────────────────────────────────────────────

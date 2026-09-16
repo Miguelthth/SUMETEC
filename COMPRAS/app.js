@@ -2,11 +2,24 @@
 // pantalla (no hay nav ni vista() como en Dirección): vincular, capturar,
 // enviar. Copiado y recortado de 14.- SUMETEC DIRECCION/app.js.
 
+// Chip permanente (siempre visible, no un aviso que desaparece): En línea /
+// Enviando / Sin red / Error, con un punto de color. _comprasEnviando y
+// _comprasUltimoError los fija activarComprasDireccion() en compras.js
+// alrededor del botón "Enviar compras pendientes".
+let _comprasEnviando = 0;
+let _comprasUltimoError = '';
+
 function estado() {
+  const el = $('#estado');
   const pendientes = leer(COLAS.compras).length;
-  $('#estado').textContent = pendientes
-    ? `${pendientes} pendientes`
-    : (navigator.onLine ? 'Al día' : 'Sin conexión');
+  const fijar = (variante, texto) => {
+    el.className = 'sm-chip' + (variante ? ' sm-chip--' + variante : '');
+    el.innerHTML = `<span class="sm-chip-punto"></span>${texto}`;
+  };
+  if (_comprasEnviando) return fijar('info', `Enviando ${_comprasEnviando}…`);
+  if (_comprasUltimoError) return fijar('err', _comprasUltimoError);
+  if (pendientes) return fijar('warn', navigator.onLine ? `${pendientes} pendientes` : `Sin red · ${pendientes}`);
+  return fijar(navigator.onLine ? 'ok' : '', navigator.onLine ? 'Al día' : 'Sin conexión');
 }
 
 async function vincular() {
@@ -27,6 +40,7 @@ async function vincular() {
   if (!r.ok) throw Error(r.error);
 
   await guardarSesionDireccion(pin, r.token);
+  _comprasUltimoError = '';
   localStorage.setItem('sumetec_compras_dispositivo', dispositivo);
   localStorage.setItem('sumetec_compras_url', url);
   $('#vincular').close();
@@ -79,6 +93,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!huboControlador) { huboControlador = true; return; }
     localStorage.setItem('compras_ultima_actualizacion', String(Date.now()));
+    if (sessionStorage.getItem('sumetec_compras_actualizacion')) return;
     if (hayTrabajoSinGuardarCompras()) { recargaPendiente = true; return; }
     window.location.reload();
   });
