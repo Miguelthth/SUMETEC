@@ -310,7 +310,12 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
    de alcance si el contenido no cupiera exacto. */
 #firmaModalBox.girado{
   position:fixed!important;top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;
-  width:94vw!important;height:92vh!important;max-width:none!important;max-height:none!important;
+  /* Al girar 90°, el ANCHO de la caja se ve como ALTO en pantalla y viceversa.
+     Por eso width usa vh (lo largo del teléfono = lo largo de la firma) y height
+     usa vw. Medido en el navegador (2026-09-16): con los valores al revés la
+     caja medía 747px de ancho visible en una pantalla de 375px y "Confirmar
+     firma" quedaba fuera de la pantalla. */
+  width:92vh!important;height:94vw!important;max-width:none!important;max-height:none!important;
   transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center center;
   padding:14px!important;gap:8px!important;flex-direction:column!important;overflow-y:auto!important;
 }
@@ -649,7 +654,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   </div>
   <!-- Mejora #5 (menú COTIZADOR 2026-07-14): header vivo -- cartera exacta siempre
        visible sin abrir 📊 Negocio. Oculto si no hay nada por cobrar. -->
-  <span id="headerVivo" style="display:none;font-size:12px;font-weight:700;color:#fff;background:rgba(192,57,43,.28);border-radius:20px;padding:5px 12px;white-space:nowrap"></span>
+  <span id="headerVivo" style="display:none;font-size:12px;font-weight:700;color:#fff;background:rgba(192,57,43,.28);border-radius:20px;padding:5px 12px;white-space:nowrap;max-width:58vw;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;cursor:pointer"></span>
   <!-- Botones modo REMISIÓN (se ocultan en modo cotización) -->
 <div class="tb-tabs" id="tbTabs">
     <button class="tb-tab on" id="tabRem" onclick="_activarModoRem()">Remisión</button>
@@ -675,6 +680,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   <!-- I-3: el botón "Generar cotización" de la barra se quitó -- ahora vive abajo, después de la tabla y los totales (#btnGenerarCotAbajo) -->
   <button class="btn btn-p" id="btnDescargarCot" style="display:none;opacity:.45;cursor:not-allowed" disabled onclick="_descargarCotGenerada()">🔒 PDF</button>
   <span id="badgePendientes" class="tb-status"></span>
+  <!-- Solo sin conexión: al tocarlo explica qué hacer (antes era un banner rojo fijo que tapaba la pantalla). -->
+  <button id="btnAlertaRed" type="button" class="tb-status err" style="display:none" onclick="_verAyudaSinRed()" aria-label="Qué hacer sin conexión" title="Qué hacer sin conexión">⚠️</button>
 </div>
 <!-- Menú "☰ Más" -- fixed, fuera de .tb (que hace scroll horizontal en celular y
      recortaba el popup aunque sus coordenadas calculadas fueran correctas; mismo
@@ -1080,6 +1087,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         ✅ Registrar pago
       </button>
     </div>
+    <button id="btnVerPdfPago" onclick="verPdfDesdePago()" style="display:none;margin-top:10px;width:100%;padding:13px;background:#2471A3;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+      📄 Ver / enviar PDF (WhatsApp, correo, descargar)
+    </button>
     <button id="btnVerRemisionPago" onclick="verRemisionDesdePago()"
       style="margin-top:10px;width:100%;padding:13px;background:var(--green-light);color:var(--green);border:2px solid #a7f3d0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
       📋 Ver remisión completa (items, PDF, historial)
@@ -1563,7 +1573,7 @@ async function procesarColaCancel(){
         } else { _bumpTry('cola_cancel',e=>String(e.id)===String(item.id)); }
       }catch(e){ _bumpTry('cola_cancel',e=>String(e.id)===String(item.id)); }
     }
-    if(ok>0)toast('Cancelaciones sincronizadas: '+ok+' ✓','ok');
+    if(ok>0)_estado('✅ '+ok+' cancelación(es) sincronizada(s)');
     actualizarBadgePendientes();
   }finally{ _procCancelEnCurso=false; }
 }
@@ -1670,13 +1680,23 @@ function actualizarPanelConexion(){
   // agrega el suyo, así nunca queda un color viejo pegado (ej. "ok" de la
   // vuelta anterior si ahora toca "warn").
   bar.classList.remove('warn','stale','ok');
-  if(ESTADO_HEARTBEAT==='sin_conexion'||!isOnline){
-    bar.classList.add('show');bar.classList.remove('warn');
-    msg.innerHTML='📵 <b>Sin conexión</b> — todo se guarda en este celular y se enviará solo al volver la señal.'
-      +(pend>0?' <b>⏳ '+pend+' pendiente(s)</b>':'')
-      +'<div style="font-weight:400;opacity:.92;margin-top:3px;font-size:11px">💡 Muévete a una zona con señal · revisa datos móviles/WiFi · usa el botón de WhatsApp para avisar un cobro · puedes seguir registrando, nada se pierde.</div>'
-      +'<div style="font-weight:400;opacity:.95;font-size:11px;margin-top:3px;background:rgba(0,0,0,.18);border-radius:6px;padding:3px 7px">🏷️ <b>Precios del catálogo:</b> '+catTxt+'</div>'
-      +'<div style="font-weight:400;opacity:.8;font-size:10.5px;margin-top:2px">Última sincronización: '+fr+'</div>';
+  const sinRed=ESTADO_HEARTBEAT==='sin_conexion'||!isOnline;
+  // 2026-09-16 (pedido de Miguel): sin conexión ya NO se pinta el banner rojo
+  // fijo -- el chip "Sin red" de arriba ya lo dice. El detalle de qué hacer
+  // vive detrás del ⚠️ de al lado (_verAyudaSinRed), que se esconde solo al
+  // volver la señal.
+  const alerta=document.getElementById('btnAlertaRed');
+  if(alerta)alerta.style.display=sinRed?'inline-flex':'none';
+  if(!sinRed&&document.getElementById('ovPopupSistema')?.classList.contains('open')&&_ayudaSinRedAbierta){
+    _ayudaSinRedAbierta=false;_popupCerrar(true);
+  }
+  _ayudaSinRedTexto='Todo se guarda en este celular y se enviará solo al volver la señal.'
+    +(pend>0?'\n⏳ '+pend+' pendiente(s) por enviar.':'')
+    +'\n\n💡 Qué hacer:\n• Muévete a una zona con señal\n• Revisa datos móviles / WiFi\n• Usa el botón de WhatsApp para avisar un cobro\n• Puedes seguir registrando, nada se pierde'
+    +'\n\n🏷️ Precios del catálogo: '+catTxt.replace(/<[^>]*>/g,'')
+    +'\nÚltima sincronización: '+fr;
+  if(sinRed){
+    bar.classList.remove('show');
   } else if(ESTADO_HEARTBEAT==='servidor_lento'){
     bar.classList.add('show','warn');
     msg.innerHTML='⚠️ <b>El servidor está lento o no responde</b> — tu celular sí tiene señal; los datos siguen guardados y se reintentará solo.'
@@ -1709,9 +1729,9 @@ function actualizarPanelConexion(){
       bar.classList.add('show','stale');bar.classList.remove('warn');
       msg.innerHTML='🏷️ Catálogo sin actualizar hace '+Math.floor(horasViejas)+'h · <span style="cursor:pointer;text-decoration:underline;font-weight:700" onclick="refrescarCatalogo(false)">Actualizar ahora</span>';
     } else {
-      // Todo al día: barra en verde en vez de ocultarse, para que "al día" también se vea (pedido de Miguel).
-      bar.classList.add('show');bar.classList.remove('warn','stale');bar.classList.add('ok');
-      msg.innerHTML='✅ Todo al día — sincronizado y respaldado.';
+      // Todo al día: sin banner -- el chip "En línea" verde de arriba ya lo dice
+      // (Miguel, 2026-09-16: el banner verde era redundante).
+      bar.classList.remove('show');
     }
   }
   _actualizarSyncLocalStatus(); // vive en ⚙️ Configuración; no-op si el panel no está montado aún
@@ -1889,7 +1909,7 @@ document.addEventListener('visibilitychange',()=>{
     // Al volver al frente: heartbeat + aviso de pendientes
     heartbeat();
     const pend=_pendientesTotal();
-    if(pend>0) toast('⏳ '+pend+' sin enviar — sincronizando…','warn',3500);
+    if(pend>0) _estado('⏳ '+pend+' sin enviar — sincronizando…',3500);
     // Si la cola tiene items, procesarlos de inmediato (por si volvió la señal)
     if(pend>0&&isOnline){
       setTimeout(()=>{procesarColaElim();procesarColaRemisiones();procesarCola();procesarColaPDF();_procesarColaCotR();procesarColaNuevos();procesarColaCancel();},500);
@@ -2026,8 +2046,8 @@ function aplicarPago(rem, monto, opts){
   enviarPagoConCola(rem, pago);
 
   // Mensaje ÚNICO por resultado
-  if(esCompleto) toast('✅ PAGADO — '+fmt(saldoActual)+' MXN','ok',4000);
-  else           toast('💛 Abono '+fmt(m)+' · Saldo: '+fmt(rem.saldo)+' MXN','ok',4000);
+  if(esCompleto) _estado('✅ PAGADO — '+fmt(saldoActual)+' MXN');
+  else           _estado('💛 Abono '+fmt(m)+' · Saldo '+fmt(rem.saldo));
   return pago;
 }
 // ════════════════════════════════════════════════════════════════════════════
@@ -2427,6 +2447,7 @@ function genFolio(){
   return'REM-'+String(n).padStart(4,'0');
 }
 function incrementarFolio(){
+  if(_avisoBloqueado())return;
   const el=document.getElementById('folioBadge');
   const actual=el.innerText.trim();
   const match=actual.match(/(\d+)$/);
@@ -2594,7 +2615,7 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
     pdf:b64, device:_deviceLabel_()};
   _guardarEnColaPDF(entry); // nunca se pierde para Drive
   actualizarBadgePendientes();
-  if(!isOnline){ toast('Sin conexión — el PDF se subirá a Drive al volver la señal','warn',4000); return; }
+  if(!isOnline){ _estado('📵 PDF en cola — se sube al volver la señal'); return; }
   _estadoHeaderVivo(yaSubidoAntes?'☁️ Actualizando PDF en Drive…':'☁️ Guardando en Drive…',0);
   fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(entry)})
     .then(r=>r.json())
@@ -2627,18 +2648,18 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
       } else if(d&&d.ok&&d.pdfOk===false){
         // La FILA se registró pero el PDF NO se guardó en Drive → mantener en cola + AVISAR.
         _bumpIntentoPDF(entry.id||entry.folio);
-        toast('⚠️ '+(entry.folio||'Remisión')+': se guardó en el Excel pero el PDF NO subió. Se reintentará.','warn',7000);
+        _estado('⚠️ '+(entry.folio||'Remisión')+': PDF no subió, se reintentará',7000);
         _revisarFallas();
         if(typeof guardarEventoSync==='function'){guardarEventoSync({folio:entry.folio,operacion:'REMISION_GUARDADA',resultado:'OK'});guardarEventoSync({folio:entry.folio,operacion:'PDF_GUARDADO',resultado:'ERROR',detalle:'El PDF no se guardó en Drive.'});}
       } else {
         _bumpIntentoPDF(entry.id||entry.folio);
-        toast('Drive: '+(d&&d.error?d.error:'se reintentará')+' (PDF en cola)','warn',4000);
+        _estado('⚠️ Drive: '+(d&&d.error?d.error:'se reintentará')+' (PDF en cola)',5000);
         _revisarFallas();
         if(typeof guardarEventoSync==='function')guardarEventoSync({folio:entry.folio,operacion:'REMISION_GUARDADA',resultado:'ERROR',detalle:(d&&d.error)||'sin respuesta ok del servidor'});
       }
       actualizarBadgePendientes();
     })
-    .catch(e=>{console.error('guardarEnDrive',e);_bumpIntentoPDF(entry.id||entry.folio);toast('Se reintentará subir el PDF al volver la señal','warn',3500);_revisarFallas();actualizarBadgePendientes();if(typeof guardarEventoSync==='function')guardarEventoSync({folio:entry.folio,operacion:'REMISION_GUARDADA',resultado:'ERROR',detalle:'sin conexión'});});
+    .catch(e=>{console.error('guardarEnDrive',e);_bumpIntentoPDF(entry.id||entry.folio);_estado('📵 PDF en cola — se reintenta al volver la señal');_revisarFallas();actualizarBadgePendientes();if(typeof guardarEventoSync==='function')guardarEventoSync({folio:entry.folio,operacion:'REMISION_GUARDADA',resultado:'ERROR',detalle:'sin conexión'});});
 }
 
 // ── Cola de PDFs (base64) — uno por remisión (sobreescribe el anterior) ──
@@ -2751,16 +2772,16 @@ async function procesarColaPDF(){
       guardarSeguro('cola_pdf',JSON.stringify(c.filter(e=>!huerfanos.includes(String(e.id||e.folio)))));
       toast('🧹 Se quitó '+huerfanos.length+' PDF atorado sin datos (ya no existía la remisión)','warn',5000);
     }
-    if(ok>0)toast('⬆️ Subiendo '+ok+' PDF(s) a Drive…','ok',4000);
+    if(ok>0)_estado('⬆️ Subiendo '+ok+' PDF(s) a Drive…');
     actualizarBadgePendientes();
   }finally{ _procPDFEnCurso=false; }
 }
 
 function addRow(d={}){if(_formBloqueado)return;items.push({_id:_id++,qty:'',clave:'',desc:'',precio:'',iva:ivaGlobal,...d});renderTable();calcTotals()}
-function delRow(id){items=items.filter(i=>i._id!==id);renderTable();calcTotals()}
+function delRow(id){if(_avisoBloqueado())return;items=items.filter(i=>i._id!==id);renderTable();calcTotals()}
 function toggleIvaPopup(e){e.stopPropagation();document.getElementById('ivaPopup').classList.toggle('open')}
 function setIvaGlobal(v,e){if(e)e.stopPropagation();ivaGlobal=v;items.forEach(it=>it.iva=v);const p2=document.getElementById('ivaPopup2');if(p2)p2.classList.remove('open');document.querySelectorAll('.iva-opt').forEach(o=>o.classList.toggle('sel',parseInt(o.textContent)===v));const lbl=document.getElementById('ivaLbl');if(lbl){lbl.textContent=v+'%';lbl.style.color='var(--green)';}renderTable();calcTotals();}
-function toggleIvaPopup2(e){e.stopPropagation();document.getElementById('ivaPopup2').classList.toggle('open');}
+function toggleIvaPopup2(e){e.stopPropagation();if(_avisoBloqueado())return;document.getElementById('ivaPopup2').classList.toggle('open');}
 document.addEventListener('click',function(){const p=document.getElementById('ivaPopup');if(p)p.classList.remove('open');const p2=document.getElementById('ivaPopup2');if(p2)p2.classList.remove('open');});
 function renderTable(){
   const tb=document.getElementById('tblBody');tb.innerHTML='';
@@ -2790,6 +2811,9 @@ function renderTable(){
     if(_formBloqueado){
       tr.querySelectorAll('.ti').forEach(el=>el.disabled=true);
       const db=tr.querySelector('.del-btn');if(db)db.style.display='none';
+      // MC-26 (3ª vuelta, probado en navegador): las flechas −/+ de cantidad y
+      // el 🎁 Regalo seguían activos tras registrar.
+      tr.querySelectorAll('button,[onclick]').forEach(el=>{el.disabled=true;el.style.pointerEvents='none';el.style.opacity='.4';});
     }
     tb.appendChild(tr);
   });autosave();
@@ -3341,6 +3365,7 @@ function _syncBtnRedondeo(){
   if(b)b.textContent=_redondearRem?'↩ Ver centavos':'🔢 Redondear';
 }
 function toggleRedondeoRem(){
+  if(_avisoBloqueado())return;
   _redondearRem=!_redondearRem;
   _syncBtnRedondeo();
   calcTotals();
@@ -3478,7 +3503,7 @@ async function registrarRemision(gpsParam){
   let folio=null;
   if(isOnline&&url){
     try{
-      toast('Obteniendo folio…','loading',0);
+      _estado('🔢 Obteniendo folio…',8000);
       const ctrl=new AbortController();
       // 2026-09-11 (mismo hallazgo que heartbeat(), Miguel: "sí tengo internet"):
       // 5s era muy corto. Esta llamada NO se repite sola cada 10s como el
@@ -3504,7 +3529,7 @@ async function registrarRemision(gpsParam){
   if(!folio){
     // Sin internet (o folio no disponible): folio temporal legible + único
     folio='TMP-'+Math.random().toString(36).substr(2,8).toUpperCase();
-    toast('Sin conexión confiable — folio temporal '+folio+'. Se sincronizará sola al volver la señal.','warn',5500);
+    _estado('📵 Folio temporal '+folio+' — se sincroniza al volver la señal',5500);
   }
 
   const now=new Date();
@@ -3638,7 +3663,7 @@ function _aplicarFolioDefinitivo(rem,nuevoFolio){
   // procesarColaPDF se encargará de subir con el folio definitivo — no duplicar aquí.
   _encolarPDFsiHace(rem);
   persistirRemisiones();
-  toast('Folio definitivo asignado: '+nuevoFolio+' (era '+viejo+'). PDF se subirá con el folio correcto.','ok',6000);
+  _estado('✅ Folio definitivo '+nuevoFolio+' (era '+viejo+')',6000);
   return true;
 }
 
@@ -3742,7 +3767,7 @@ async function procesarColaRemisiones(){
       }catch(e){ _bumpTry('cola_remisiones',e=>e.id===item.id); }
     }
     if(ok>0){
-      toast('Remisiones sincronizadas: '+ok+' ✓','ok');
+      _estado('✅ '+ok+' remisión(es) sincronizada(s)');
       procesarColaPDF();
       // Recargar cobros INMEDIATAMENTE después de sincronizar (para que se vea en tiempo real)
       // BUG FIX (2026-08-06): la función se llama bajarCobros(), no cargarCobros()
@@ -3901,8 +3926,9 @@ function _actualizarHeaderVivo(cartera){
   if(_headerVivoOcupado)return; // hay un estado temporal mostrándose (ver _estadoHeaderVivo) -- no lo pises
   const el=document.getElementById('headerVivo'); if(!el)return;
   const c=cartera||_calcularCartera(_cobrosCombinados());
+  el.onclick=null; el.title='';
   if(!c.totalPorCobrar){ el.style.display='none'; return; }
-  el.style.display='inline-flex';
+  el.style.display='inline-block';
   el.innerHTML='💰 '+fmt(c.totalPorCobrar)+(c.vencido30>0?' <span style="color:#ffb3a7">· ⚠️ '+fmt(c.vencido30)+' vencido</span>':'');
 }
 // 2026-09-16 (pedido de Miguel): los avisos de "guardando en Drive/subiendo
@@ -3912,13 +3938,22 @@ function _actualizarHeaderVivo(cartera){
 // mostrar la cartera real. `ms:0` lo deja fijo hasta el siguiente llamado
 // (para el "Guardando..." mientras la subida está en curso de verdad).
 let _headerVivoOcupado=false;
+let _estadoTimer=null;
 function _estadoHeaderVivo(html,ms){
   const el=document.getElementById('headerVivo'); if(!el)return;
   _headerVivoOcupado=true;
-  el.style.display='inline-flex';
+  clearTimeout(_estadoTimer); // un estado nuevo reemplaza al anterior sin que el viejo lo borre antes de tiempo
+  el.style.display='inline-block';
   el.innerHTML=html;
-  if(ms>0)setTimeout(()=>{_headerVivoOcupado=false;_actualizarHeaderVivo();},ms);
+  // Mismo tamaño del chip: si el texto no cabe se corta con "…" y al tocarlo se lee completo.
+  const plano=el.textContent;
+  el.title=plano;
+  el.onclick=()=>popupAlerta(plano,'Estado');
+  if(ms>0)_estadoTimer=setTimeout(()=>{_headerVivoOcupado=false;_actualizarHeaderVivo();},ms);
 }
+// Avisos de estado (pagos, sincronización, PDF) -- van arriba en el chip, no en
+// toast() abajo, que tapaba la barra de navegación (pedido de Miguel, MC-33).
+function _estado(texto,ms){_estadoHeaderVivo(esc(texto),ms||4000);}
 
 function _renderNegocio(){
   const cobros=_cobrosCombinados();
@@ -4506,15 +4541,35 @@ function _telCliente(nombre){
   const k=String(nombre||'').trim().toLowerCase();
   if(!k)return'';
   const c=(CLIENTES||[]).find(x=>String(x.nombre||'').trim().toLowerCase()===k);
-  return c?telWA(c.tel):'';
+  if(c&&c.tel){const t=telWA(c.tel);if(t)return t;}
+  // 2026-09-16 (reportado por Miguel): si el cliente no está en el catálogo,
+  // o no tiene teléfono ahí, buscar en las remisiones LOCALES de ese cliente
+  // -- muchas veces el teléfono solo se capturó en la venta, no en el catálogo.
+  const r=remisiones.find(x=>String(x.cliente||'').trim().toLowerCase()===k&&x.data&&x.data.c_tel);
+  return r?telWA(r.data.c_tel):'';
 }
-// Abre WhatsApp con la URL armada; sin tel registrado abre el selector de contacto.
-// Devuelve la URL (para poder verificarla en pruebas sin abrir ventana).
+// Abre WhatsApp con la URL armada.
+// 2026-09-16 (reportado por Miguel): sin teléfono, wa.me/?text=... abre la
+// página genérica de WhatsApp Web/selector de contacto -- al elegir un chat
+// desde ahí, el texto casi siempre se pierde (confirmado por Miguel: "abro
+// la conversación y nada se carga"). El menú Compartir del celular SÍ
+// conserva el texto porque uno elige WhatsApp y el chat desde la misma
+// acción -- se usa como primera opción cuando no hay teléfono.
 function _abrirWA(tel,msg){
-  if(!tel)toast('Sin teléfono registrado — elige el contacto en WhatsApp','warn',3500);
-  const url='https://wa.me/'+(tel||'')+'?text='+encodeURIComponent(msg);
-  window.open(url,'_blank');
-  return url;
+  if(tel){
+    window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg),'_blank');
+    return;
+  }
+  if(navigator.share){
+    navigator.share({text:msg}).catch(()=>{});
+    return;
+  }
+  // Último recurso (navegador sin Web Share): copiar el mensaje para que no
+  // se pierda y abrir la página genérica -- antes solo se abría, sin avisar
+  // que el texto no siempre llega.
+  try{navigator.clipboard&&navigator.clipboard.writeText(msg);}catch(_){}
+  toast('Sin teléfono registrado — el mensaje se copió, pégalo en el chat que elijas','warn',5500);
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
 // Recordatorio de UNA remisión (botón 📲 en la lista de Cobros).
 function cobrarWA(folio){
@@ -4580,6 +4635,7 @@ async function abrirPagoRapido(id, folio, esLocal){
   document.getElementById('prSaldo').textContent=fmt(rem.saldo||0)+' MXN';
   document.getElementById('prMonto').value='';
   const _vbtn=document.getElementById('btnVerRemisionPago');if(_vbtn)_vbtn.style.display='none';
+  const _pbtn=document.getElementById('btnVerPdfPago');if(_pbtn)_pbtn.style.display='none';
   const _cbtn=document.getElementById('btnConfirmarPagoRapido');if(_cbtn){_cbtn.style.display='';_cbtn.disabled=false;_cbtn.textContent='✅ Registrar pago';}
   const _op=document.getElementById('prObsPreview');if(_op)_op.style.display='none';
   document.getElementById('ovPagoRapido').classList.add('open');
@@ -4628,6 +4684,8 @@ async function confirmarPagoRapido(){
     // Mostrar botón para abrir la remisión y enviar PDF
     const _vbtn=document.getElementById('btnVerRemisionPago');
     if(_vbtn)_vbtn.style.display='block';
+    const _pbtn=document.getElementById('btnVerPdfPago');
+    if(_pbtn)_pbtn.style.display='block';
     const _cbtn=document.getElementById('btnConfirmarPagoRapido');
     if(_cbtn)_cbtn.style.display='none';
 
@@ -4893,7 +4951,9 @@ function reenviarPDFHistorial(id){
   if(!r){toast('No se encontró la remisión en este dispositivo','err');return;}
   if(!r.data){toast('Esta remisión no tiene detalle local para regenerar el PDF','warn');return;}
   loadRem(id);
+  _pdfSoloVistaPrevia=true; // abre vista previa con WhatsApp/Correo/Descargar (MC-28)
   descargarPDF(r,true);
+  _pdfSoloVistaPrevia=false; // por si descargarPDF salió antes de consumirlo (ej. sin jsPDF)
 }
 // ── Modificar remisión existente (F3) ─────────────────────────
 // Reabre la venta TAL CUAL (items, pagos, cliente). Conserva el historial de pagos:
@@ -6063,7 +6123,7 @@ function syncPrintHeader(){
 // Drive lleve el folio definitivo.
 // ── Comprobante de pago (para remisiones remotas sin items) ──────
 // Genera un PDF simple con folio, cliente, total y el historial de pagos.
-function _generarComprobantePago(rem, descargar){
+function _generarComprobantePago(rem, descargar, vistaPrevia){
   if(!window.jspdf){toast('Necesitas internet para generar el PDF','err');return;}
   try{
     const {jsPDF}=window.jspdf;
@@ -6164,6 +6224,15 @@ function _generarComprobantePago(rem, descargar){
 
     const filename='COMPROBANTE_'+rem.folio+'_'+new Date().toLocaleDateString('es-MX').replace(/\//g,'')+'.pdf';
 
+    // MC-28 (3ª vuelta): comprobante también con vista previa + WhatsApp/Correo/
+    // Descargar, igual que la remisión con items -- no sube a Drive hasta que
+    // Miguel elija "Correo" (mismo criterio que _abrirVistaPreviaPDF).
+    if(vistaPrevia){
+      _abrirVistaPreviaPDF(doc,filename,{folio:rem.folio,cliente:rem.cliente,total:rem.total,rem,
+        email:(rem.data&&rem.data.c_email)||'',hash:null});
+      return;
+    }
+
     // Siempre subir a Drive
     guardarEnDrive(doc,rem.folio,rem.cliente,rem.total,filename,rem);
 
@@ -6190,8 +6259,19 @@ function descargarPDF(remOverride, forzarDescarga){
 
   // ── Caso especial: remisión remota sin items (cobro desde otro dispositivo) ──
   // En vez de un PDF vacío, generar un comprobante de pago con el historial.
-  const sinItems = _d && (!_d.items || _d.items.filter(i=>+i.qty>0&&+i.precio>0).length===0);
-  if(sinItems && remOverride){
+  // OJO: antes esto solo se activaba si _regen era true (forzarDescarga=false),
+  // así que reenviarPDFHistorial()/descargarPDF(r,true) sobre una remisión
+  // remota (items:[]) caía en la rama normal de abajo con `items` global
+  // vacío y armaba un PDF de remisión EN BLANCO en vez del comprobante. Ahora
+  // se revisa remOverride.data directo, sin importar forzarDescarga.
+  const sinItems = remOverride && remOverride.data &&
+    (!remOverride.data.items || remOverride.data.items.filter(i=>+i.qty>0&&+i.precio>0).length===0);
+  if(sinItems){
+    if(_pdfSoloVistaPrevia){
+      _pdfSoloVistaPrevia=false;
+      _generarComprobantePago(remOverride, false, true);
+      return;
+    }
     _generarComprobantePago(remOverride, forzarDescarga);
     return;
   }
@@ -6203,7 +6283,7 @@ function descargarPDF(remOverride, forzarDescarga){
   // En apps/viewers window.open está bloqueado — preferimos navigator.share.
   const canShare = isIOS && !!navigator.share;
   let iosWin = null;
-  if(!_regen && isIOS && !canShare){
+  if(!_regen && isIOS && !canShare && !_pdfSoloVistaPrevia){
     iosWin = window.open('about:blank','_blank');
     if(iosWin){
       iosWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Generando PDF...</title></head><body style="margin:0;background:#0B2D4A;color:#fff;font-family:-apple-system,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px"><div style="font-size:42px;margin-bottom:16px">📄</div><div style="font-size:18px;font-weight:600;margin-bottom:8px">Generando PDF...</div><div style="font-size:13px;opacity:.65">Espera un momento</div></body></html>');
@@ -6228,7 +6308,7 @@ function descargarPDF(remOverride, forzarDescarga){
       }
     }
     if(!window.jspdf){if(iosWin)try{iosWin.close()}catch(_){};if(!_regen)toast('Necesitas internet para generar el PDF','err');return;}
-    if(!_regen)toast('Generando PDF...');
+    if(!_regen)_estado('📄 Generando PDF…',3000);
 
     // ── Datos (del formulario, o de la remisión guardada si _regen) ──
     const logoSrc   = document.getElementById('logoImg').src;
@@ -6490,13 +6570,32 @@ function descargarPDF(remOverride, forzarDescarga){
     const _obsMaxLines=Math.max(1,Math.floor((blkH-13)/2.8));
     doc.setFont('helvetica','bold').setFontSize(7.5);
     const _cancLines=_canc_obs_text?doc.splitTextToSize(_canc_obs_text,obsW-10):[];
-    doc.setFont('helvetica','normal').setFontSize(7.5).setTextColor(...MUT);
-    let _obsNormLines=doc.splitTextToSize(_obsSinCanc,obsW-10);
+    // 2026-09-17 (pedido de Miguel): el saldo/historial de pagos se perdía
+    // entre la leyenda genérica ("Los precios están sujetos a...") -- ambos
+    // salían iguales, gris y sin negrita. Se separa el bloque de INFO real
+    // (saldo pendiente / historial de pagos, mismos marcadores que arma
+    // _obsLineasPagos/updateObsBalance en el frontend) del texto fijo de
+    // leyenda, y se dibuja en negrita + verde para que resalte.
+    const _obsInfoIni=_obsSinCanc.search(/--- PAGOS ---|--- BALANCE ---|=== PAGOS ===|Gracias por su compra|Saldo pendiente:/);
+    const _obsLeyenda=(_obsInfoIni>=0?_obsSinCanc.slice(0,_obsInfoIni):_obsSinCanc).trimEnd();
+    const _obsInfoTxt=_obsInfoIni>=0?_obsSinCanc.slice(_obsInfoIni):'';
+    let _leyLines=_obsLeyenda?doc.splitTextToSize(_obsLeyenda,obsW-10):[];
+    let _infoLines=_obsInfoTxt?doc.splitTextToSize(_obsInfoTxt,obsW-10):[];
+    // El saldo/historial (INFO) importa más que la leyenda fija -- si no cabe
+    // todo, se recorta la leyenda primero, nunca la info.
     const _maxNorm=Math.max(0,_obsMaxLines-_cancLines.length);
-    if(_obsNormLines.length>_maxNorm) _obsNormLines=_obsNormLines.slice(0,_maxNorm);
-    doc.text(_obsNormLines,ML+5,y+10);
+    if(_infoLines.length>=_maxNorm){ _infoLines=_infoLines.slice(0,_maxNorm); _leyLines=[]; }
+    else{ const _maxLey=_maxNorm-_infoLines.length; if(_leyLines.length>_maxLey)_leyLines=_leyLines.slice(0,_maxLey); }
+    doc.setFont('helvetica','normal').setFontSize(7.5).setTextColor(...MUT);
+    doc.text(_leyLines,ML+5,y+10);
+    const _leyH=_leyLines.length*2.8;
+    if(_infoLines.length){
+      doc.setFont('helvetica','bold').setFontSize(7.5).setTextColor(...GRN);
+      doc.text(_infoLines,ML+5,y+10+_leyH);
+      doc.setFont('helvetica','normal').setTextColor(...MUT);
+    }
+    const _obsNormH=(_leyLines.length+_infoLines.length)*2.8;
     if(_canc_obs_text){
-      const _obsNormH=_obsNormLines.length*2.8;
       doc.setFont('helvetica','bold').setFontSize(7.5).setTextColor(192,57,43);
       doc.text(_cancLines,ML+5,y+10+_obsNormH);
       doc.setFont('helvetica','normal').setTextColor(...MUT);
@@ -6607,6 +6706,17 @@ function descargarPDF(remOverride, forzarDescarga){
     // _regen=false) volvía a subir a Drive un PDF que ya se había subido al Registrar,
     // sin que nada hubiera cambiado. Ahora solo sube si es _regen (cobro/edición real,
     // que sí cambia el contenido), si nunca se había subido, o si el hash cambió.
+    // MC-28 (2ª vuelta): desde Historial solo se ARMA el PDF para verlo -- no se
+    // sube a Drive ni se descarga hasta que Miguel elija WhatsApp/Correo/Descargar
+    // dentro de la vista previa (_abrirVistaPreviaPDF).
+    if(_pdfSoloVistaPrevia){
+      _pdfSoloVistaPrevia=false;
+      if(iosWin) try{iosWin.close()}catch(_){}
+      _abrirVistaPreviaPDF(doc,filename,{folio:folio_,cliente:cNombre,total:tot,rem:remActivo,
+        email:(remActivo&&remActivo.data&&remActivo.data.c_email)||document.getElementById('c_email')?.value||'',
+        hash:_hashRemPDF(remActivo,folio_,tot,activeItems.length)});
+      return;
+    }
     const _hashPDFActual=_hashRemPDF(remActivo,folio_,tot,activeItems.length);
     const _yaSubidoIgual=!!(remActivo&&remActivo.pdfSubidoTs&&remActivo.pdfHash===_hashPDFActual);
     // MC-03: un reenvío de correo a propósito (PDF sin cambios, pero la casilla
@@ -6664,6 +6774,63 @@ function descargarPDF(remOverride, forzarDescarga){
 
 // Blob y metadata del visor activo
 let _visorBlob = null, _visorBlobUrl = null, _visorFilename = null;
+
+// MC-28 (2ª vuelta, 2026-09-16): el 📄 del Historial abre una VISTA PREVIA con
+// las mismas salidas que la pantalla de confirmación al registrar (MC-03):
+// WhatsApp (menú Compartir con el PDF + mensaje), correo (lo manda el
+// servidor al subir el PDF a Drive) y descargar. `var`: descargarPDF lo lee.
+var _pdfSoloVistaPrevia=false;
+function _abrirVistaPreviaPDF(doc,filename,info){
+  document.getElementById('_vp_ov')?.remove();
+  const blob=doc.output('blob');
+  const url=URL.createObjectURL(blob);
+  // Explícito desde `info` (dato guardado de la remisión) en vez de leer el
+  // formulario en vivo -- esta vista previa puede abrirse SIN haber cargado
+  // esa remisión en el formulario (ej. desde el popup de Pago rápido), y ahí
+  // #c_email podía traer el correo de OTRO cliente que quedó cargado antes.
+  const email=(info.email||'').trim();
+  const yaEnviado=info.rem&&info.rem.correoEnviadoInfo
+    ?'Ya se envió el '+new Date(info.rem.correoEnviadoInfo.ts).toLocaleDateString('es-MX'):'';
+  const ov=document.createElement('div');
+  ov.id='_vp_ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:#1a1a1a;display:flex;flex-direction:column';
+  const btn='flex:1;justify-content:center;padding:12px 6px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;display:flex;align-items:center;gap:4px';
+  ov.innerHTML=`
+    <div style="background:#0B2D4A;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <span style="flex:1;color:#fff;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${esc(info.folio)} · ${esc(info.cliente)}</span>
+      <button id="_vpCerrar" aria-label="Cerrar" style="background:rgba(255,255,255,.15);color:#fff;border:none;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;flex-shrink:0">✕</button>
+    </div>
+    <iframe src="${url}" title="Vista previa del PDF" style="flex:1;width:100%;border:none;background:#fff"></iframe>
+    <div style="background:#0B2D4A;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));flex-shrink:0">
+      <div style="font-size:11px;color:rgba(255,255,255,.7);margin-bottom:6px;text-align:center">${email?('✉️ '+esc(email)+(yaEnviado?' · '+yaEnviado:'')):'Este cliente no tiene correo capturado'}</div>
+      <div style="display:flex;gap:8px">
+        <button id="_vpWa" style="${btn};background:#128c4a">💬 WhatsApp</button>
+        <button id="_vpMail" style="${btn};background:#2471A3">✉️ Correo</button>
+        <button id="_vpDesc" style="${btn};background:#1C6E4A">⬇️ Descargar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  const cerrar=()=>{ov.remove();setTimeout(()=>{try{URL.revokeObjectURL(url)}catch(_){}},60000);};
+  ov.querySelector('#_vpCerrar').onclick=cerrar;
+  ov.querySelector('#_vpWa').onclick=()=>_compartirWhatsAppPDF(doc,filename,info.cliente,info.folio,info.total);
+  ov.querySelector('#_vpMail').onclick=()=>{
+    if(!_correoValido(email)){toast('Este cliente no tiene correo — agrégalo con ✏️ Modificar en el Historial','warn',5000);return;}
+    if(!isOnline){toast('Sin conexión — el correo se manda cuando vuelva la señal y se reintente','warn',4500);}
+    _correoPendienteEnvio=true;
+    guardarEnDrive(doc,info.folio,info.cliente,info.total,filename,null,info.hash,!!(info.rem&&info.rem.pdfSubidoTs));
+  };
+  ov.querySelector('#_vpDesc').onclick=()=>{
+    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Mac/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
+    if(isIOS&&navigator.share){
+      const file=new File([blob],filename,{type:'application/pdf'});
+      const conArchivo=navigator.canShare&&navigator.canShare({files:[file]});
+      navigator.share(conArchivo?{files:[file],title:filename}:{title:filename}).catch(e=>{if(e.name!=='AbortError')toast('No se pudo abrir Compartir','warn');});
+    } else {
+      doc.save(filename);
+      toast('Descargado: '+filename,'ok');
+    }
+  };
+}
 
 // Botón "↑ Compartir": Share API si está disponible
 function _compartirVisor(){
@@ -6897,6 +7064,8 @@ function _bloquearFormulario(){
   // tecleando, no una asignación por código). Bloquear también los botones que
   // disparan ese camino.
   ['btnBuscarCliente','btnMasDatosCliente'].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=true;el.style.opacity='.4';el.style.pointerEvents='none';}});
+  _candadosExtra(true);
+  renderTable(); // repinta renglones ya bloqueados (flechas −/+, ✕, regalo)
   _syncMobileChrome();
 }
 function _desbloquearFormulario(){
@@ -6907,7 +7076,34 @@ function _desbloquearFormulario(){
   const br=document.getElementById('btnRegistrar');if(br){br.disabled=false;br.style.opacity='';br.innerHTML='✅ REGISTRAR';}
   const ivaTh=document.querySelector('.th-iva');if(ivaTh)ivaTh.style.pointerEvents='';
   ['btnBuscarCliente','btnMasDatosCliente'].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=false;el.style.opacity='';el.style.pointerEvents='';}});
+  _candadosExtra(false);
+  renderTable();
   _syncMobileChrome();
+}
+// MC-26 (3ª vuelta, 2026-09-16): lo que seguía editable tras registrar, encontrado
+// registrando una remisión real en el navegador y listando todo lo tocable:
+// folio (editable a mano y con su botón +), selector de IVA en celular
+// (#ivaWrap -- el de escritorio .th-iva ya estaba), 🔢 Redondear (cambia el
+// total guardado), firma, y la sección COBRO: sus campos solo sirven para
+// una remisión NUEVA (alimentan registrarTodo, que es justo lo que duplicaba
+// la venta en Drive) -- para cobrar una ya registrada está 💰 Registrar Pago,
+// que ahora abre el pago rápido (irAPagos).
+function _avisoBloqueado(){
+  if(!_formBloqueado)return false;
+  toast('Esta remisión ya está registrada — usa ✏️ Modificar para cambiarla','warn',3500);
+  return true;
+}
+function _candadosExtra(bloquear){
+  const apagar=(el)=>{if(!el)return;el.disabled=bloquear;el.style.pointerEvents=bloquear?'none':'';el.style.opacity=bloquear?'.4':'';};
+  const fb=document.getElementById('folioBadge');if(fb)fb.contentEditable=bloquear?'false':'true';
+  apagar(document.querySelector('button[onclick="incrementarFolio()"]'));
+  apagar(document.getElementById('ivaWrap'));
+  apagar(document.getElementById('btnRedondeo'));
+  apagar(document.getElementById('firmaPreview'));
+  apagar(document.getElementById('btnBorrarFirma'));
+  const enEdicion=!!_modoEdicion;
+  const mostrarCaptura=!bloquear||enEdicion;
+  ['abonoArea','btnPendiente','btnPagarTotal'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=mostrarCaptura?'':'none';});
 }
 // F1: valida que NO falten datos antes de descargar/generar el PDF.
 // Devuelve un string con el problema, o '' si todo está completo.
@@ -7073,8 +7269,7 @@ async function registrarTodo(){
 
     // 1) Guardar/actualizar remisión
     const _resGuardado=await registrarRemision(gps);
-    // Limpiar toast "Obteniendo folio…" de inmediato — no esperar al Drive
-    toast('','',1);
+    // "Obteniendo folio…" vive en el chip de arriba y lo reemplaza el siguiente estado.
 
     // M-09 (auditoría de robustez 2026-09-10): si la escritura en este celular falló
     // (memoria llena), la venta vive SOLO en memoria. Antes el flujo seguía igual —
@@ -7329,7 +7524,7 @@ function renderPagos(){
   // solo si AHORA cobra el nuevo saldo.
   if(check){check.checked=(!enEdicion)&&(r.estado==='pagado');check.disabled=!enEdicion&&r.estado==='pagado';}
   const aa=document.getElementById('abonoArea');
-  if(aa)aa.style.display=(!enEdicion&&r.estado==='pagado')?'none':'block';
+  if(aa)aa.style.display=(!enEdicion&&(r.estado==='pagado'||_formBloqueado))?'none':'block'; // MC-26: registrada = se cobra con 💰 Registrar Pago
   // Aviso en modo edición si la remisión ya tenía pagos registrados
   let _editPagosAviso=document.getElementById('_editPagosAviso');
   if(enEdicion&&(r.pagos||[]).length>0){
@@ -7364,6 +7559,11 @@ function renderPagos(){
 }
 
 function irAPagos(){
+  // MC-26: con la remisión ya registrada, la sección COBRO de abajo queda
+  // oculta (sus campos re-registraban la venta) -- se cobra con el mismo
+  // pago rápido de la lista de Cobros, que usa aplicarPago() y no duplica nada.
+  const r=_formBloqueado&&!_modoEdicion&&remActualId?remisiones.find(x=>String(x.id)===String(remActualId)):null;
+  if(r){abrirPagoRapido(r.id,r.folio,true);return;}
   document.getElementById('pagosSection')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -7415,7 +7615,7 @@ function confirmarAnulacion(){
   _anularUUID=null;
   renderPagos();
   enviarPagoConCola(r,r.pagos[r.pagos.length-1]);
-  toast('Pago anulado. Saldo actualizado: '+fmt(r.saldo)+' MXN','ok');
+  _estado('↩️ Pago anulado · Saldo '+fmt(r.saldo));
 }
 
 // ── WhatsApp offline ───────────────────────────────────────────
@@ -7450,7 +7650,7 @@ function enviarPagoConCola(r,pago){
   _encolarPago(r,pago);
   actualizarBadgePendientes();
   if(isOnline){_enviarPago(r,pago);}
-  else{toast('Sin conexión — pago guardado en cola','warn',3500);}
+  else{_estado('📵 Pago en cola — se envía al volver la señal');}
 }
 function _alertarNoAutorizado(d){
   if(d&&d.error&&String(d.error).includes('no autorizado'))
@@ -7493,7 +7693,7 @@ function _resolverRespuestaPago(r,pago,d){
     if(typeof guardarEventoSync==='function')guardarEventoSync({folio:(r&&r.folio)||(pago&&pago.folio)||'',operacion:(pago&&pago.tipo==='anulacion')?'PAGO_ANULADO':'PAGO_GUARDADO',resultado:'OK'});
     if(d.cajaPendiente){
       if(typeof guardarEventoSync==='function')guardarEventoSync({folio:(r&&r.folio)||(pago&&pago.folio)||'',operacion:'CAJA_PENDIENTE',resultado:'ERROR',detalle:'El cobro quedó en cartera pero falta reflejarlo en caja.'});
-      toast('⚠️ Cobro guardado, pero falta reflejarlo en Caja. Reintenta la sincronización.','warn',8000);
+      _estado('⚠️ Cobro guardado, falta reflejarlo en Caja',8000);
       // Mantener el mismo UUID en cola: el servidor no duplica el pago y vuelve
       // a intentar solo el espejo de caja hasta que ambos registros coincidan.
       return false;
@@ -7506,7 +7706,7 @@ function _resolverRespuestaPago(r,pago,d){
     if(r){r.saldo=0; if(r.estado!=='cancelada')r.estado='pagado'; if(r.data)r.data.pagos=[...(r.pagos||[])];}
     persistirRemisiones();
     if(pago){_dequeueByUUID(pago.uuid);_marcarPagoSync(pago.uuid);}
-    toast('⚠️ '+((r&&r.folio)||'La remisión')+' ya estaba cobrada por el otro dispositivo. Tu cobro NO se duplicó.','warn',7000);
+    _estado('⚠️ '+((r&&r.folio)||'La remisión')+' ya estaba cobrada en otro celular — no se duplicó',8000);
     setTimeout(()=>{if(typeof bajarCobros==='function')bajarCobros();},700);
     if(typeof guardarEventoSync==='function')guardarEventoSync({folio:(r&&r.folio)||'',operacion:'PAGO_GUARDADO',resultado:'OK',detalle:'ya estaba pagada en el otro dispositivo'});
     return true;
@@ -7559,7 +7759,7 @@ async function procesarCola(){
       }catch(e){ _bumpTry('cola_offline',e=>e.pago&&e.pago.uuid===item.pago.uuid); }
     }
     actualizarBadgePendientes();
-    if(enviados>0)toast('Cola sincronizada: '+enviados+' pago(s) enviado(s) ✓','ok');
+    if(enviados>0)_estado('✅ '+enviados+' pago(s) enviado(s)');
   }finally{ _procPagosEnCurso=false; }
 }
 // ── Fallas de exportación al ERP (C-02): ventas guardadas que NO llegaron al Excel del ERP ──
@@ -7574,7 +7774,7 @@ function _marcarFallaERP(rem){
   // MC-06: prende el badge de ⚠ Excepciones -- ya no depende del contador de
   // "sin enviar" para avisarse, así que se enciende aquí mismo.
   if(typeof _actualizarBadgeExcepciones==='function')_actualizarBadgeExcepciones(_totalExcepciones());
-  toast('⚠️ '+rem.folio+': guardada, pero NO llegó al ERP. Toca el contador para reintentar.','warn',6000);
+  _estado('⚠️ '+rem.folio+': no llegó al ERP — toca el contador',7000);
 }
 function _limpiarFallaERP(id){
   const l=_fallasERP(); const n=l.filter(x=>String(x.id)!==String(id));
@@ -7625,6 +7825,11 @@ function actualizarBadgePendientes(){
     }else if(!isOnline){
       b.innerHTML='<span class="dot"></span>Sin red'+(total>0?' · '+total:'');
       b.classList.add('err'); b.title='Sin conexión — se guarda y se envía al volver la señal';
+    }else if(_fallasPendientes().length){
+      // Antes era una barra roja fija ABAJO que tapaba las pestañas de navegación.
+      const nf=_fallasPendientes().length;
+      b.innerHTML='<span class="dot"></span>⚠️ '+nf+' sin guardar';
+      b.classList.add('err'); b.title=nf+' documento(s) NO se han podido guardar tras varios intentos — toca para ver y reintentar';
     }else if(total>0){
       b.innerHTML='<span class="dot"></span>Enviando '+total+'…';
       b.classList.add('warn'); b.title='Toca para ver qué falta';
@@ -7633,7 +7838,7 @@ function actualizarBadgePendientes(){
       b.classList.add('ok'); b.title='Todo enviado y sincronizado';
     }
   }
-  _revisarFallas();
+  document.getElementById('alertaFallas')?.remove(); // barra vieja de abajo, ya no se usa
   _actualizarBadgeExcepciones(_totalExcepciones());
   actualizarPanelConexion();
 }
@@ -7670,17 +7875,10 @@ function _fallasPendientes(){
 }
 // Muestra/oculta el aviso rojo fijo según haya documentos atorados.
 function _revisarFallas(){
-  const fallas=_fallasPendientes();
-  let bar=document.getElementById('alertaFallas');
-  if(!fallas.length){ if(bar)bar.style.display='none'; return; }
-  if(!bar){
-    bar=document.createElement('div'); bar.id='alertaFallas'; bar.className='no-print';
-    bar.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:985;background:#b91c1c;color:#fff;padding:11px 16px;font-size:13px;font-weight:700;text-align:center;cursor:pointer;box-shadow:0 -2px 10px rgba(0,0,0,.3)';
-    bar.onclick=verEstado;
-    document.body.appendChild(bar);
-  }
-  bar.style.display='block';
-  bar.innerHTML='⚠️ '+fallas.length+' documento(s) NO se han podido guardar tras varios intentos — toca para ver y reintentar';
+  // Las fallas atoradas ahora se muestran en el chip rojo de arriba
+  // (actualizarBadgePendientes) -- antes eran una barra fija abajo que tapaba
+  // las pestañas de navegación en el celular.
+  actualizarBadgePendientes();
 }
 // Pantalla "Estado": qué está pendiente, qué falló y desde cuándo. Botón reintentar.
 function verEstado(){
@@ -7891,6 +8089,14 @@ function verRemisionDesdePago(){
   const id=_prId;
   closeOv('ovPagoRapido');closeOv('ovCobros');closeOv('ovHist');
   if(id)loadRemCobro(id);
+}
+// Pregunta de Miguel (2026-09-16): tras cobrar, el popup de Pago rápido no
+// dejaba descargar/enviar el PDF actualizado -- solo mostraba el texto de
+// observaciones. Reusa exactamente la vista previa de Historial (📄, MC-28).
+function verPdfDesdePago(){
+  const id=_prId;
+  closeOv('ovPagoRapido');closeOv('ovCobros');
+  if(id)reenviarPDFHistorial(id);
 }
 
 // ── Firma digital del cliente ─────────────────────────────────
@@ -8103,6 +8309,7 @@ function _dibujarLineaFirma(ctx,canvas){
   ctx.restore();
 }
 function abrirFirma(){
+  if(_avisoBloqueado())return;
   document.getElementById('ovFirma').classList.add('open');
   const canvas=document.getElementById('firmaCanvas');
   const ctx=_ajustarResolucionCanvasFirma(canvas);
@@ -8171,6 +8378,7 @@ function confirmarFirma(){
   autosave();
 }
 function borrarFirma(){
+  if(_avisoBloqueado())return;
   _firmaData=null;
   const img=document.getElementById('firmaImg');
   const ph=document.getElementById('firmaPlaceholder');
@@ -8271,6 +8479,15 @@ function _popupBase(titulo,mensaje,opts){
 // Reemplaza alert(msg) -- un solo botón "Entendido".
 async function popupAlerta(mensaje,titulo){
   return _popupBase(titulo||'⚠️ Aviso',mensaje,{botones:[{texto:'Entendido',valor:true,clase:'btn-p'}]});
+}
+// ⚠️ junto a "Sin red" (ver actualizarPanelConexion, que arma el texto y
+// cierra este aviso solo si vuelve la señal con él abierto). `var` y no `let`:
+// actualizarPanelConexion puede correr antes de llegar a esta línea.
+var _ayudaSinRedTexto='', _ayudaSinRedAbierta=false;
+async function _verAyudaSinRed(){
+  _ayudaSinRedAbierta=true;
+  await popupAlerta(_ayudaSinRedTexto,'📵 Sin conexión');
+  _ayudaSinRedAbierta=false;
 }
 // Reemplaza confirm(msg) -- devuelve true/false, igual que la nativa.
 async function popupConfirmar(mensaje,titulo){
@@ -8595,7 +8812,7 @@ async function _procesarColaCotR(){
       } else if(res&&res.ok&&res.pdfOk===false){
         // Fila registrada pero el PDF NO subió → mantener en cola + avisar.
         _bumpIntentoCot(entry.id);
-        toast('⚠️ '+(entry.folio||'Cotización')+': se registró pero el PDF NO subió. Se reintentará.','warn',7000);
+        _estado('⚠️ '+(entry.folio||'Cotización')+': PDF no subió, se reintentará',7000);
         _revisarFallas();
         if(typeof guardarEventoSync==='function')guardarEventoSync({folio,operacion:'COTIZACION_GUARDADA',resultado:'ERROR',detalle:'el PDF no se guardó en Drive'});
       } else {
@@ -9181,7 +9398,7 @@ async function _generarCotizacion(){
     _desbloquearDescargaCot();
 
     // ── Subir a Drive ──
-    toast(isOnline ? '☁️ Subiendo cotización a Drive…' : '📵 Sin conexión — se subirá al volver la señal','ok',3000);
+    _estado(isOnline ? '☁️ Subiendo cotización a Drive…' : '📵 Cotización en cola — se sube al volver la señal',3500);
     if(isOnline) setTimeout(_procesarColaCotR, 300);
 
     // Limpiar borrador y salir de modo edición al generar exitosamente
