@@ -293,23 +293,26 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   #firmaModalBox{width:96vw!important;height:92vh!important;max-width:none!important;max-height:none!important;padding:10px!important}
   #firmaCanvas{min-height:64vh!important}
 }
-/* Boton manual 🔄 -- diseño horizontal propio (nada se gira/transforma):
-   cabecera compacta arriba, lienzo ancho y bajo, botones en fila abajo.
-   MC-27 (2026-09-16): Miguel decidió no perseguir rotar la pantalla de
-   verdad (Fullscreen + Screen Orientation Lock, sin soporte en Safari/
-   iPhone) -- esta vista simulada es la única, para todos los navegadores.
-   2026-09-16 (2ª vuelta): esta regla vivía DENTRO de @media(max-width:900px)
-   -- en un celular grande girado a landscape de verdad, el ancho lógico
-   supera 900px y la regla dejaba de aplicar del todo, así que el botón 🔄
-   parecía "no hacer nada". Ahora es incondicional: fuerza el recuadro
-   ancho-y-bajo sin importar el tamaño de pantalla ni si el celular está
-   físicamente girado o no.
-   `overflow-y:auto` es lo que evita que "✅ Confirmar firma" se corte si el
-   contenido no cabe exacto en 62vh -- antes, sin scroll, el botón quedaba
-   fuera de la caja sin forma de alcanzarlo. */
+/* Boton manual 🔄 -- ROTACIÓN REAL con CSS transform (3er intento, 2026-09-16).
+   Historial: 1) transform:rotate() en 2026-07-21 se abandonó ("se veía de
+   lado") -- el bug real era que el mapeo de coordenadas del dedo no
+   compensaba la rotación, no la rotación en sí. 2) Esta misma sesión probó
+   Fullscreen+Screen Orientation Lock (sin soporte en Safari) -- descartado.
+   3) Recuadro ancho-y-bajo SIN rotar -- Miguel aclaró que no es lo que pidió:
+   quiere que el recuadro SÍ se vea girado (todos los elementos), y que sea EL
+   CLIENTE quien gire el teléfono para leerlo/firmarlo derecho -- igual que un
+   datáfono físico que se le entrega volteado. Coordenadas del dedo
+   compensadas en pos() (abrirFirma) -- ver derivación en el comentario ahí.
+   Incondicional (no depende de @media ni de si el celular está físicamente
+   girado): el botón 🔄 siempre fuerza este estado. `position:fixed` +
+   `translate(-50%,-50%) rotate(90deg)` centra y gira sin depender del layout
+   de #ovFirma. `overflow-y:auto` evita que "✅ Confirmar firma" quede fuera
+   de alcance si el contenido no cupiera exacto. */
 #firmaModalBox.girado{
-  width:94vw!important;height:62vh!important;max-width:none!important;max-height:none!important;
-  padding:12px!important;gap:8px!important;flex-direction:column!important;overflow-y:auto!important;
+  position:fixed!important;top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;
+  width:94vw!important;height:92vh!important;max-width:none!important;max-height:none!important;
+  transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center center;
+  padding:14px!important;gap:8px!important;flex-direction:column!important;overflow-y:auto!important;
 }
 #firmaModalBox.girado #firmaCanvas{flex:1!important;width:100%!important;height:auto!important;min-height:120px!important}
 #firmaModalBox.girado .firma-btns{flex-direction:row!important;flex-shrink:0!important}
@@ -793,8 +796,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Datos del Cliente</span>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-          <button class="sbtn" onclick="toggleCPanel()" title="Buscar cliente">🔍 Buscar</button>
-          <button class="sbtn" onclick="abrirMasDatosCliente()" title="RFC, contacto, correo, persona moral">➕</button>
+          <button class="sbtn" id="btnBuscarCliente" onclick="toggleCPanel()" title="Buscar cliente">🔍 Buscar</button>
+          <button class="sbtn" id="btnMasDatosCliente" onclick="abrirMasDatosCliente()" title="RFC, contacto, correo, persona moral">➕</button>
           <button class="sbtn" id="btnToggleClientDetail" onclick="toggleClientDetail()" style="display:none">▾</button>
         </div>
       </div>
@@ -1663,7 +1666,6 @@ function actualizarPanelConexion(){
   const catTs=localStorage.getItem('erp_catalogo_ts');
   const catTxt=catTs?('Publicado por el ERP: '+_frescuraTexto(catTs).txt.replace(/^actualizado /,''))
                     :'⚠️ El ERP todavía no ha publicado catálogo — revisa el token del Apps Script en Configuración del ERP';
-  let _dResp; // días desde el último respaldo -- calculado dentro de la rama MC-33 de abajo
   // MC-33: un solo lugar que limpia los 3 colores -- cada rama de abajo solo
   // agrega el suyo, así nunca queda un color viejo pegado (ej. "ok" de la
   // vuelta anterior si ahora toca "warn").
@@ -1699,16 +1701,6 @@ function actualizarPanelConexion(){
       ? ' · <span style="text-decoration:underline;cursor:pointer;font-weight:800" onclick="abrirToken()">⚠️ Sin token — configúralo aquí</span>'
       : '';
     msg.innerHTML='🔄 <b>Subiendo…</b>'+tokenHint+' Los datos no se perderán aunque cierres la app.';
-  } else if(remisiones.length && (_dResp=_diasDesde(localStorage.getItem('ultimo_respaldo_ts')))!==null && _dResp>=7){
-    // MC-33 (2026-09-16): el recordatorio de respaldo vivía en un toast() que
-    // tapaba la barra de navegación de abajo en celular y había que esperar a
-    // que se quitara solo. Todo lo que es "estado, no una acción puntual" va
-    // aquí arriba, igual que conexión/token/cuota -- se lee sin estorbar nada.
-    bar.classList.add('show','warn');
-    msg.innerHTML='🛟 <b>Hace '+_dResp+' días que no respaldas tus datos.</b> <span style="text-decoration:underline;cursor:pointer;font-weight:800" onclick="abrirEmpresa()">Abrir 🏢 Mi empresa → ⬇️ Exportar</span>';
-  } else if(remisiones.length && _dResp===null){
-    bar.classList.add('show','warn');
-    msg.innerHTML='🛟 <b>Aún no has hecho ningún respaldo.</b> <span style="text-decoration:underline;cursor:pointer;font-weight:800" onclick="abrirEmpresa()">Abrir 🏢 Mi empresa → ⬇️ Exportar</span>';
   } else {
     // Online, sin pendientes y respaldado: revisar si el catálogo lleva más de 3 horas sin actualizarse
     const tsNum=parseInt(localStorage.getItem('gs_sync_ts')||'0',10);
@@ -2603,7 +2595,7 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
   _guardarEnColaPDF(entry); // nunca se pierde para Drive
   actualizarBadgePendientes();
   if(!isOnline){ toast('Sin conexión — el PDF se subirá a Drive al volver la señal','warn',4000); return; }
-  toast(yaSubidoAntes?'☁️ Actualizando el PDF en Drive (cambió el saldo)…':'☁️ Guardando en Drive…','loading',0);
+  _estadoHeaderVivo(yaSubidoAntes?'☁️ Actualizando PDF en Drive…':'☁️ Guardando en Drive…',0);
   fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(entry)})
     .then(r=>r.json())
     .then(d=>{
@@ -2622,13 +2614,13 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
         }
         if(correoEnviar){
           if(d.correoEnviado){
-            toast('Guardado en Drive ✓ · ✉️ correo enviado','ok');
+            _estadoHeaderVivo('✅ Guardado ✓ · ✉️ correo enviado',5000);
             // MC-03: marca local para "ya se envió antes" -- se lee en _mostrarConfirmacion.
             if(remActiva){remActiva.correoEnviadoInfo={ts:Date.now(),email:datosCliente.email};persistirRemisiones();}
           }
-          else toast('Guardado en Drive ✓ · ⚠️ no se pudo enviar el correo (se guardó igual)','warn',5000);
+          else _estadoHeaderVivo('✅ Guardado ✓ · ⚠️ correo no enviado',5000);
         } else {
-          toast('Guardado en Drive ✓','ok');
+          _estadoHeaderVivo('✅ Guardado en Drive ✓',3000);
         }
         cargarFolioRemoto();
         if(typeof guardarEventoSync==='function'){guardarEventoSync({folio:d.folio||entry.folio,operacion:'REMISION_GUARDADA',resultado:'OK'});guardarEventoSync({folio:d.folio||entry.folio,operacion:'PDF_GUARDADO',resultado:'OK'});}
@@ -3156,6 +3148,10 @@ document.addEventListener('click',e=>{
 },{passive:true});
 
 function toggleCPanel(){
+  // MC-26: refuerzo -- aunque el botón #btnBuscarCliente esté disabled, este
+  // guard evita abrir el buscador si algo más lo dispara (ej. el listener de
+  // teclado o una llamada directa).
+  if(_formBloqueado && !cPanelOpen)return;
   const p=document.getElementById('cPanel');cPanelOpen=!cPanelOpen;
   if(cPanelOpen){renderCList(CLIENTES);p.classList.add('open');document.getElementById('cSearch').value='';document.getElementById('cSearch').focus();_ajustarHojaTeclado(p);setTimeout(()=>_ajustarHojaTeclado(p),350);}
   else p.classList.remove('open');
@@ -3902,11 +3898,26 @@ function _calcularCartera(cobros){
 // visible SIN abrir el modal 📊 Negocio. Se llama al cargar, tras bajarCobros() y
 // cada vez que se abre/refresca Negocio (reutiliza el mismo cálculo, sin red extra).
 function _actualizarHeaderVivo(cartera){
+  if(_headerVivoOcupado)return; // hay un estado temporal mostrándose (ver _estadoHeaderVivo) -- no lo pises
   const el=document.getElementById('headerVivo'); if(!el)return;
   const c=cartera||_calcularCartera(_cobrosCombinados());
   if(!c.totalPorCobrar){ el.style.display='none'; return; }
   el.style.display='inline-flex';
   el.innerHTML='💰 '+fmt(c.totalPorCobrar)+(c.vencido30>0?' <span style="color:#ffb3a7">· ⚠️ '+fmt(c.vencido30)+' vencido</span>':'');
+}
+// 2026-09-16 (pedido de Miguel): los avisos de "guardando en Drive/subiendo
+// PDF" tapaban la navegación de abajo con toast(). Reusa el mismo chip del
+// toolbar que ya muestra "💰 monto · vencido" -- MISMO tamaño, solo cambia el
+// texto mientras dura la acción, y al terminar (o pasado `ms`) vuelve solo a
+// mostrar la cartera real. `ms:0` lo deja fijo hasta el siguiente llamado
+// (para el "Guardando..." mientras la subida está en curso de verdad).
+let _headerVivoOcupado=false;
+function _estadoHeaderVivo(html,ms){
+  const el=document.getElementById('headerVivo'); if(!el)return;
+  _headerVivoOcupado=true;
+  el.style.display='inline-flex';
+  el.innerHTML=html;
+  if(ms>0)setTimeout(()=>{_headerVivoOcupado=false;_actualizarHeaderVivo();},ms);
 }
 
 function _renderNegocio(){
@@ -5091,16 +5102,35 @@ function _pintarUltimoRespaldo(){
   el.innerHTML='<span style="color:'+col+'">🛟 Último respaldo: '+txt+'.</span>';
 }
 // Recordatorios al arrancar la app. Visibles (toast), no bloqueantes.
-// MC-33 (2026-09-16): el de respaldo se quitó de aquí -- vive ahora en el
-// indicador de arriba (actualizarPanelConexion), que no tapa la navegación
-// de abajo y no se quita solo, así que ya no hace falta repetirlo como toast.
 function _avisosArranque(){
+  try{
+    if(remisiones.length){
+      const d=_diasDesde(localStorage.getItem('ultimo_respaldo_ts'));
+      if(d===null||d>=7)_avisoRespaldoTemporal(d);
+    }
+  }catch(_){}
   try{
     if(PRODUCTOS.length){
       const d=_diasDesde(localStorage.getItem('gs_sync_ts'));
       if(d!==null && d>=3) setTimeout(()=>toast('🏷️ Los precios del catálogo son de hace '+d+' días. Abre ⚙️ Catálogos → 🔄 Conectar para actualizar.','warn',8000),2400);
     }
   }catch(_){}
+}
+// MC-33 (2026-09-16, 2ª vuelta): Miguel aclaró que NO quiere el aviso de
+// respaldo pegado para siempre arriba -- "que avise al abrir pero no
+// necesario que esté pegado". Se movió de vuelta a aquí (solo al arrancar,
+// una vez), pero usando el indicador de arriba en vez de un toast() que
+// tapaba la barra de navegación de abajo -- se ve unos segundos y luego
+// vuelve solo al estado real de conexión (actualizarPanelConexion).
+function _avisoRespaldoTemporal(dias){
+  const bar=document.getElementById('netBar');if(!bar)return;
+  const msg=document.getElementById('netBarMsg')||bar;
+  bar.classList.remove('warn','stale','ok');bar.classList.add('show','warn');
+  msg.innerHTML=(dias===null
+    ?'🛟 <b>Aún no has hecho ningún respaldo.</b>'
+    :'🛟 <b>Hace '+dias+' días que no respaldas tus datos.</b>')
+    +' <span style="text-decoration:underline;cursor:pointer;font-weight:800" onclick="abrirEmpresa()">Abrir 🏢 Mi empresa → ⬇️ Exportar</span>';
+  setTimeout(actualizarPanelConexion,8000);
 }
 // M-10 (auditoría de robustez 2026-09-10): un respaldo de ayer reemplazaba
 // `r_rems` de hoy sin pedir confirmar el reemplazo, aceptaba CUALQUIER clave de
@@ -5882,6 +5912,7 @@ function _buscarClienteCatalogo(nombre){
   return CLIENTES.find(c=>(c.nombre||'').trim().toLowerCase()===q)||null;
 }
 function abrirMasDatosCliente(){
+  if(_formBloqueado){toast('Esta remisión ya está registrada — usa ✏️ Modificar para cambiar sus datos','warn',4000);return;} // MC-26
   _ncModo='masdatos';
   const g=id=>document.getElementById(id)?.value||'';
   const nombreActual=g('c_nombre');
@@ -6860,6 +6891,12 @@ function _bloquearFormulario(){
   const ar=document.querySelector('.add-row');if(ar){ar.disabled=true;ar.style.opacity='.35';}
   const br=document.getElementById('btnRegistrar');if(br){br.disabled=true;br.style.opacity='.5';br.innerHTML='🔒 Registrado';}
   const ivaTh=document.querySelector('.th-iva');if(ivaTh)ivaTh.style.pointerEvents='none';
+  // MC-26 (2026-09-16): "deja cambiar clientes" -- los campos c_nombre/c_dir/etc
+  // quedaban disabled, pero 🔍 Buscar seguía abriendo el dropdown y selCliente()
+  // sigue escribiendo esos valores por JS (disabled solo bloquea al USUARIO
+  // tecleando, no una asignación por código). Bloquear también los botones que
+  // disparan ese camino.
+  ['btnBuscarCliente','btnMasDatosCliente'].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=true;el.style.opacity='.4';el.style.pointerEvents='none';}});
   _syncMobileChrome();
 }
 function _desbloquearFormulario(){
@@ -6869,6 +6906,7 @@ function _desbloquearFormulario(){
   const ar=document.querySelector('.add-row');if(ar){ar.disabled=false;ar.style.opacity='';}
   const br=document.getElementById('btnRegistrar');if(br){br.disabled=false;br.style.opacity='';br.innerHTML='✅ REGISTRAR';}
   const ivaTh=document.querySelector('.th-iva');if(ivaTh)ivaTh.style.pointerEvents='';
+  ['btnBuscarCliente','btnMasDatosCliente'].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=false;el.style.opacity='';el.style.pointerEvents='';}});
   _syncMobileChrome();
 }
 // F1: valida que NO falten datos antes de descargar/generar el PDF.
@@ -6922,6 +6960,13 @@ function prepararPago(tipo){
 
 // ── REGISTRAR — botón principal ───────────────────────────────
 async function registrarTodo(){
+  // MC-26 (2026-09-16, hallazgo real de Miguel): el botón de abajo en celular
+  // (#mobileActionPrimary) es un elemento APARTE de #btnRegistrar -- bloquear
+  // solo #btnRegistrar (lo que ya hacía _bloquearFormulario) no impedía
+  // volver a tocar "Registrar remisión" en la barra fija de abajo y crear
+  // OTRA remisión en Drive de la misma venta. Este guard cubre cualquier
+  // camino (móvil, desktop, futuro) desde el único lugar que todos comparten.
+  if(_formBloqueado){toast('Esta remisión ya está registrada — usa ✏️ Modificar para cambiarla','warn',4000);return;}
   const sn=snap();
   const activos=sn.items.filter(i=>(+i.qty>0)&&((+i.precio>0)||i.regalo));
   if(!activos.length){toast('Agrega al menos un producto con cantidad y precio','err');return;}
@@ -8017,7 +8062,11 @@ function toggleGiroFirma(){
 // (pos/down/move/_dibujarLineaFirma) siga trabajando en coordenadas CSS
 // normales sin tener que multiplicar nada a mano.
 function _ajustarResolucionCanvasFirma(canvas){
-  const dpr=window.devicePixelRatio||1;
+  // 2026-09-16 (2ª vuelta): "le falta mucha resolución" -- piso de 2x aunque
+  // devicePixelRatio reporte 1 (pasa en algunos Android configurados con
+  // escalado de pantalla). No hay costo real: es un canvas chico, no una
+  // imagen de cámara.
+  const dpr=Math.max(window.devicePixelRatio||1,2);
   const cssW=canvas.clientWidth||canvas.offsetWidth||500;
   const cssH=canvas.clientHeight||canvas.offsetHeight||220;
   canvas.width=Math.round(cssW*dpr);
@@ -8039,6 +8088,13 @@ function _reajustarCanvasFirma(){
   });
 }
 function _dibujarLineaFirma(ctx,canvas){
+  // Con #firmaModalBox.girado, el lienzo está rotado 90° de verdad -- esta
+  // guía se dibuja en coordenadas LOCALES (sin rotar), así que aquí se vería
+  // vertical en vez de horizontal. Es solo una guía visual, no afecta el
+  // trazo real -- se omite mientras está girado en vez de mostrarla mal
+  // orientada.
+  const box=document.getElementById('firmaModalBox');
+  if(box&&box.classList.contains('girado'))return;
   ctx.save();
   ctx.strokeStyle='#C7CDD6';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
   const w=canvas._cssW||canvas.width,h=canvas._cssH||canvas.height;
@@ -8061,10 +8117,29 @@ function abrirFirma(){
   // así que dibujar aquí en CSS-px es lo correcto. El ratio cssW/r.width casi
   // siempre es 1 (el tamaño CSS ya coincide con lo mostrado), pero se
   // conserva por si el layout cambia sin haber vuelto a llamar el ajuste.
+  //
+  // Con #firmaModalBox.girado (rotate(90deg) real, ver CSS ~línea 310), el
+  // dedo toca en coordenadas de PANTALLA (ya rotadas) pero el canvas dibuja
+  // en su propio espacio SIN rotar -- hay que deshacer la rotación aquí.
+  // getBoundingClientRect() de un elemento rotado EXACTO 90° sigue dando un
+  // rectángulo alineado a los ejes (ancho/alto simplemente se intercambian),
+  // así que es confiable usarlo como referencia. Derivación (rotate(90deg) =
+  // sentido horario, origen en el centro): un punto local (x,y) del canvas
+  // SIN rotar, con ancho W y alto H, cae en la pantalla en el offset
+  // (u,v)=(H−y, x) medido desde la esquina superior-izquierda del recuadro
+  // YA rotado (que mide H de ancho × W de alto). Invirtiendo: x=v, y=H−u.
+  // Este es justo el bug de 2026-07-21 ("la firma se veía de lado") -- ahí
+  // nunca se hizo esta compensación.
   function pos(e){
     const r=canvas.getBoundingClientRect();
     const src=e.touches?e.touches[0]:e;
-    return{x:(src.clientX-r.left)*(canvas._cssW/r.width),y:(src.clientY-r.top)*(canvas._cssH/r.height)};
+    const girado=document.getElementById('firmaModalBox')?.classList.contains('girado');
+    const offX=src.clientX-r.left, offY=src.clientY-r.top;
+    if(girado){
+      const u=offX*(canvas._cssH/r.width), v=offY*(canvas._cssW/r.height);
+      return{x:v,y:canvas._cssH-u};
+    }
+    return{x:offX*(canvas._cssW/r.width),y:offY*(canvas._cssH/r.height)};
   }
   function down(e){e.preventDefault();_firmaDrawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);}
   function move(e){e.preventDefault();if(!_firmaDrawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();}
@@ -8558,7 +8633,15 @@ function _syncMobileChrome(){
   const cot=_mobileEsCotizacion();
   const label=document.getElementById('mNavModoTxt'),primary=document.getElementById('mobileActionPrimary');
   const pdf=document.getElementById('mobileActionPdf'),total=document.getElementById('mobileActionTotal');
-  if(primary)primary.textContent=cot?'Generar cotización':'Registrar remisión';
+  // MC-26 (2026-09-16): este botón es el que de verdad se toca en celular --
+  // antes _bloquearFormulario() solo apagaba #btnRegistrar (el de escritorio,
+  // display:none en móvil) y este seguía activo, dejando registrar la MISMA
+  // venta otra vez en Drive.
+  if(primary){
+    primary.disabled=_formBloqueado;
+    primary.style.opacity=_formBloqueado?'.5':'';
+    primary.textContent=_formBloqueado?'🔒 Registrado':(cot?'Generar cotización':'Registrar remisión');
+  }
   if(total){const origen=document.getElementById(cot?'cot_tTot':'tTot');total.textContent=origen?.textContent||'$0.00 MXN';}
   if(pdf){const origen=document.getElementById(cot?'btnDescargarCot':'btnDescargarPDF');pdf.disabled=!origen||origen.disabled;}
   document.querySelectorAll('.mobile-nav button').forEach(b=>b.removeAttribute('aria-current'));
