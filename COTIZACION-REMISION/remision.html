@@ -296,8 +296,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 @media(max-width:900px){
   /* Boton manual 🔄 -- diseño horizontal propio (nada se gira/transforma):
      cabecera compacta arriba, lienzo ancho y bajo, botones en fila abajo.
-     Fallback para navegadores sin Fullscreen + Screen Orientation Lock
-     (Safari/iPhone confirmado sin soporte de screen.orientation.lock()). */
+     MC-27 (2026-09-16): Miguel decidió no perseguir rotar la pantalla de
+     verdad (Fullscreen + Screen Orientation Lock, sin soporte en Safari/
+     iPhone) -- esta vista simulada es la única, para todos los navegadores. */
   #firmaModalBox.girado{
     width:94vw!important;height:62vh!important;max-width:none!important;max-height:none!important;
     padding:12px!important;gap:8px!important;flex-direction:column!important;
@@ -305,13 +306,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   #firmaModalBox.girado #firmaCanvas{flex:1!important;width:100%!important;height:auto!important;min-height:0!important}
   #firmaModalBox.girado .firma-btns{flex-direction:row!important}
 }
-/* Rotación REAL (fullscreen + orientation lock landscape, ver toggleGiroFirma):
-   el viewport ya es landscape de verdad -- solo se pide que el recuadro use
-   ese espacio completo, nada se gira con transform. */
-#firmaModalBox.girado-real{
-  width:96vw!important;height:92vh!important;max-width:none!important;max-height:none!important;
-}
-#firmaModalBox.girado-real #firmaCanvas{min-height:64vh!important}
 
 @media(max-width:480px){
   .page{padding:0 6px}.doc-hd{padding:14px 12px;gap:8px}.logo-wrap{max-width:48%}.logo-wrap img{max-width:100%;height:auto!important}
@@ -448,7 +442,13 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   .items-table .td-iva{order:5;grid-column:1/-1} /* visible solo en cotización -- en remisión sigue display:none (línea 143) */
   .items-table tbody td.td-imp{order:1;grid-column:2;text-align:right;align-self:center;font-size:17px;font-weight:800;color:var(--green)}
   .items-table tbody td.td-imp::before{display:none}
-  .items-table tbody td.td-del{order:9;position:absolute;right:10px;bottom:10px;padding:0;border:none;margin:0;text-align:right;width:auto}
+  .items-table tbody td.td-del{order:9;position:absolute;right:6px;bottom:8px;padding:0;border:none;margin:0;text-align:right;width:auto}
+  /* MC-24 (2026-09-16): más pegada al borde (right:10px→6px) y un poco más
+     chica que el resto de los botones táctiles de 44px -- Miguel la reportó
+     muy cerca del box de cantidad. Sigue dentro de la tarjeta: el padding de
+     12px de la tarjeta (.items-table tbody tr, línea ~410) deja margen de
+     sobra entre este right:6px y el borde real. */
+  .items-table tbody td.td-del .del-btn{width:36px!important;height:36px!important;min-height:36px!important;font-size:12px}
 
   /* Áreas táctiles más grandes */
   .del-btn{width:30px;height:30px;min-height:30px!important;font-size:13px}
@@ -529,8 +529,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   /* El boton fijo de abajo (mobileActionPrimary) ya hace lo mismo -- ocultar los
      inline para no duplicar la accion en pantallas chicas. */
   #btnRegistrar,#btnGenerarCotAbajo{display:none!important}
-  body:has(#ovHist.open) .mobile-action,body:has(#ovHistCot.open) .mobile-action,
-  body:has(#ovCobros.open) .mobile-action,body:has(#menuMas.open) .mobile-action{display:none!important}
+  /* MC-34 (2026-09-16): antes se enumeraba modal por modal (ovHist, ovCobros,
+     menuMas…) y se olvidaba alguno -- Miguel reportó justo eso con el buscador
+     de clientes (#cPanel, clase .sp). Regla general: CUALQUIER overlay/popup
+     abierto (.ov, .sp, .pp-global, .menu-mas) oculta el banner de
+     Total/Registrar. "Navegando la remisión sin nada abierto" es la única
+     condición para que se vea. */
+  body:has(.ov.open) .mobile-action,body:has(.sp.open) .mobile-action,
+  body:has(.pp-global.open) .mobile-action,body:has(.menu-mas.open) .mobile-action{display:none!important}
 
   /* Sección inferior */
   .obs-ta{font-size:13px;min-height:200px}
@@ -559,6 +565,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 #netBar.show{display:block}
 #netBar.warn{background:#E67E22}
 #netBar.stale{background:#5D6D7E;font-size:11.5px}
+/* MC-33 (2026-09-16): estado "todo al día" -- antes la barra se ocultaba del
+   todo aquí; Miguel pidió que el indicador de arriba siempre diga algo,
+   verde cuando está al día. */
+#netBar.ok{background:#1C6E4A;font-size:11.5px}
 /* ── Watermark ─────────────────────────────────────────────── */
 .doc{position:relative;overflow:hidden}
 .watermark-pagado{position:absolute;top:48%;left:50%;transform:translate(-50%,-50%) rotate(-28deg);font-size:96px;font-weight:900;color:rgba(28,110,74,0.09);text-transform:uppercase;pointer-events:none;z-index:5;letter-spacing:16px;white-space:nowrap;user-select:none}
@@ -708,7 +718,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
       <button id="tg_btn" onclick="_tgGuardar()" disabled
         style="flex:2;padding:10px;background:#9CA3AF;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;opacity:1;transition:background .15s">✅ Guardar y entrar</button>
     </div>
-    <div style="font-size:11px;color:#9CA3AF">El token te lo da tu administrador o está en tu archivo TOKEN_SECRETO.txt</div>
+    <div style="font-size:11px;color:#9CA3AF">El token te lo da tu administrador</div>
   </div>
 </div>
 <div id="netBar"><div id="netBarMsg">📵 Sin conexión — todo se guarda y se enviará al volver la señal</div></div>
@@ -779,7 +789,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
            guardarEnDrive() los lee de aquí para registrarDatosCliente(). -->
       <input type="hidden" id="c_rfc"><input type="hidden" id="c_email"><input type="hidden" id="c_contacto"><input type="hidden" id="c_persona_moral">
       <div class="sp" id="cPanel" style="top:54px;left:16px;right:16px;min-width:unset" onmousedown="event.preventDefault()">
-        <input type="text" placeholder="Buscar por nombre o RFC…" id="cSearch" oninput="filtClientes(this.value)">
+        <!-- MC-34 (2026-09-16): botón ✕ explícito -- tocar fuera ya cerraba este
+             panel (listener en :3259), pero Miguel no tenía forma segura de
+             cancelarlo sin elegir un cliente; este botón nunca depende de dónde
+             cae el tap. -->
+        <div style="display:flex;align-items:stretch;gap:6px">
+          <input type="text" placeholder="Buscar por nombre o RFC…" id="cSearch" oninput="filtClientes(this.value)" style="flex:1">
+          <button type="button" aria-label="Cerrar" onclick="toggleCPanel()" style="flex-shrink:0;width:38px;border:none;background:var(--bg);color:var(--muted);border-radius:8px;font-size:16px;cursor:pointer">✕</button>
+        </div>
         <div id="cList"></div>
         <div style="padding:8px 10px;border-top:1px solid #E5E5E7">
           <button onclick="abrirNuevoCliente()" style="width:100%;padding:7px;background:#E8F5EF;color:#1C6E4A;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">＋ Agregar nuevo cliente</button>
@@ -976,7 +993,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 </div>
 </div>
 
-<div class="ov" id="ovHist"><div class="modal"><div class="modal-hd"><div class="modal-title">📋 Historial de Remisiones</div><button class="mx" onclick="closeOv('ovHist')">✕</button></div><input class="mi" type="text" id="histBusqInput" placeholder="Buscar por folio o cliente…" oninput="filtRems(this.value)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">Origen:</label><select id="histFiltroOrigen" onchange="_renderHistCombinado(document.getElementById('histBusqInput').value)" style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-size:12px;font-family:inherit;background:#fff"><option value="">Todos</option><option value="REMISION">📱 Remisión</option><option value="ERP">💻 ERP</option><option value="COTIZACION">📋 Cotización</option></select></div><div id="histFiltroCliente" style="display:none;background:var(--green-light);border-radius:8px;padding:7px 12px;margin-bottom:8px;align-items:center;justify-content:space-between;gap:8px"><div style="font-size:12.5px;font-weight:700;color:var(--green)" id="histFiltroNombre"></div><div style="font-size:12px;font-weight:700;color:var(--green)" id="histFiltroTotal"></div><button onclick="limpiarFiltroCliente()" style="background:none;border:none;color:var(--green);cursor:pointer;font-size:15px;font-weight:700;line-height:1">✕</button></div><div class="ml" id="remList"></div></div></div>
+<div class="ov" id="ovHist"><div class="modal"><div class="modal-hd"><div class="modal-title">📋 Historial de Remisiones</div><button class="mx" onclick="closeOv('ovHist')">✕</button></div><input class="mi" type="text" id="histBusqInput" placeholder="Buscar por folio o cliente…" oninput="filtRems(this.value)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">Origen:</label><select id="histFiltroOrigen" onchange="_renderHistCombinado(document.getElementById('histBusqInput').value)" style="flex:1;min-width:90px;border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-size:12px;font-family:inherit;background:#fff"><option value="">Todos</option><option value="REMISION">📱 Remisión</option><option value="ERP">💻 ERP</option><option value="COTIZACION">📋 Cotización</option></select><select id="histFiltroMes" title="Filtrar por mes" onchange="_renderHistCombinado(document.getElementById('histBusqInput').value)" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 6px;font-size:12px;font-family:inherit;background:#fff"><option value="">📅 Todos</option><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select><select id="histFiltroAnio" title="Filtrar por año" onchange="_renderHistCombinado(document.getElementById('histBusqInput').value)" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 6px;font-size:12px;font-family:inherit;background:#fff"><option value="">🗓️ Todos</option></select></div><div id="histFiltroCliente" style="display:none;background:var(--green-light);border-radius:8px;padding:7px 12px;margin-bottom:8px;align-items:center;justify-content:space-between;gap:8px"><div style="font-size:12.5px;font-weight:700;color:var(--green)" id="histFiltroNombre"></div><div style="font-size:12px;font-weight:700;color:var(--green)" id="histFiltroTotal"></div><button onclick="limpiarFiltroCliente()" style="background:none;border:none;color:var(--green);cursor:pointer;font-size:15px;font-weight:700;line-height:1">✕</button></div><div class="ml" id="remList"></div></div></div>
 <!-- Historial de Cotizaciones -->
 <div class="ov" id="ovHistCot"><div class="modal"><div class="modal-hd"><div class="modal-title">📄 Historial de Cotizaciones</div><button class="mx" onclick="closeOv('ovHistCot')">✕</button></div><input class="mi" type="text" id="histCotBusq" placeholder="Buscar por folio o cliente…" oninput="_filtrarHistCot(this.value)"><div class="ml" id="cotHistList" style="margin-top:8px"></div></div></div>
 
@@ -1069,14 +1086,16 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
       <button class="mx" onclick="closeOv('ovCobros')">✕</button>
     </div>
   </div>
-  <div style="padding:8px 16px 0;display:flex;align-items:center;gap:8px">
+  <div style="padding:8px 16px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <label style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">Origen:</label>
-    <select id="cobrosFiltroOrigen" onchange="verCobros()" style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-size:12px;font-family:inherit;background:#fff">
+    <select id="cobrosFiltroOrigen" onchange="verCobros()" style="flex:1;min-width:90px;border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-size:12px;font-family:inherit;background:#fff">
       <option value="">Todos</option>
       <option value="REMISION">📱 Remisión</option>
       <option value="ERP">💻 ERP</option>
       <option value="COTIZACION">📋 Cotización</option>
     </select>
+    <select id="cobrosFiltroMes" title="Filtrar por mes" onchange="verCobros()" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 6px;font-size:12px;font-family:inherit;background:#fff"><option value="">📅 Todos</option><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select>
+    <select id="cobrosFiltroAnio" title="Filtrar por año" onchange="verCobros()" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 6px;font-size:12px;font-family:inherit;background:#fff"><option value="">🗓️ Todos</option></select>
   </div>
   <div id="cobrosList"></div>
 </div></div>
@@ -1630,6 +1649,11 @@ function actualizarPanelConexion(){
   const catTs=localStorage.getItem('erp_catalogo_ts');
   const catTxt=catTs?('Publicado por el ERP: '+_frescuraTexto(catTs).txt.replace(/^actualizado /,''))
                     :'⚠️ El ERP todavía no ha publicado catálogo — revisa el token del Apps Script en Configuración del ERP';
+  let _dResp; // días desde el último respaldo -- calculado dentro de la rama MC-33 de abajo
+  // MC-33: un solo lugar que limpia los 3 colores -- cada rama de abajo solo
+  // agrega el suyo, así nunca queda un color viejo pegado (ej. "ok" de la
+  // vuelta anterior si ahora toca "warn").
+  bar.classList.remove('warn','stale','ok');
   if(ESTADO_HEARTBEAT==='sin_conexion'||!isOnline){
     bar.classList.add('show');bar.classList.remove('warn');
     msg.innerHTML='📵 <b>Sin conexión</b> — todo se guarda en este celular y se enviará solo al volver la señal.'
@@ -1661,15 +1685,27 @@ function actualizarPanelConexion(){
       ? ' · <span style="text-decoration:underline;cursor:pointer;font-weight:800" onclick="abrirToken()">⚠️ Sin token — configúralo aquí</span>'
       : '';
     msg.innerHTML='🔄 <b>Subiendo…</b>'+tokenHint+' Los datos no se perderán aunque cierres la app.';
+  } else if(remisiones.length && (_dResp=_diasDesde(localStorage.getItem('ultimo_respaldo_ts')))!==null && _dResp>=7){
+    // MC-33 (2026-09-16): el recordatorio de respaldo vivía en un toast() que
+    // tapaba la barra de navegación de abajo en celular y había que esperar a
+    // que se quitara solo. Todo lo que es "estado, no una acción puntual" va
+    // aquí arriba, igual que conexión/token/cuota -- se lee sin estorbar nada.
+    bar.classList.add('show','warn');
+    msg.innerHTML='🛟 <b>Hace '+_dResp+' días que no respaldas tus datos.</b> <span style="text-decoration:underline;cursor:pointer;font-weight:800" onclick="abrirEmpresa()">Abrir 🏢 Mi empresa → ⬇️ Exportar</span>';
+  } else if(remisiones.length && _dResp===null){
+    bar.classList.add('show','warn');
+    msg.innerHTML='🛟 <b>Aún no has hecho ningún respaldo.</b> <span style="text-decoration:underline;cursor:pointer;font-weight:800" onclick="abrirEmpresa()">Abrir 🏢 Mi empresa → ⬇️ Exportar</span>';
   } else {
-    // Online y sin pendientes: revisar si el catálogo lleva más de 3 horas sin actualizarse
+    // Online, sin pendientes y respaldado: revisar si el catálogo lleva más de 3 horas sin actualizarse
     const tsNum=parseInt(localStorage.getItem('gs_sync_ts')||'0',10);
     const horasViejas=tsNum?(Date.now()-tsNum)/(1000*60*60):null;
     if(horasViejas!==null && horasViejas>3){
       bar.classList.add('show','stale');bar.classList.remove('warn');
       msg.innerHTML='🏷️ Catálogo sin actualizar hace '+Math.floor(horasViejas)+'h · <span style="cursor:pointer;text-decoration:underline;font-weight:700" onclick="refrescarCatalogo(false)">Actualizar ahora</span>';
     } else {
-      bar.classList.remove('show','warn','stale');
+      // Todo al día: barra en verde en vez de ocultarse, para que "al día" también se vea (pedido de Miguel).
+      bar.classList.add('show');bar.classList.remove('warn','stale');bar.classList.add('ok');
+      msg.innerHTML='✅ Todo al día — sincronizado y respaldado.';
     }
   }
   _actualizarSyncLocalStatus(); // vive en ⚙️ Configuración; no-op si el panel no está montado aún
@@ -1961,8 +1997,14 @@ function aplicarPago(rem, monto, opts){
   if(String(remActualId)===String(rem.id) && document.getElementById('obs')){
     updateObsBalance(rem);
   } else if(rem.data){
+    // MC-36 (2026-09-16): este regex es la copia manual del de updateObsBalance()
+    // (~línea 7084) para cuando la remisión NO está cargada en el formulario --
+    // le faltaba "Saldo pendiente:" en el patrón, así que esa línea (sembrada al
+    // registrar la venta como pendiente, ver updateObsBalance) nunca se limpiaba
+    // y el resumen de pagos nuevo quedaba pegado debajo de la vieja en vez de
+    // reemplazarla. Mismo patrón que el de la línea 7084 -- si cambia uno, cambia el otro.
     const bloque=_obsLineasPagos(rem);
-    rem.data.obs=(rem.data.obs||'').replace(/\n?(?:--- BALANCE ---|=== PAGOS ===|--- PAGOS ---|Gracias por su compra)[\s\S]*/,'').trimEnd();
+    rem.data.obs=(rem.data.obs||'').replace(/\n?(?:--- BALANCE ---|=== PAGOS ===|--- PAGOS ---|Gracias por su compra|Saldo pendiente:)[\s\S]*/,'').trimEnd();
     rem.data.obs+=bloque?(rem.data.obs?'\n\n':'')+bloque:'';
   }
   if(rem.data) rem.data.pagos=[...rem.pagos];
@@ -4327,7 +4369,15 @@ function verCobros(){
   const todas=_cobrosCombinados();
   const filtroOrigen=document.getElementById('cobrosFiltroOrigen');
   const fOrigen=filtroOrigen?filtroOrigen.value:'';
-  const lista=fOrigen?todas.filter(c=>(c.origen||'REMISION')===fOrigen):todas;
+  let lista=fOrigen?todas.filter(c=>(c.origen||'REMISION')===fOrigen):todas;
+  // MC-32 (2026-09-16): mismo filtro de mes/año que Historial.
+  _poblarFiltroAnio('cobrosFiltroAnio',lista);
+  const fMes=document.getElementById('cobrosFiltroMes')?.value;
+  const fAnio=document.getElementById('cobrosFiltroAnio')?.value;
+  if(fMes||fAnio) lista=lista.filter(c=>{
+    const ma=_mesAnioDeFecha(c.fecha);if(!ma)return false;
+    return (!fMes||ma.mes===+fMes)&&(!fAnio||ma.anio===+fAnio);
+  });
   const ts=localStorage.getItem('cache_cobros_ts');
   const fr=_frescuraTexto(ts);
   const sub=document.getElementById('cobrosSubtitle');
@@ -4642,6 +4692,21 @@ async function verHist(){
     }catch(e){}
   }
 }
+// MC-32 (2026-09-16): filtro por mes/año en Historial y Cobros, junto al de
+// origen. Reusa el mismo formato dd/mm/aaaa que ya parsea _venceEn (arriba).
+function _mesAnioDeFecha(fechaTxt){
+  const m=String(fechaTxt||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m?{mes:+m[2],anio:+m[3]}:null;
+}
+// Llena el <select> de año con los años que de verdad aparecen en `lista`
+// (más recientes primero), conservando la selección si sigue siendo válida.
+function _poblarFiltroAnio(selectId,lista){
+  const sel=document.getElementById(selectId);if(!sel)return;
+  const actual=sel.value;
+  const anios=[...new Set(lista.map(r=>_mesAnioDeFecha(r.fecha)?.anio).filter(Boolean))].sort((a,b)=>b-a);
+  sel.innerHTML='<option value="">🗓️ Todos</option>'+anios.map(a=>'<option value="'+a+'">'+a+'</option>').join('');
+  if(anios.includes(+actual))sel.value=actual;
+}
 function _renderHistCombinado(q){
   // Mezcla: locales (datos completos) primero, luego servidor, deduplicando por la
   // MISMA clave que cobros (_claveRem) → folio definitivo compartido, no el UUID local.
@@ -4669,6 +4734,13 @@ function _renderHistCombinado(q){
   const filtroOrigenEl=document.getElementById('histFiltroOrigen');
   const fOrigenHist=filtroOrigenEl?filtroOrigenEl.value:'';
   if(fOrigenHist) lista=lista.filter(r=>(r.origen||'REMISION')===fOrigenHist);
+  _poblarFiltroAnio('histFiltroAnio',lista);
+  const fMes=document.getElementById('histFiltroMes')?.value;
+  const fAnio=document.getElementById('histFiltroAnio')?.value;
+  if(fMes||fAnio) lista=lista.filter(r=>{
+    const ma=_mesAnioDeFecha(r.fecha);if(!ma)return false;
+    return (!fMes||ma.mes===+fMes)&&(!fAnio||ma.anio===+fAnio);
+  });
   renderRems(lista);
 }
 function filtRems(q){_filtroClienteActivo=null;const chip=document.getElementById('histFiltroCliente');if(chip)chip.style.display='none';_renderHistCombinado(q);}
@@ -4734,6 +4806,10 @@ function renderRems(list){
     const accionModificar=tieneItems&&r.estado!=='cancelada'
       ?`<button class="btn" style="padding:4px 8px;font-size:11px;background:#e0f0ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:6px" onclick="event.stopPropagation();modificarRem('${r.id}')" title="Modificar">✏️</button>`
       :'';
+    // MC-28 (2026-09-16): reenviar el PDF sin tener que abrir la remisión primero.
+    const accionPDF=tieneItems
+      ?`<button class="btn" style="padding:4px 8px;font-size:11px;background:#fef3e8;color:#b45309;border:1px solid #fde3c2;border-radius:6px" onclick="event.stopPropagation();reenviarPDFHistorial('${r.id}')" title="Descargar/reenviar PDF">📄</button>`
+      :'';
     const accionCancelar=r.estado!=='cancelada'
       ?`<button class="btn" style="padding:4px 8px;font-size:11px;background:#fff0f0;color:#c0392b;border:1px solid #fecaca;border-radius:6px" onclick="event.stopPropagation();abrirCancelacion('${r.id}','${r.folio}')">🚫</button>`
       :'';
@@ -4750,7 +4826,7 @@ function renderRems(list){
     return`<div class="rem-i" ${onclick} style="${esServidor?'cursor:default':''}">
       <div class="rem-i-hd">
         <div class="rem-fo">${r.folio}</div>
-        <div class="rem-i-actions">${accionCobrar}${accionModificar}${accionCancelar}${accionTraza}</div>
+        <div class="rem-i-actions">${accionCobrar}${accionModificar}${accionPDF}${accionCancelar}${accionTraza}</div>
       </div>
       ${etiqueta?`<div style="margin-top:2px">${etiqueta}</div>`:''}
       <div style="flex:1;min-width:0">
@@ -4771,6 +4847,28 @@ function loadRem(id){
   restore(r.data);renderTable();calcTotals();closeOv('ovHist');remActualId=r.id;
   _ocultarAdeudo();
   renderPagos();updateObsBalance(r);_desbloquearPDF(true);toast('Remisión '+r.folio+' cargada','ok');
+  // MC-26 (2026-09-16): esto es solo VER una remisión ya registrada (no
+  // "Editar remisión", que sigue siendo el único camino para modificarla --
+  // ver _modificarRemConfirmado, que sí llama _desbloquearFormulario()).
+  // Antes loadRem() nunca bloqueaba el formulario, así que si venías de
+  // nuevaRem() (desbloqueado) y solo tocabas una remisión del Historial para
+  // verla, sus campos quedaban editables como si nada. Se bloquea AL FINAL,
+  // después de que restore()/renderTable() terminaron de pintar los renglones
+  // -- addRow() (:2751) se cancela sola si el formulario ya está bloqueado.
+  _bloquearFormulario();
+}
+// MC-28 (2026-09-16): reenviar/redescargar el PDF de cualquier remisión del
+// Historial sin tener que abrirla primero manualmente. descargarPDF() con
+// forzarDescarga=true lee del FORMULARIO activo (items, c_nombre, folioBadge…),
+// no de rem.data directo -- por eso primero se carga con loadRem() (que ya
+// deja remActualId/items/formulario sincronizados con esta remisión) y
+// apenas entonces se dispara la descarga.
+function reenviarPDFHistorial(id){
+  const r=remisiones.find(x=>String(x.id)===String(id));
+  if(!r){toast('No se encontró la remisión en este dispositivo','err');return;}
+  if(!r.data){toast('Esta remisión no tiene detalle local para regenerar el PDF','warn');return;}
+  loadRem(id);
+  descargarPDF(r,true);
 }
 // ── Modificar remisión existente (F3) ─────────────────────────
 // Reabre la venta TAL CUAL (items, pagos, cliente). Conserva el historial de pagos:
@@ -4979,14 +5077,10 @@ function _pintarUltimoRespaldo(){
   el.innerHTML='<span style="color:'+col+'">🛟 Último respaldo: '+txt+'.</span>';
 }
 // Recordatorios al arrancar la app. Visibles (toast), no bloqueantes.
+// MC-33 (2026-09-16): el de respaldo se quitó de aquí -- vive ahora en el
+// indicador de arriba (actualizarPanelConexion), que no tapa la navegación
+// de abajo y no se quita solo, así que ya no hace falta repetirlo como toast.
 function _avisosArranque(){
-  try{
-    if(remisiones.length){
-      const d=_diasDesde(localStorage.getItem('ultimo_respaldo_ts'));
-      if(d===null) toast('🛟 Aún no respaldas tus datos. Abre 🏢 Mi empresa → ⬇️ Exportar para guardar una copia.','warn',8000);
-      else if(d>=7) toast('🛟 Hace '+d+' días que no respaldas. Abre 🏢 Mi empresa → ⬇️ Exportar.','warn',8000);
-    }
-  }catch(_){}
   try{
     if(PRODUCTOS.length){
       const d=_diasDesde(localStorage.getItem('gs_sync_ts'));
@@ -6834,6 +6928,28 @@ async function registrarTodo(){
     return;
   }
 
+  // MC-25 (2026-09-16, aclarado por Miguel): el campo "Monto a abonar" no puede
+  // quedar VACÍO por descuido -- exige una decisión explícita: tocar "Pendiente"
+  // (deja la palabra PENDIENTE en el campo, MC-04), tocar "Total"/"Poner total"
+  // (llena el campo con el saldo completo), o escribir un monto a mano. Si nadie
+  // tocó ninguno de los tres, el campo llega vacío y hoy eso se colaba como
+  // crédito silencioso -- ya no.
+  // Solo aplica a remisiones NUEVAS: en modo edición (_modoEdicion) el campo
+  // vacío es válido y significa "no toco el pago esta vez" -- el estado/saldo
+  // ya decidido en su registro original se conserva (ver renderPagos, que
+  // nunca reescribe montoAbono al cargar una remisión existente).
+  if(!_modoEdicion){
+    const _montoVal0=(document.getElementById('montoAbono')?.value||'').trim();
+    const _esPendienteExplicito=/^pendiente$/i.test(_montoVal0);
+    const _chkPagado0=document.getElementById('checkPagado')?.checked;
+    const _huboEleccion=_chkPagado0||(_pagoPreparado&&_pagoPreparado.tipo==='completo')||_esPendienteExplicito||parseMonto(_montoVal0)>0;
+    if(!_huboEleccion){
+      toast('⚠️ Elige cómo se paga: toca Pendiente, Total, o escribe un monto a abonar','err',5000);
+      document.getElementById('montoAbono')?.focus();
+      return;
+    }
+  }
+
   // 2026-09-10 (hallazgo 2, auditoría Cotizador): si se va a registrar un pago (pagado
   // completo o abono con monto), el método de pago YA NO puede quedar vacío y caer en
   // "Efectivo" por default silencioso -- eso infla el corte de caja cuando el cliente
@@ -7560,7 +7676,6 @@ function closeOv(id){
   if(id==='ovPagoRapido'){
     const c=document.getElementById('btnConfirmarPagoRapido');if(c)c.style.display='';
   }
-  if(id==='ovFirma')_liberarOrientacionFirma();
 }
 
 // ── Trazabilidad de documento (Mejoras priorizadas 2026-08) ──────────────────
@@ -7718,7 +7833,6 @@ function verRemisionDesdePago(){
 // ── Firma digital del cliente ─────────────────────────────────
 let _firmaData=null; // base64 PNG de la firma actual
 let _firmaDrawing=false;
-let _firmaOrientacionReal=false; // true si de verdad se forzó landscape (fullscreen+orientation lock)
 
 // ── Detección de adeudo anterior del cliente ─────────────────
 let _adeudoTimer=null,_adeudoClienteActual=null;
@@ -7863,69 +7977,17 @@ function toggleFirma(){
   sec.style.display=visible?'none':'flex';
   if(ico)ico.textContent=visible?'▼':'▲';
 }
-// Girar el pad de firma a horizontal DE VERDAD (no un recuadro simulado):
-// pide pantalla completa del modal y bloquea la orientación del dispositivo
-// en landscape con la Screen Orientation API. Como el navegador reacomoda el
-// viewport de verdad (vw/vh cambian), el layout normal + el @media
-// (orientation:landscape) que ya existía arriba hacen el resto solos -- textos
-// e íconos NO se giran con CSS (eso fue lo que salió mal en el primer intento,
-// 2026-07-21: rotar el recuadro con transform dejaba la firma y el texto de
-// lado), simplemente el teléfono queda "acostado" y todo se dibuja normal.
-//
-// iOS Safari no soporta screen.orientation.lock() (confirmado): ahí esto falla
-// silenciosamente y se cae al recuadro "ancho y bajo" de siempre (.girado) --
-// mismo comportamiento que tenía la app antes de este cambio, sin regresión.
-async function toggleGiroFirma(){
+// MC-27 (2026-09-16): esta sesión probó primero Fullscreen + Screen Orientation
+// Lock para girar la pantalla DE VERDAD -- Miguel decidió que no vale la pena:
+// no es necesario que lo soporten todos los navegadores (iOS Safari no tiene
+// screen.orientation.lock()), basta con abrir una vista con estilo horizontal.
+// Vuelta al toggle simple de la clase .girado (el mismo recuadro ancho-y-bajo
+// que ya existía antes de esta sesión).
+function toggleGiroFirma(){
   const box=document.getElementById('firmaModalBox');if(!box)return;
-  const ov=document.getElementById('ovFirma');
-  const soportaRotacionReal=!!(ov?.requestFullscreen && screen.orientation && screen.orientation.lock);
-
-  if(_firmaOrientacionReal){
-    await _liberarOrientacionFirma();
-  } else if(soportaRotacionReal){
-    try{
-      await ov.requestFullscreen();
-      await screen.orientation.lock('landscape');
-      _firmaOrientacionReal=true;
-      box.classList.add('girado-real');
-    }catch(err){
-      console.warn('SW/firma: no se pudo forzar landscape real, se usa el recuadro simulado', err);
-      box.classList.toggle('girado');
-    }
-  } else {
-    box.classList.toggle('girado');
-  }
-  _actualizarBtnGiroFirma();
+  box.classList.toggle('girado');
   _reajustarCanvasFirma();
 }
-function _actualizarBtnGiroFirma(){
-  const btn=document.getElementById('btnGiroFirma');if(!btn)return;
-  const activo=_firmaOrientacionReal;
-  btn.textContent=activo?'↩️':'🔄';
-  btn.title=activo?'Volver a vertical':'Girar a horizontal / vertical';
-  btn.setAttribute('aria-label',btn.title);
-}
-// Libera el bloqueo de orientación y sale de pantalla completa (llamado al
-// girar de vuelta, al cerrar el modal con ✕, y al confirmar la firma).
-async function _liberarOrientacionFirma(){
-  if(!_firmaOrientacionReal)return;
-  _firmaOrientacionReal=false;
-  document.getElementById('firmaModalBox')?.classList.remove('girado-real');
-  try{ screen.orientation?.unlock?.(); }catch(err){}
-  try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(err){}
-}
-// El usuario también puede salir de pantalla completa con el gesto del sistema
-// (no solo con el botón 🔄) -- si eso pasa mientras seguíamos "en real", hay
-// que bajar la bandera y quitar la clase para que el ícono/estado no mientan.
-document.addEventListener('fullscreenchange',()=>{
-  if(!document.fullscreenElement && _firmaOrientacionReal){
-    _firmaOrientacionReal=false;
-    document.getElementById('firmaModalBox')?.classList.remove('girado-real');
-    try{ screen.orientation?.unlock?.(); }catch(err){}
-    _actualizarBtnGiroFirma();
-    _reajustarCanvasFirma();
-  }
-});
 function _reajustarCanvasFirma(){
   requestAnimationFrame(()=>{
     const canvas=document.getElementById('firmaCanvas');if(!canvas)return;
@@ -8206,7 +8268,10 @@ async function popupPrompt(mensaje,valorDefault,titulo){
         <button class="sbtn" onclick="toggleCPanelCot()">🔍 Buscar cliente</button>
       </div>
       <div class="sp" id="cot_cPanel" style="top:54px;left:16px;right:16px;min-width:unset" onmousedown="event.preventDefault()">
-        <input type="text" placeholder="Buscar por nombre o RFC…" id="cot_cSearch" oninput="filtClientesCot(this.value)">
+        <div style="display:flex;align-items:stretch;gap:6px">
+          <input type="text" placeholder="Buscar por nombre o RFC…" id="cot_cSearch" oninput="filtClientesCot(this.value)" style="flex:1">
+          <button type="button" aria-label="Cerrar" onclick="toggleCPanelCot()" style="flex-shrink:0;width:38px;border:none;background:var(--bg);color:var(--muted);border-radius:8px;font-size:16px;cursor:pointer">✕</button>
+        </div>
         <div id="cot_cList"></div>
         <div style="padding:8px 10px;border-top:1px solid #E5E5E7">
           <button onclick="abrirNuevoCliente()" style="width:100%;padding:7px;background:#E8F5EF;color:#1C6E4A;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">+ Agregar nuevo cliente</button>
