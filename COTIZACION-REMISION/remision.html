@@ -293,19 +293,26 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   #firmaModalBox{width:96vw!important;height:92vh!important;max-width:none!important;max-height:none!important;padding:10px!important}
   #firmaCanvas{min-height:64vh!important}
 }
-@media(max-width:900px){
-  /* Boton manual 🔄 -- diseño horizontal propio (nada se gira/transforma):
-     cabecera compacta arriba, lienzo ancho y bajo, botones en fila abajo.
-     MC-27 (2026-09-16): Miguel decidió no perseguir rotar la pantalla de
-     verdad (Fullscreen + Screen Orientation Lock, sin soporte en Safari/
-     iPhone) -- esta vista simulada es la única, para todos los navegadores. */
-  #firmaModalBox.girado{
-    width:94vw!important;height:62vh!important;max-width:none!important;max-height:none!important;
-    padding:12px!important;gap:8px!important;flex-direction:column!important;
-  }
-  #firmaModalBox.girado #firmaCanvas{flex:1!important;width:100%!important;height:auto!important;min-height:0!important}
-  #firmaModalBox.girado .firma-btns{flex-direction:row!important}
+/* Boton manual 🔄 -- diseño horizontal propio (nada se gira/transforma):
+   cabecera compacta arriba, lienzo ancho y bajo, botones en fila abajo.
+   MC-27 (2026-09-16): Miguel decidió no perseguir rotar la pantalla de
+   verdad (Fullscreen + Screen Orientation Lock, sin soporte en Safari/
+   iPhone) -- esta vista simulada es la única, para todos los navegadores.
+   2026-09-16 (2ª vuelta): esta regla vivía DENTRO de @media(max-width:900px)
+   -- en un celular grande girado a landscape de verdad, el ancho lógico
+   supera 900px y la regla dejaba de aplicar del todo, así que el botón 🔄
+   parecía "no hacer nada". Ahora es incondicional: fuerza el recuadro
+   ancho-y-bajo sin importar el tamaño de pantalla ni si el celular está
+   físicamente girado o no.
+   `overflow-y:auto` es lo que evita que "✅ Confirmar firma" se corte si el
+   contenido no cabe exacto en 62vh -- antes, sin scroll, el botón quedaba
+   fuera de la caja sin forma de alcanzarlo. */
+#firmaModalBox.girado{
+  width:94vw!important;height:62vh!important;max-width:none!important;max-height:none!important;
+  padding:12px!important;gap:8px!important;flex-direction:column!important;overflow-y:auto!important;
 }
+#firmaModalBox.girado #firmaCanvas{flex:1!important;width:100%!important;height:auto!important;min-height:120px!important}
+#firmaModalBox.girado .firma-btns{flex-direction:row!important;flex-shrink:0!important}
 
 @media(max-width:480px){
   .page{padding:0 6px}.doc-hd{padding:14px 12px;gap:8px}.logo-wrap{max-width:48%}.logo-wrap img{max-width:100%;height:auto!important}
@@ -561,6 +568,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .tb-status.warn{background:#E67E22;color:#fff}.tb-status.warn .dot{background:#fff}
 .tb-status.err{background:#C0392B;color:#fff;box-shadow:0 0 0 3px rgba(192,57,43,.28)}.tb-status.err .dot{background:#fff}
 .tb-status.sync{background:rgba(36,113,163,.45);color:#fff}.tb-status.sync .dot{background:#cfe4f5}
+/* 2026-09-16 (pedido de Miguel): verde cuando está al día -- antes "En línea"
+   no tenía color propio y el fondo fijo de #badgePendientes (ver abajo) lo
+   pintaba naranja siempre, sin importar el estado real. */
+.tb-status.ok{background:#1C6E4A;color:#fff}.tb-status.ok .dot{background:#fff}
 #netBar{display:none;position:sticky;top:54px;z-index:190;background:#C0392B;color:#fff;font-size:12px;font-weight:600;text-align:center;padding:6px 16px;letter-spacing:.3px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 #netBar.show{display:block}
 #netBar.warn{background:#E67E22}
@@ -578,8 +589,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .pago-abono{border-left:3px solid #F59E0B}
 .pago-anulado{border-left:3px solid #E74C3C;opacity:.55}
 /* Badge pendientes -- el display real lo gobierna .tb-status (chip permanente); esta
-   regla legacy con display:none quedaba con mas especificidad y lo tapaba siempre. */
-#badgePendientes{background:#E67E22;color:#fff;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
+   regla legacy con display:none quedaba con mas especificidad y lo tapaba siempre.
+   2026-09-16: se le quitó `background:#E67E22` -- por especificidad de ID le
+   ganaba SIEMPRE a .tb-status.warn/.err/.sync/.ok, así que el chip se veía
+   naranja fijo sin importar el estado real (bug real, no solo "En línea"). */
+#badgePendientes{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
 .estado-badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap;flex-shrink:0}
 .badge-pagado{background:#E8F5EF;color:#1C6E4A}
 .badge-abono{background:#FFF8E1;color:#92400E}
@@ -7555,19 +7569,23 @@ function actualizarBadgePendientes(){
   const b=document.getElementById('badgePendientes');
   if(b){
     b.onclick=verEstado;
-    b.classList.remove('warn','err','sync');
+    b.classList.remove('warn','err','sync','ok');
+    // 2026-09-16 (pedido de Miguel): 3 colores con sentido -- verde "en línea"
+    // (todo al día), naranja SOLO mientras algo se está enviando de verdad, y
+    // rojo cuando hay un problema real (token rechazado o sin conexión, que
+    // sin señal ninguna de las colas se puede subir -- también es "problema").
     if(TOKEN_INVALIDO_CONFIRMADO){
       b.innerHTML='<span class="dot"></span>'+(total>0?total+' sin enviar':'Token inválido');
       b.classList.add('err'); b.title='El servidor rechaza el token — toca para corregirlo';
     }else if(!isOnline){
       b.innerHTML='<span class="dot"></span>Sin red'+(total>0?' · '+total:'');
-      b.classList.add('warn'); b.title='Sin conexión — se guarda y se envía al volver la señal';
+      b.classList.add('err'); b.title='Sin conexión — se guarda y se envía al volver la señal';
     }else if(total>0){
       b.innerHTML='<span class="dot"></span>Enviando '+total+'…';
-      b.classList.add('sync'); b.title='Toca para ver qué falta';
+      b.classList.add('warn'); b.title='Toca para ver qué falta';
     }else{
       b.innerHTML='<span class="dot"></span>En línea';
-      b.title='Todo enviado y sincronizado';
+      b.classList.add('ok'); b.title='Todo enviado y sincronizado';
     }
   }
   _revisarFallas();
@@ -7988,43 +8006,65 @@ function toggleGiroFirma(){
   box.classList.toggle('girado');
   _reajustarCanvasFirma();
 }
+// 2026-09-16: el trazo se veía "de mala calidad", más delgado o grueso según
+// qué tan rápido se movía el dedo. Causa real: canvas.width/height se
+// igualaban al tamaño CSS mostrado (ej. 350×220), pero un celular normal
+// tiene devicePixelRatio 2-3 -- el navegador dibuja esos 350×220 px reales y
+// luego los ESTIRA para llenar la pantalla física, y ese estirado es lo que
+// se veía borroso/desigual (no es un efecto de presión, nunca lo hubo). Fix
+// estándar: el canvas guarda devicePixelRatio veces más píxeles de los que
+// se ven, y el contexto se escala de vuelta para que el código de dibujo
+// (pos/down/move/_dibujarLineaFirma) siga trabajando en coordenadas CSS
+// normales sin tener que multiplicar nada a mano.
+function _ajustarResolucionCanvasFirma(canvas){
+  const dpr=window.devicePixelRatio||1;
+  const cssW=canvas.clientWidth||canvas.offsetWidth||500;
+  const cssH=canvas.clientHeight||canvas.offsetHeight||220;
+  canvas.width=Math.round(cssW*dpr);
+  canvas.height=Math.round(cssH*dpr);
+  canvas._cssW=cssW;canvas._cssH=cssH;canvas._dpr=dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return ctx;
+}
 function _reajustarCanvasFirma(){
   requestAnimationFrame(()=>{
     const canvas=document.getElementById('firmaCanvas');if(!canvas)return;
     const prevImg=_firmaData;
-    canvas.width=canvas.clientWidth||500;
-    canvas.height=canvas.clientHeight||220;
-    const ctx=canvas.getContext('2d');
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const ctx=_ajustarResolucionCanvasFirma(canvas);
+    ctx.clearRect(0,0,canvas._cssW,canvas._cssH);
     _dibujarLineaFirma(ctx,canvas);
     ctx.strokeStyle='#0B2D4A';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
-    if(prevImg){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height);img.src=prevImg;}
+    if(prevImg){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,canvas._cssW,canvas._cssH);img.src=prevImg;}
   });
 }
 function _dibujarLineaFirma(ctx,canvas){
   ctx.save();
   ctx.strokeStyle='#C7CDD6';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
-  const y=canvas.height*0.78;
-  ctx.beginPath();ctx.moveTo(canvas.width*0.06,y);ctx.lineTo(canvas.width*0.94,y);ctx.stroke();
+  const w=canvas._cssW||canvas.width,h=canvas._cssH||canvas.height;
+  const y=h*0.78;
+  ctx.beginPath();ctx.moveTo(w*0.06,y);ctx.lineTo(w*0.94,y);ctx.stroke();
   ctx.restore();
 }
 function abrirFirma(){
   document.getElementById('ovFirma').classList.add('open');
   const canvas=document.getElementById('firmaCanvas');
-  // Ajustar ancho y alto reales al tamaño mostrado.
-  canvas.width=canvas.offsetWidth||500;
-  canvas.height=canvas.offsetHeight||220;
-  const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const ctx=_ajustarResolucionCanvasFirma(canvas);
+  ctx.clearRect(0,0,canvas._cssW,canvas._cssH);
   _dibujarLineaFirma(ctx,canvas);
   ctx.strokeStyle='#0B2D4A';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
   // Si ya hay firma, mostrarla
-  if(_firmaData){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height);img.src=_firmaData;}
+  if(_firmaData){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,canvas._cssW,canvas._cssH);img.src=_firmaData;}
 
+  // Coordenadas en espacio CSS (no en píxeles reales del canvas) -- el
+  // contexto ya está escalado por devicePixelRatio (_ajustarResolucionCanvasFirma),
+  // así que dibujar aquí en CSS-px es lo correcto. El ratio cssW/r.width casi
+  // siempre es 1 (el tamaño CSS ya coincide con lo mostrado), pero se
+  // conserva por si el layout cambia sin haber vuelto a llamar el ajuste.
   function pos(e){
     const r=canvas.getBoundingClientRect();
     const src=e.touches?e.touches[0]:e;
-    return{x:(src.clientX-r.left)*(canvas.width/r.width),y:(src.clientY-r.top)*(canvas.height/r.height)};
+    return{x:(src.clientX-r.left)*(canvas._cssW/r.width),y:(src.clientY-r.top)*(canvas._cssH/r.height)};
   }
   function down(e){e.preventDefault();_firmaDrawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);}
   function move(e){e.preventDefault();if(!_firmaDrawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();}
@@ -8035,7 +8075,7 @@ function abrirFirma(){
 function limpiarFirmaCanvas(){
   const canvas=document.getElementById('firmaCanvas');
   const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);_dibujarLineaFirma(ctx,canvas);
+  ctx.clearRect(0,0,canvas._cssW||canvas.width,canvas._cssH||canvas.height);_dibujarLineaFirma(ctx,canvas);
 }
 function confirmarFirma(){
   const canvas=document.getElementById('firmaCanvas');
