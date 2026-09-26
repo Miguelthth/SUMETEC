@@ -173,19 +173,27 @@ function _badgeEstadoCompraDireccion_(estado) {
   return '📨 Enviada, esperando revisión';
 }
 
+// Re-auditoría 2026-09-25 (N-06, mejora B9): el proveedor de una compra viene del ERP
+// (snapshot) o de lo que se capturó/leyó por OCR -- texto de otra fuente. Antes se
+// metía al HTML sin escapar (mismo patrón que H-11 en Dirección).
+function _escHtmlCompra_(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function _htmlHistorialComprasDireccion_(items) {
   if (!items.length) return '<p class="vacio">Sin compras recientes.</p>';
   const filas = items.map(it => `<li class="historial-item">
-    <span class="proveedor">${it.proveedor || '(sin proveedor)'}</span>
-    <span class="total">$${it.total.toFixed(2)}</span>
+    <span class="proveedor">${_escHtmlCompra_(it.proveedor || '(sin proveedor)')}</span>
+    <span class="total">$${Number(it.total || 0).toFixed(2)}</span>
     <span class="badge">${_badgeEstadoCompraDireccion_(it.estado)}</span>
-    ${it.fecha ? `<small class="fecha">${String(it.fecha).replace('T', ' ')}</small>` : ''}
+    ${it.fecha ? `<small class="fecha">${_escHtmlCompra_(String(it.fecha).replace('T', ' '))}</small>` : ''}
   </li>`).join('');
   // La leyenda dice explícitamente de cuándo es el estado del ERP -- nunca se
   // presenta como "así está ahora mismo" si el snapshot ya lleva rato viejo.
   const primeraConTs = items.find(it => it.snapshotTs);
   const leyenda = primeraConTs
-    ? `<p class="leyenda">Estado del ERP según el último resumen (${String(primeraConTs.snapshotTs).replace('T', ' ')}).</p>`
+    ? `<p class="leyenda">Estado del ERP según el último resumen (${_escHtmlCompra_(String(primeraConTs.snapshotTs).replace('T', ' '))}).</p>`
     : '<p class="leyenda">Aún no se ha podido consultar el ERP en este teléfono.</p>';
   return leyenda + `<ul class="historial-compras">${filas}</ul>`;
 }

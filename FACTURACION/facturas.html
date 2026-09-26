@@ -301,14 +301,13 @@ button.fact.peligro:hover{background:#FDECEA}
      fuera de Apps Script) y SOLO si no hay token guardado en este navegador. En
      modo 'google' (Apps Script "Solo yo") o 'demo' no hace falta -- ya están
      protegidos de otra forma (login de Google / no hay datos reales que cuidar).
-     Sin PIN a propósito: FACTURACIÓN es de un solo operador (Miguel), a
-     diferencia de Dirección/Compras que sí reparten dispositivos. -->
+     B5: en modo fetch el token se cifra con PIN propio de Facturación. -->
 <div id="tokenGateFact" class="sumetec-acceso" style="display:none;--acento:#d99c2b">
   <div class="sumetec-acceso-panel">
     <div class="sumetec-acceso-cabecera">
       <div class="sumetec-acceso-marca">Facturación · SUMETEC<small>● En línea</small></div>
 <details id="ayuda-facturacion" class="sumetec-acceso-ayuda sumetec-acceso-ayuda--solo-enlace"><summary aria-label="Información para vincular">i</summary>
-        <div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración la clave de acceso para Facturación. Cópiala completa, sin espacios al principio o al final.</p><p>La clave queda guardada solo en este teléfono. Si no puedes entrar, pide una nueva.</p></div>
+        <div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración el token propio de Facturación. Se guarda cifrado con el PIN que elijas para este teléfono.</p></div>
       </details>
     </div>
     <div class="sumetec-acceso-intro">
@@ -399,13 +398,19 @@ const URL_BACKEND_FACT = 'https://script.google.com/macros/s/AKfycbwN1sLGbFIxmw2
 // texto plano. Se pide una sola vez con configurarTokenFact() (botón 🔑 Token
 // del encabezado) y se guarda en localStorage de ESE navegador -- nunca viaja
 // con el archivo. Mismo patrón que API_TOKEN en 2.- COTIZADOR/remision.html.
-function _tokenFact(){ return (localStorage.getItem('sumetec_fact_token')||'').trim(); }
-function configurarTokenFact(){
+let _factTokenMem='';
+function _tokenFact(){ return _factTokenMem; }
+async function configurarTokenFact(){
   const actual = _tokenFact();
-  const v = (prompt('Token de acceso a Facturación (debe coincidir con API_TOKEN del backend).\nSe guarda solo en este navegador, nunca en el archivo publicado.\n\nDéjalo vacío si el backend no tiene API_TOKEN configurado (config de hoy).', actual) || '').trim();
+  const v = (prompt('Token propio de Facturación. Se guardará cifrado con tu PIN.', actual) || '').trim();
   if (v === actual) return; // sin cambio real -- no hace falta recargar
-  if (v) localStorage.setItem('sumetec_fact_token', v);
-  else localStorage.removeItem('sumetec_fact_token');
+  if (v) {
+    const pin=await sumetecPedirPinToken('Facturación',true);
+    if(pin===null)return;
+    await sumetecGuardarTokenCifrado('fact',v,pin);
+    localStorage.removeItem('sumetec_fact_token');
+  } else sumetecOlvidarTokenCifrado('fact');
+  _factTokenMem=v;
   // Recarga limpia: en modo 'fetch' esto puede hacer aparecer o desaparecer
   // el candado bloqueante (tokenGateFact) según si el nuevo valor es válido.
   if (api.modo === 'fetch') { toast(v ? 'Token guardado — recargando…' : 'Token borrado — recargando…', 'ok'); setTimeout(()=>location.reload(), 600); }
@@ -749,6 +754,8 @@ async function _iniciarFacturacionProtegida() {
   const gate = document.getElementById('tokenGateFact');
   gate.style.display = 'flex';
   sumetecBloquearFondo(gate, true);
+  try{_factTokenMem=await sumetecRestaurarTokenApp('fact','Facturación','sumetec_fact_token');}
+  catch(e){console.warn(e);return;}
   const token = _tokenFact();
   if (!token) return;
   try {
@@ -757,7 +764,7 @@ async function _iniciarFacturacionProtegida() {
     await sumetecMarcarAccesoValidado(token, _FACT_HUELLA_VALIDADA);
   } catch (e) {
     if (e.message === 'TOKEN_INVALIDO') {
-      localStorage.removeItem('sumetec_fact_token');
+      _factTokenMem='';sumetecOlvidarTokenCifrado('fact');
       localStorage.removeItem(_FACT_HUELLA_VALIDADA);
       return;
     }
@@ -778,19 +785,24 @@ async function _tokenGateFactEntrar(){
   sumetecEntrando(btn, true);
   const anterior = _tokenFact();
   try {
-    localStorage.setItem('sumetec_fact_token', v);
+    _factTokenMem=v;
     const r = await _post({ tipo: 'ping' });
     if (!r || r.ok !== true) {
-      if (anterior) localStorage.setItem('sumetec_fact_token', anterior); else localStorage.removeItem('sumetec_fact_token');
+      _factTokenMem=anterior;
       if (err) { err.textContent = 'Token incorrecto — revísalo e intenta otra vez.'; err.style.display = 'block'; }
       return;
     }
     await sumetecMarcarAccesoValidado(v, _FACT_HUELLA_VALIDADA);
-    // Recarga limpia: init() corre desde cero ya con el token bueno guardado.
-    location.reload();
+    const pin=await sumetecPedirPinToken('Facturación',true);
+    if(pin===null){_factTokenMem=anterior;return;}
+    await sumetecGuardarTokenCifrado('fact',v,pin);
+    localStorage.removeItem('sumetec_fact_token');
+    document.getElementById('tokenGateFact').style.display='none';
+    sumetecBloquearFondo(document.getElementById('tokenGateFact'),false);
+    init();
   } catch (e) {
-    if (anterior) localStorage.setItem('sumetec_fact_token', anterior); else localStorage.removeItem('sumetec_fact_token');
-    if (err) { err.textContent = 'No se pudo validar (revisa tu conexión) e intenta otra vez.'; err.style.display = 'block'; }
+    _factTokenMem=anterior;
+    if (err) { err.textContent = e.message||'No se pudo validar. Revisa tu conexión.'; err.style.display = 'block'; }
   } finally {
     sumetecEntrando(btn, false);
   }

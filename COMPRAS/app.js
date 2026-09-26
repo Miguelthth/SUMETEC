@@ -47,7 +47,7 @@ async function vincular() {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({
-      tipo: 'vincular_dispositivo', codigo, dispositivo,
+      tipo: 'vincular_dispositivo', app: 'COMPRAS', codigo, dispositivo,
       nombre: navigator.userAgent.slice(0, 60)
     })
   }).then(x => x.json());

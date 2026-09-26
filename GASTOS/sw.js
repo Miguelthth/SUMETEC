@@ -5,7 +5,7 @@
 // las fuentes del tema (~220 KB) casi nunca cambian -- solo si el ERP
 // cambia de marca. Si compartieran una sola caché, corregir una coma en el
 // HTML forzaría a redescargar las fuentes completas en el siguiente uso.
-const CACHE = 'sumetec-gas-db5eee9cae'; // bump obligatorio o los celulares siguen con la app vieja
+const CACHE = 'sumetec-gas-6a2adeb200'; // bump obligatorio o los celulares siguen con la app vieja
 const CACHE_ASSETS = 'sumetec-gas-assets-089af8bd65';
 const PREFIJO = 'sumetec-gas-';
 // version.js se agrego al SHELL el 2026-09-12: ya se copiaba al deploy y el

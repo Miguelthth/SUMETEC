@@ -5,7 +5,7 @@
 // fuentes del tema (~220 KB) casi nunca cambian -- solo si el ERP cambia de
 // marca. Si compartieran una sola caché, arreglar una coma en caja.js
 // forzaría a redescargar las fuentes completas en el siguiente uso.
-const CACHE = 'sumetec-direccion-556aeea700';
+const CACHE = 'sumetec-direccion-d21157ecb1';
 const CACHE_ASSETS = 'sumetec-direccion-assets-089af8bd65';
 const PREFIJO = 'sumetec-direccion-';
 // Inventario queda explícito además del manifiesto para documentar que la

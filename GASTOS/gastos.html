@@ -256,7 +256,7 @@ body{padding-bottom:max(110px,calc(90px + env(safe-area-inset-bottom)))}
     <div class="sumetec-acceso-cabecera">
       <div class="sumetec-acceso-marca">Gastos · SUMETEC<small>● En línea</small></div>
 <details id="ayuda-gastos" class="sumetec-acceso-ayuda sumetec-acceso-ayuda--solo-enlace"><summary aria-label="Información para vincular">i</summary>
-        <div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración la clave de acceso de este teléfono. Escribe tu nombre como quieres que aparezca en los gastos.</p><p>La clave se guarda solo en este teléfono. Si cambias de celular, vuelve a pedirla.</p></div>
+        <div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración un código de vinculación de 8 caracteres. Gastos tendrá un acceso propio, cifrado con el PIN que elijas.</p></div>
       </details>
     </div>
     <div class="sumetec-acceso-intro">
@@ -267,6 +267,7 @@ body{padding-bottom:max(110px,calc(90px + env(safe-area-inset-bottom)))}
     <div class="sumetec-acceso-campos">
       <div class="sumetec-acceso-campo sumetec-acceso-campo--principal"><label for="tg_nombre">Tu nombre</label><input id="tg_nombre" type="text" autocomplete="name" placeholder="Tu nombre"></div>
       <div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="tg_input">Token de acceso</label><input id="tg_input" type="password" autocomplete="off" placeholder="Token de acceso"></div>
+      <div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="tg_codigo">O código de vinculación</label><input id="tg_codigo" type="text" maxlength="8" autocomplete="off" placeholder="8 caracteres"></div>
     </div>
     <p id="tg_error" class="sumetec-acceso-error" role="alert" aria-live="polite"></p>
     <button id="tg_btn" type="button" class="sumetec-acceso-boton" onclick="_tgGuardar()">Vincular</button>
@@ -278,8 +279,8 @@ body{padding-bottom:max(110px,calc(90px + env(safe-area-inset-bottom)))}
 
 <script src="acceso.js"></script>
 <script>
-// ── Token: compartido por origen con remision.html (localStorage) ──────────
-let API_TOKEN = (localStorage.getItem('api_token') || '').trim();
+// B5: token propio de Gastos, descifrado sólo durante la sesión.
+let API_TOKEN = '';
 let _gastosAccesoAutorizado = false;
 const _GASTOS_HUELLA_VALIDADA = 'sumetec_gastos_token_validado';
 
@@ -366,26 +367,39 @@ async function _validarTokenGastos_(token) {
   } finally { clearTimeout(tiempo); }
 }
 async function _tgGuardar() {
-  const v = (document.getElementById('tg_input').value || '').trim();
+  let v = (document.getElementById('tg_input').value || '').trim();
+  const codigo=(document.getElementById('tg_codigo').value||'').trim();
   const nombre = (document.getElementById('tg_nombre').value || '').trim();
   const error = document.getElementById('tg_error');
-  if (!nombre || !v) { error.textContent = 'Escribe tu nombre y el token.'; return; }
+  if (!nombre || (!v&&!codigo)) { error.textContent = 'Escribe tu nombre y el código de vinculación.'; return; }
   error.textContent = '';
   const boton = document.getElementById('tg_btn');
   sumetecEntrando(boton, true);
   try {
+    if(!v){
+      const dispositivo=localStorage.getItem('sumetec_gastos_dispositivo')||crypto.randomUUID();
+      const r=await fetch(getScriptUrl(),{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({tipo:'vincular_dispositivo',app:'GASTOS',codigo,dispositivo,nombre})}).then(x=>x.json());
+      if(!r.ok)throw Error(r.error||'No se pudo vincular');
+      v=r.token;
+      document.getElementById('tg_input').value=v;
+      localStorage.setItem('sumetec_gastos_dispositivo',dispositivo);
+    }
     await _validarTokenGastos_(v);
     await sumetecMarcarAccesoValidado(v, _GASTOS_HUELLA_VALIDADA);
   } catch (e) {
     if (e.message === 'TOKEN_INVALIDO') { error.textContent = 'El servidor rechazó el token.'; sumetecEntrando(boton, false); return; }
     if (!await sumetecAccesoValidadoAntes(v, _GASTOS_HUELLA_VALIDADA)) {
-      error.textContent = 'No se pudo validar. Revisa tu conexión e inténtalo otra vez.';
+      error.textContent = e.message||'No se pudo validar. Revisa tu conexión.';
       sumetecEntrando(boton, false); return;
     }
   }
+  const pin=await sumetecPedirPinToken('Gastos',true);
+  if(pin===null){sumetecEntrando(boton,false);return;}
+  try{await sumetecGuardarTokenCifrado('gastos',v,pin);localStorage.removeItem('api_token');}
+  catch(e){error.textContent=e.message;sumetecEntrando(boton,false);return;}
   _guardarVendedorCompartido(nombre);
   API_TOKEN = v;
-  localStorage.setItem('api_token', v);
   _gastosAccesoAutorizado = true;
   _tokenGateCheck();
   _iniciarAppSegunModo_();
@@ -1254,7 +1268,7 @@ function _bumpIntentoGasto_(id) {
 function _reabrirTokenGate_() {
   API_TOKEN = '';
   _gastosAccesoAutorizado = false;
-  localStorage.removeItem('api_token');
+  sumetecOlvidarTokenCifrado('gastos');
   localStorage.removeItem(_GASTOS_HUELLA_VALIDADA);
   document.getElementById('app').innerHTML = '';
   const inp = document.getElementById('tg_input');
@@ -1264,6 +1278,8 @@ function _reabrirTokenGate_() {
 
 async function _iniciarAccesoGastos_() {
   _tokenGateCheck();
+  try{API_TOKEN=await sumetecRestaurarTokenApp('gastos','Gastos','api_token');}
+  catch(e){console.warn(e);return;}
   if (!API_TOKEN) return;
   try {
     await _validarTokenGastos_(API_TOKEN);
@@ -1271,7 +1287,7 @@ async function _iniciarAccesoGastos_() {
   } catch (e) {
     if (e.message === 'TOKEN_INVALIDO') {
       API_TOKEN = '';
-      localStorage.removeItem('api_token');
+      sumetecOlvidarTokenCifrado('gastos');
       localStorage.removeItem(_GASTOS_HUELLA_VALIDADA);
       _tokenGateCheck();
       return;

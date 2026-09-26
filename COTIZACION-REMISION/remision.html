@@ -633,7 +633,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 @media(max-width:780px),(max-height:500px){
   .btn,.ti,.ci-val input,.fv input,.fv select,.fg input,.fg select,.fg textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{min-height:44px}
   .qty-stepper{display:grid;grid-template-columns:34px minmax(56px,1fr) 34px;gap:8px;align-items:center}.qty-stepper button{width:34px;height:34px}.qty-stepper input{width:100%!important;min-height:38px!important;text-align:center!important}
-  .del-btn{width:44px;height:44px}.cobro-btn,.anular-btn,#btnRedondeo,#btnVerUtil,#btnAgregarFirma{min-height:44px}.ch .sbtn{min-height:44px}
+  .del-btn{width:44px;height:44px}.cobro-btn,.anular-btn,#btnVerUtil,#btnAgregarFirma{min-height:44px}.ch .sbtn{min-height:44px}
 }
 </style>
 <link rel="stylesheet" href="acceso.css">
@@ -731,7 +731,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <div class="sumetec-acceso-cabecera">
       <div class="sumetec-acceso-marca">Cotizador · SUMETEC<small>● En línea</small></div>
 <details id="ayuda-cotizador" class="sumetec-acceso-ayuda sumetec-acceso-ayuda--solo-enlace"><summary aria-label="Información para vincular">i</summary>
-        <div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración la clave de acceso de este teléfono. Escribe tu nombre como quieres que aparezca en las remisiones.</p><p>Copia la clave completa, sin espacios al principio o al final. No la compartas con otras personas.</p></div>
+        <div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración un código de vinculación de 8 caracteres. Escribe tu nombre como quieres que aparezca en las remisiones.</p><p>Después crea un PIN para proteger el acceso de este teléfono.</p></div>
       </details>
     </div>
     <div class="sumetec-acceso-intro">
@@ -742,6 +742,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <div class="sumetec-acceso-campos">
       <div class="sumetec-acceso-campo sumetec-acceso-campo--principal"><label for="tg_nombre">Tu nombre</label><input id="tg_nombre" type="text" autocomplete="name" placeholder="Tu nombre" oninput="_tgSyncBtn()"></div>
       <div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="tg_input">Token de acceso</label><input id="tg_input" type="password" autocomplete="off" placeholder="Token de acceso" oninput="_tgSyncBtn()"></div>
+      <div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="tg_codigo">O código de vinculación</label><input id="tg_codigo" type="text" maxlength="8" autocomplete="off" placeholder="8 caracteres" oninput="_tgSyncBtn()"></div>
     </div>
     <div id="tg_error" class="sumetec-acceso-error" role="alert" aria-live="polite" style="display:none"></div>
     <button id="tg_btn" type="button" class="sumetec-acceso-boton" onclick="_tgGuardar()" disabled>Vincular</button>
@@ -887,7 +888,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
       <div class="tl"><span class="tll" id="ivaWrap" style="cursor:pointer;user-select:none;position:relative;font-size:14px;font-weight:700;color:var(--text)" onclick="toggleIvaPopup2(event)">IVA <span id="ivaLbl" style="font-size:14px;font-weight:700;color:#b45309">— elegir</span><div class="iva-popup" id="ivaPopup2"><div class="iva-opt" onclick="setIvaGlobal(0,event)">0%</div><div class="iva-opt" onclick="setIvaGlobal(8,event)">8%</div><div class="iva-opt" onclick="setIvaGlobal(16,event)">16%</div></div></span><span class="tlv" id="tIva">$0.00</span></div>
       <div class="tl"><span class="tll">Descuento</span><span class="tlv" id="tDesc">$0.00</span></div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-        <button id="btnRedondeo" onclick="toggleRedondeoRem()" class="no-print" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:6px;font-size:10px;color:var(--muted);cursor:pointer;padding:3px 9px;font-family:inherit">🔢 Redondear</button>
         <div class="tf" style="flex:1;margin-top:0"><span class="tf-l">Total</span><span class="tf-v" id="tTot">$0.00 MXN</span></div>
       </div>
       <div class="tw" id="tWords"></div>
@@ -1226,7 +1226,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 <div class="ov" id="ovCat"><div class="modal"><div class="modal-hd"><div class="modal-title">⚙️ Configuración</div><button class="mx" onclick="closeOv('ovCat')">✕</button></div>
 
   <div style="font-weight:700;font-size:13px;margin-bottom:4px">🔑 Token de acceso</div>
-  <div class="info-box">Es la <strong>contraseña compartida</strong> entre este celular y tu servidor — el mismo token que usan TODOS los celulares. Sin el token correcto, el servidor rechaza todo. Se guarda solo en <strong>este dispositivo</strong>.</div>
+  <div class="info-box">Cada aplicación recibe su propio acceso. Se guarda cifrado con el PIN de este teléfono. Pide un código de vinculación a administración si necesitas renovar el acceso.</div>
   <div class="fg">
     <label>Pega tu token</label>
     <input id="api_token_input" type="password" autocomplete="off" spellcheck="false" placeholder="Pega aquí el token" oninput="guardarApiToken()" style="font-family:monospace">
@@ -2229,14 +2229,15 @@ const URL_DRIVE     = URL_SERVIDOR;  // misma URL para Drive y folios
 //   • Eliminar una remisión
 //   • Modificar (editar) una remisión
 //   • Quitar una cotización del historial de un celular
-// Sirve para que nadie haga esos cambios "sin querer". Es el MISMO para todos los
-// celulares (vive aquí, en el código). NO es seguridad de alto nivel — solo evita
-// accidentes.
+// Sirve para que nadie haga esos cambios "sin querer". NO es seguridad de alto
+// nivel — solo evita accidentes.
 //
-// CÓMO CAMBIARLO: escribe el nuevo código entre las comillas y vuelve a subir
-//   remision.html a GitHub Pages. Recomendado: 4 a 6 dígitos (p. ej. '2580').
-// CÓMO DESACTIVARLO (que NO pida nada): déjalo vacío  →  ''
-const CODIGO_BORRADO = '2526';   // ← cámbialo por el tuyo
+// Re-auditoría 2026-09-25 (N-08, pedido de Miguel): el código YA NO está escrito
+// aquí (este archivo es público en GitHub Pages). Es el MISMO código de seguridad
+// de campo que usan Gastos y Dirección: se cambia en el ERP (Administración →
+// Ecosistema → Sincronizar todo) y llega a este celular solo como huella SHA-256
+// dentro de la configuración publicada (gs_cfg → SEGURIDAD.hash_codigo).
+const SAL_CODIGO_CAMPO = 'sumetec-campo|';
 
 // ╚══════════════════════════════════════════════════════════════════════════════╝
 // ║                    FIN CONFIGURACIÓN — REMISIONES                           ║
@@ -2244,7 +2245,7 @@ const CODIGO_BORRADO = '2526';   // ← cámbialo por el tuyo
 // ─────────────────────────────────────────────────────────────────────────────
 // Token de seguridad — leído de localStorage para no quedar en código fuente
 // Configurar en el botón 🔑 Token de la barra
-let API_TOKEN=(localStorage.getItem('api_token')||'').trim();
+let API_TOKEN=''; // B5: sólo en memoria; localStorage conserva la versión cifrada.
 let _cotAccesoAutorizado = false;
 const _COT_HUELLA_VALIDADA = 'sumetec_cotizador_token_validado';
 
@@ -2814,7 +2815,7 @@ function renderTable(){
   <input class="ti r" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(it.precio)}" placeholder="0.00" data-id="${it._id}" data-f="precio" oninput="upd(this)" onclick="this.select()" style="width:100%;box-sizing:border-box">
   <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px">
     <div style="display:flex;align-items:center;gap:4px">
-      ${(costoEfectivo(it)>0&&+it.precio>0)?`<div id="margen${it._id}" onclick="_infoMargen(${it._id})" style="cursor:pointer;font-size:9px;font-weight:800;line-height:1;white-space:nowrap;color:${((+it.precio-costoEfectivo(it))/+it.precio*100)<30?'#c0392b':'#1C6E4A'}" title="Margen — toca para detalle">▣${(((+it.precio-costoEfectivo(it))/+it.precio)*100).toFixed(0)}%</div>`:''}
+      ${(costoEfectivo(it)>0&&margenLinea(it,+document.getElementById('descPct')?.value||0).margenPct!=null)?`<div id="margen${it._id}" onclick="_infoMargen(${it._id})" style="cursor:pointer;font-size:9px;font-weight:800;line-height:1;white-space:nowrap;color:${margenLinea(it,+document.getElementById('descPct')?.value||0).margenPct<30?'#c0392b':'#1C6E4A'}" title="Margen — toca para detalle">▣${margenLinea(it,+document.getElementById('descPct')?.value||0).margenPct.toFixed(0)}%</div>`:''}
       ${(+it.costo>0)?`<button type="button" onclick="sugerirPrecio(${it._id})" title="Sugerir precio (costo × factor)" style="border:none;background:none;cursor:pointer;font-size:12px;line-height:1;padding:2px">💡</button>`:''}
     </div>
     ${it._precioAnt!=null?`<div onclick="usarPrecioAnterior(${it._id})" style="cursor:pointer;color:#1a56a0;font-size:9px;font-weight:700;white-space:nowrap;line-height:1;text-align:right" title="Precio anterior de este cliente">↩ $${(+it._precioAnt).toFixed(2)}</div>`:''}
@@ -3048,9 +3049,9 @@ function _htmlTendenciaCosto(clave){
 // F5: detalle de margen — modal visual (no alert del navegador).
 function _infoMargen(rowId){
   const it=items.find(i=>i._id===rowId);if(!it)return;
-  const c=costoEfectivo(it),p=+it.precio||0;
-  if(p<=0){toast('Sin precio configurado','warn');return;}
-  const util=p-c, m=util/p*100;
+  const r=margenLinea(it,+document.getElementById('descPct')?.value||0);
+  if(r.margenPct==null){toast('Sin ingreso configurado','warn');return;}
+  const c=r.costo,p=r.ingreso,util=r.utilidad,m=r.margenPct;
   const ok=m>=30;
   const notaIva=(+it.iva>0)
     ?'Costo sin IVA — se recupera con el IVA de esta venta.'
@@ -3070,7 +3071,7 @@ function _infoMargen(rowId){
   document.getElementById('ovMargenIco').textContent=ok?'✅':'⚠️';
   document.getElementById('ovMargenTit').innerHTML=(ok?'<span style="color:#1C6E4A">Margen OK</span>':'<span style="color:#c0392b">Margen bajo</span>')+'<br><span style="font-size:13px;font-weight:400;color:var(--muted)">'+esc(it.clave||it.desc||'producto')+'</span>';
   document.getElementById('ovMargenBody').innerHTML=
-    'Precio: <b>$'+p.toFixed(2)+'</b><br>Costo proveedor: <b>$'+c.toFixed(2)+'</b><br>Utilidad: <b>$'+util.toFixed(2)+'</b><br>'
+    'Ingreso sin IVA, tras descuento: <b>$'+p.toFixed(2)+'</b><br>Costo efectivo: <b>$'+c.toFixed(2)+'</b><br>Utilidad: <b>$'+util.toFixed(2)+'</b><br>'
     +'Margen: <b style="font-size:18px;color:'+(ok?'#1C6E4A':'#c0392b')+'">'+m.toFixed(1)+'%</b><br>'
     +(ok?'<span style="color:#1C6E4A">✓ Mayor o igual al 30%</span>':'<span style="color:#c0392b">⚠️ Menor al 30% — revisa precio o negocia con proveedor</span>')
     +'<div style="margin-top:8px;font-size:11.5px;color:var(--muted)">'+notaIva+'</div>'
@@ -3330,14 +3331,9 @@ document.addEventListener('click',e=>{
   if(cPanelOpen&&!p.contains(e.target)&&!e.target.closest('.sbtn')){p.classList.remove('open');cPanelOpen=false;}
 });
 
-// Modo de redondeo del TOTAL de remisiones. Por defecto CON CENTAVOS (2 decimales,
-// H-1 2026-07-22), con botón "Redondear" junto al Total para verlo a peso cerrado.
-// (Las cotizaciones SIEMPRE usan 2 decimales — calcTotalsCot no usa este flag.)
-let _redondearRem=false;
 // Fuente única de verdad para el cálculo financiero.
 // _calcTot() vive ahora en calculos.js (cargado en <head>). Es el núcleo del dinero:
-// devuelve {sub, iva, desc, tot, arts, pzs}. Usa _redondearRem (global de abajo) si
-// no se le pasa `redondear`. Aquí solo se consume.
+// devuelve {sub, iva, desc, tot, arts, pzs}. Aquí solo se consume.
 function calcTotals(){
   const _dpEl=document.getElementById('descPct');
   const _dpCrudo=_dpEl?_dpEl.value:0;
@@ -3359,6 +3355,11 @@ function calcTotals(){
   // con descuento y regalos -- informativa, no toca el total.
   const tu=document.getElementById('tUtil');
   if(tu)tu.innerHTML=_utilidadLineaHTML(items,dp);
+  items.forEach(it=>{
+    const el=document.getElementById('margen'+it._id);if(!el)return;
+    const m=margenLinea(it,dp).margenPct;
+    if(m!=null){el.textContent='▣'+m.toFixed(0)+'%';el.style.color=m<30?'#c0392b':'#1C6E4A';}
+  });
   // Actualizar saldo del panel de cobro en tiempo real si no hay remisión activa
   if(!remActualId){
     const sd=document.getElementById('saldoDisplay');
@@ -3379,31 +3380,6 @@ function toggleVerUtilidadRem(){
   if(b)b.textContent=_verUtilidadRem?'🙈 Ocultar utilidad':'📊 Ver utilidad';
   if(d)d.style.display=_verUtilidadRem?'':'none';
 }
-// Botón "Quitar redondeo / Redondear" junto al Total de la remisión.
-function _syncBtnRedondeo(){
-  const b=document.getElementById('btnRedondeo');
-  if(b)b.textContent=_redondearRem?'↩ Ver centavos':'🔢 Redondear';
-}
-function toggleRedondeoRem(){
-  if(_avisoBloqueado())return;
-  _redondearRem=!_redondearRem;
-  _syncBtnRedondeo();
-  calcTotals();
-  // Reflejar el modo en la remisión activa para que el PDF y el saldo coincidan.
-  const r=remisiones.find(x=>String(x.id)===String(remActualId));
-  if(r){
-    if(r.data)r.data.redondear=redondeoEfectivo(items,_redondearRem);
-    const dp=+(document.getElementById('descPct')?.value||0);
-    const{tot}=_calcTot(items,dp);
-    r.total=tot; r.saldo=Math.max(0,Math.round((tot-_sumaPagos(r))*100)/100);
-    persistirRemisiones();
-    // Actualizar TODO en tiempo real: panel de cobro (saldo) y observaciones (balance).
-    renderPagos();
-    updateObsBalance(r);
-  }
-  autosave();
-  toast(_redondearRem?'Total redondeado a peso':'Mostrando centavos','ok',2500);
-}
 // fmt(), n2l() y words() viven ahora en calculos.js (cargado en <head>). Globales, mismo uso.
 
 function snap(){
@@ -3420,9 +3396,7 @@ function snap(){
     d_asesor:document.getElementById('d_asesor').value,d_pago:document.getElementById('d_pago').value,
     obs:document.getElementById('obs').value,
     descPct:document.getElementById('descPct').value,items,
-    // Modo EFECTIVO (regla H-18): con IVA nunca se guarda "redondear", así el
-    // PDF regenerado da el mismo total que se cobró.
-    redondear:redondeoEfectivo(items,_redondearRem),
+    calculoPorRenglon:true,
     _firma:_firmaData||null};
 }
 function restore(data){
@@ -3432,9 +3406,6 @@ function restore(data){
   ['c_nombre','c_dir','c_cp','c_tel','c_rfc','c_email','c_contacto','c_persona_moral','d_asesor','obs'].forEach(f=>s(f,data[f]));
   s('d_pago',data.d_pago);s('descPct',data.descPct??0);
   _mostrarTelAsesor('d_asesor','d_asesor_tel');
-  // Restaurar el modo de redondeo guardado con la remisión (default: redondeado)
-  _redondearRem=(data.redondear!==false);
-  _syncBtnRedondeo();
   items=(data.items||[]).map(it=>({...it,_id:_id++}));
   // Restaurar firma si había una guardada
   _firmaData=data._firma||null;
@@ -4227,7 +4198,9 @@ function cierreDelDia(){
     // el pago QUE la anulación revirtió seguía sumando, así que un cobro
     // anulado inflaba "Cobrado hoy" y el desglose por método. pagosValidosDe
     // es el mismo filtro que ya usaba _sumaPagos para el saldo.
-    pagosValidosDe(r).forEach(p=>{
+    // 2026-09-25 (N-19): pagosDeCajaDe además deja fuera el renglón técnico
+    // `ajuste_erp` (lo cobrado en el mostrador del ERP), que no entró hoy por aquí.
+    pagosDeCajaDe(r).forEach(p=>{
       if(!p||p.fecha!==hoyTxt)return;
       const met=p.metodo||'Efectivo';
       porMetodo[met]=(porMetodo[met]||0)+(+p.monto||0);
@@ -5147,9 +5120,9 @@ function _salirModoEdicion(){
 
 // ── 🔒 CÓDIGO DE BORRADO ──────────────────────────────────────────────────────
 // Pide un código antes de eliminar una remisión, para que nadie borre una venta
-// "sin querer". El código es FIJO y vive en el bloque CONFIGURACIÓN del inicio
-// (busca:  const CODIGO_BORRADO ). Es el mismo en todos los celulares. NO es
-// seguridad de alto nivel — solo evita borrados accidentales, como pediste.
+// "sin querer". El código es el de seguridad de campo que publica el ERP (solo su
+// huella, ver SAL_CODIGO_CAMPO arriba). NO es seguridad de alto nivel — solo
+// evita borrados accidentales, como pediste.
 // Diálogo construido al vuelo (sin tocar el HTML). Resuelve con el texto o null si cancela.
 function _pedirPinUI(titulo,subtitulo){
   return new Promise(resolve=>{
@@ -5173,14 +5146,26 @@ function _pedirPinUI(titulo,subtitulo){
     setTimeout(()=>inp.focus(),60);
   });
 }
-// Devuelve true si la acción puede continuar. Si CODIGO_BORRADO está vacío → true (sin
-// protección). `accion` es el texto que se muestra ("eliminar esta remisión", etc.).
+async function _huellaCodigo(c){
+  const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(SAL_CODIGO_CAMPO+c));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+function _huellaCodigoPublicada(){
+  try{ const c=JSON.parse(localStorage.getItem('gs_cfg')||'null');
+       return (c&&c.SEGURIDAD&&c.SEGURIDAD.hash_codigo)||''; }catch(_){ return ''; }
+}
+// Devuelve true si la acción puede continuar. `accion` es el texto que se muestra
+// ("eliminar esta remisión", etc.). Sin huella publicada no deja pasar (igual que
+// Gastos): el candado no puede quedar abierto solo porque falta sincronizar.
 async function _verificarPinBorrado(accion){
-  const codigo=(typeof CODIGO_BORRADO!=='undefined'?CODIGO_BORRADO:'').trim();
-  if(!codigo) return true; // desactivado desde la configuración
+  const h=_huellaCodigoPublicada();
+  if(!h){
+    toast('Aún no hay código de seguridad en este celular: en el ERP entra a Administración → Ecosistema, guarda y pulsa Sincronizar todo; luego abre el Cotizador con señal.','err',10000);
+    return false;
+  }
   const ing=await _pedirPinUI('🔒 Código requerido','Ingresa el código para '+(accion||'continuar'));
   if(ing===null) return false;                 // canceló
-  if(ing===codigo) return true;                // correcto
+  if(await _huellaCodigo(ing)===h) return true; // correcto
   toast('Código incorrecto — acción cancelada','err');
   return false;
 }
@@ -5693,7 +5678,6 @@ function guardarApiToken(){
   const v=(document.getElementById('api_token_input').value||'').trim();
   const cambioToken = v!==API_TOKEN;
   API_TOKEN=v;
-  localStorage.setItem('api_token',v);
   if(cambioToken && _cotAccesoAutorizado){
     _cotAccesoAutorizado=false;
     const gateInput=document.getElementById('tg_input');
@@ -5735,8 +5719,9 @@ function _tgPegar(){
 function _tgSyncBtn(){
   const nombre=(document.getElementById('tg_nombre')?.value||'').trim();
   const tok=(document.getElementById('tg_input')?.value||'').trim();
+  const codigo=(document.getElementById('tg_codigo')?.value||'').trim();
   const btn=document.getElementById('tg_btn');
-  const listo=!!(nombre&&tok);
+  const listo=!!(nombre&&(tok||codigo));
   if(btn){
     btn.disabled=!listo;
     btn.style.cursor=listo?'pointer':'not-allowed';
@@ -5756,18 +5741,28 @@ async function _validarTokenCotizador_(token){
   } finally { clearTimeout(tiempo); }
 }
 async function _tgGuardar(){
-  const v=(document.getElementById('tg_input')?.value||'').trim();
+  let v=(document.getElementById('tg_input')?.value||'').trim();
+  const codigo=(document.getElementById('tg_codigo')?.value||'').trim();
   const nombre=(document.getElementById('tg_nombre')?.value||'').trim();
   const err=document.getElementById('tg_error');
   // MC-01: el error se muestra DENTRO de la tarjeta (el toast queda oculto
   // debajo del overlay #tokenGate, z-index 99999, y nunca se llegaba a leer).
   const mostrarError=(msg)=>{if(err){err.textContent=msg;err.style.display='block';}};
   if(!nombre){mostrarError('⚠️ Escribe tu nombre primero.');return;}
-  if(!v){mostrarError('⚠️ Escribe el token primero.');return;}
+  if(!v&&!codigo){mostrarError('⚠️ Escribe el código de vinculación.');return;}
   if(err)err.style.display='none';
   const btn=document.getElementById('tg_btn');
   sumetecEntrando(btn, true);
   try{
+    if(!v){
+      const dispositivo=localStorage.getItem('sumetec_cotizador_dispositivo')||crypto.randomUUID();
+      const r=await fetch(getScriptUrl(),{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({tipo:'vincular_dispositivo',app:'COTIZADOR',codigo,dispositivo,nombre})}).then(x=>x.json());
+      if(!r.ok)throw Error(r.error||'No se pudo vincular');
+      v=r.token;
+      const tokenInput=document.getElementById('tg_input');if(tokenInput)tokenInput.value=v;
+      localStorage.setItem('sumetec_cotizador_dispositivo',dispositivo);
+    }
     await _validarTokenCotizador_(v);
     await sumetecMarcarAccesoValidado(v, _COT_HUELLA_VALIDADA);
   }catch(e){
@@ -5776,10 +5771,14 @@ async function _tgGuardar(){
       sumetecEntrando(btn, false); return;
     }
     if(!await sumetecAccesoValidadoAntes(v, _COT_HUELLA_VALIDADA)){
-      mostrarError('No se pudo validar. Revisa tu conexión e inténtalo otra vez.');
+      mostrarError(e.message==='TOKEN_INVALIDO'?'Token incorrecto.':(e.message||'No se pudo validar. Revisa tu conexión.'));
       sumetecEntrando(btn, false); return;
     }
   }
+  const pin=await sumetecPedirPinToken('Cotizador',true);
+  if(pin===null){sumetecEntrando(btn,false);return;}
+  try{await sumetecGuardarTokenCifrado('cotizador',v,pin);localStorage.removeItem('api_token');}
+  catch(e){mostrarError(e.message);sumetecEntrando(btn,false);return;}
   // Copiar también al campo del modal de token (consistencia)
   const inp2=document.getElementById('api_token_input');if(inp2)inp2.value=v;
   // I-5: guarda el nombre como "vendedor" -- ya alimenta _deviceLabel_() y con
@@ -5798,13 +5797,15 @@ async function _tgGuardar(){
 }
 async function _iniciarAccesoCotizador_(){
   _tokenGateCheck();
+  try{API_TOKEN=await sumetecRestaurarTokenApp('cotizador','Cotizador','api_token');}
+  catch(e){console.warn(e);return;}
   if(!API_TOKEN)return;
   try{
     await _validarTokenCotizador_(API_TOKEN);
     await sumetecMarcarAccesoValidado(API_TOKEN, _COT_HUELLA_VALIDADA);
   }catch(e){
     if(e.message==='TOKEN_INVALIDO'){
-      API_TOKEN=''; localStorage.removeItem('api_token');
+      API_TOKEN=''; sumetecOlvidarTokenCifrado('cotizador');
       localStorage.removeItem(_COT_HUELLA_VALIDADA);
       return;
     }
@@ -5850,7 +5851,7 @@ function abrirCatalogos(){
   document.getElementById('gs_url').value=localStorage.getItem('gs_url')||'';
   document.getElementById('gsSync').textContent=localStorage.getItem('gs_sync')||'—';
   const inp=document.getElementById('api_token_input');
-  if(inp){inp.value=localStorage.getItem('api_token')||'';inp.type='password';}
+  if(inp){inp.value=API_TOKEN;inp.type='password';}
   const b=document.getElementById('btnVerToken');if(b)b.textContent='👁️ Ver';
   _actualizarTokenStatus();
   _mostrarVersionInstalada();
@@ -6555,9 +6556,10 @@ function descargarPDF(remOverride, forzarDescarga){
     const _itemsSrc = _regen ? (_d.items||[]) : items;
     const activeItems = _itemsSrc.filter(it=>it.clave||it.desc||(+it.qty>0));
     const dp=+(_regen ? _d.descPct : document.getElementById('descPct').value)||0;
-    // Al regenerar un PDF guardado, usar el modo de redondeo que tenía esa remisión.
+    // Un PDF viejo usa la regla con la que se cobró; los nuevos van por renglón.
     const _redon = _regen ? (_d.redondear!==false) : undefined;
-    const{sub,iva:ivaT,desc:desc_,tot,arts,pzs}=_calcTot(activeItems,dp,_redon,_regen);
+    const legado = _regen && _d.calculoPorRenglon!==true;
+    const{sub,iva:ivaT,desc:desc_,tot,arts,pzs}=_calcTot(activeItems,dp,_redon,legado);
 
     // ── jsPDF init ───────────────────────────────────────
     const {jsPDF} = window.jspdf;
@@ -7306,7 +7308,6 @@ function _candadosExtra(bloquear){
   const fb=document.getElementById('folioBadge');if(fb)fb.contentEditable=bloquear?'false':'true';
   apagar(document.querySelector('button[onclick="incrementarFolio()"]'));
   apagar(document.getElementById('ivaWrap'));
-  apagar(document.getElementById('btnRedondeo'));
   apagar(document.getElementById('firmaPreview'));
   apagar(document.getElementById('btnBorrarFirma'));
   const enEdicion=!!_modoEdicion;
@@ -8373,7 +8374,7 @@ function _desglosePopupHTML(rem){
   if(!d||!Array.isArray(d.items))return'';
   const activeItems=d.items.filter(it=>it.clave||it.desc||(+it.qty>0));
   const dp=+d.descPct||0;
-  const{sub,iva,desc,tot}=_calcTot(activeItems,dp,d.redondear,true);
+  const{sub,iva,desc,tot}=_calcTot(activeItems,dp,d.redondear,d.calculoPorRenglon!==true);
   // Tasa a mostrar: si todas las líneas cobradas comparten IVA, esa; si no, "mixto".
   const tasaLbl=tasaIvaLbl(activeItems);
   let html='<div style="text-align:left;font-size:13px;line-height:2;margin:10px 0 14px;background:var(--bg,#F2F4F7);border-radius:8px;padding:10px 14px">'+
@@ -9311,7 +9312,7 @@ function renderTableCot(){
       <td class="td-desc" data-label="Descripción"><input class="ti" type="text" value="${esc(it.desc)}" placeholder="Descripción"
         onchange="_cotAct(${it._id},'desc',this.value)"></td>
       <td class="r td-r" data-label="Precio Unit."><div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
-        ${(costoEfectivo(it)>0&&p>0)?`<div onclick="_cotInfoMargen(${it._id})" style="cursor:pointer;font-size:9px;font-weight:800;line-height:1;white-space:nowrap;color:${((p-costoEfectivo(it))/p*100)<30?'#c0392b':'#1C6E4A'}" title="Margen — toca para detalle">▣${(((p-costoEfectivo(it))/p)*100).toFixed(0)}%</div>`:''}
+        ${(costoEfectivo(it)>0&&margenLinea(it,+document.getElementById('cot_descPct')?.value||0).margenPct!=null)?`<div id="cotMargen${it._id}" onclick="_cotInfoMargen(${it._id})" style="cursor:pointer;font-size:9px;font-weight:800;line-height:1;white-space:nowrap;color:${margenLinea(it,+document.getElementById('cot_descPct')?.value||0).margenPct<30?'#c0392b':'#1C6E4A'}" title="Margen — toca para detalle">▣${margenLinea(it,+document.getElementById('cot_descPct')?.value||0).margenPct.toFixed(0)}%</div>`:''}
         <div style="display:flex;flex-direction:column;align-items:flex-end;flex:1;min-width:0">
           <input class="ti" type="number" inputmode="decimal" value="${it.precio}" placeholder="0.00" min="0" step="0.01" style="text-align:right;width:100%"
             onchange="_cotAct(${it._id},'precio',this.value)" oninput="calcTotalsCot()">
@@ -9359,10 +9360,8 @@ function _cotUsarPrecioAnt(id){
 // ── Totales (mismo cálculo que cotizador) ─────────────────────────────────
 function calcTotalsCot(){
   const dp=+document.getElementById('cot_descPct')?.value||0;
-  // La fórmula monetaria (IVA sobre base descontada) vive en un solo lugar: _calcTot.
-  // Cotización no redondea (redondear=false), así sub/iva/desc son idénticos a antes.
-  const {sub,iva,desc}=_calcTot(_cotItems,dp,false);
-  const tot=sub-sub*(dp/100)+iva;
+  // La fórmula monetaria por renglón de A1 vive en un solo lugar: _calcTot.
+  const {sub,iva,desc,tot}=_calcTot(_cotItems,dp,false);
   // arts/pzs con la semántica propia de cotización (solo líneas con precio).
   let arts=0,pzs=0;
   _cotItems.forEach(it=>{const q=+it.qty||0,p=+it.precio||0;if(q>0&&p>0){arts++;pzs+=q;}});
@@ -9371,6 +9370,11 @@ function calcTotalsCot(){
   s('cot_tSub',n2(sub));s('cot_tIva',n2(iva));s('cot_tDesc',n2(desc));
   s('cot_tTot',n2(tot)+' MXN');s('cot_tWords','('+n2l(tot)+')');
   s('cot_rArts',String(arts));s('cot_rPzs',String(pzs));
+  _cotItems.forEach(it=>{
+    const el=document.getElementById('cotMargen'+it._id);if(!el)return;
+    const m=margenLinea(it,dp).margenPct;
+    if(m!=null){el.textContent='▣'+m.toFixed(0)+'%';el.style.color=m<30?'#c0392b':'#1C6E4A';}
+  });
   _syncMobileChrome();
 }
 
@@ -9475,9 +9479,9 @@ function _cotPpSel(idx){
 // #9: detalle de margen del cotizador (modal, igual que remisiones)
 function _cotInfoMargen(rowId){
   const it=_cotItems.find(i=>i._id===rowId);if(!it)return;
-  const c=costoEfectivo(it),p=+it.precio||0;
-  if(p<=0){toast('Sin precio configurado','warn');return;}
-  const util=p-c,m=util/p*100,ok=m>=30;
+  const r=margenLinea(it,+document.getElementById('cot_descPct')?.value||0);
+  if(r.margenPct==null){toast('Sin ingreso configurado','warn');return;}
+  const c=r.costo,p=r.ingreso,util=r.utilidad,m=r.margenPct,ok=m>=30;
   const notaIva=(+it.iva>0)
     ?'Costo sin IVA — se recupera con el IVA de esta venta.'
     :'Costo CON IVA — al vender a 0% ese IVA de compra no se recupera, cuenta como costo real.';
@@ -9496,7 +9500,7 @@ function _cotInfoMargen(rowId){
   document.getElementById('ovMargenIco').textContent=ok?'✅':'⚠️';
   document.getElementById('ovMargenTit').innerHTML=(ok?'<span style="color:#1C6E4A">Margen OK</span>':'<span style="color:#c0392b">Margen bajo</span>')+'<br><span style="font-size:13px;font-weight:400;color:var(--muted)">'+esc(it.clave||it.desc||'producto')+'</span>';
   document.getElementById('ovMargenBody').innerHTML=
-    'Precio: <b>$'+p.toFixed(2)+'</b><br>Costo proveedor: <b>$'+c.toFixed(2)+'</b><br>Utilidad: <b>$'+util.toFixed(2)+'</b><br>'
+    'Ingreso sin IVA, tras descuento: <b>$'+p.toFixed(2)+'</b><br>Costo efectivo: <b>$'+c.toFixed(2)+'</b><br>Utilidad: <b>$'+util.toFixed(2)+'</b><br>'
     +'Margen: <b style="font-size:18px;color:'+(ok?'#1C6E4A':'#c0392b')+'">'+m.toFixed(1)+'%</b><br>'
     +(ok?'<span style="color:#1C6E4A">✓ Mayor o igual al 30%</span>':'<span style="color:#c0392b">⚠️ Menor al 30% — revisa precio o negocia con proveedor</span>')
     +'<div style="margin-top:8px;font-size:11.5px;color:var(--muted)">'+notaIva+'</div>'
@@ -10234,7 +10238,7 @@ function _cotEstadoBadge(entry){
       c_nombre:r.data.c_nombre||'', c_dir:r.data.c_dir||'', c_cp:r.data.c_cp||'', c_tel:r.data.c_tel||'',
       d_asesor:r.data.d_asesor||'',
       d_pago:_mapearDPagoARemision(r.data.d_pago||''),
-      obs:r.data.obs||'', descPct:r.data.descPct||0, redondear:true,
+      obs:r.data.obs||'', descPct:r.data.descPct||0, calculoPorRenglon:true,
       items:(r.data.items||[]).map(it=>({...it}))
     };
     restore(dataRem);

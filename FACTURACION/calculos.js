@@ -35,40 +35,35 @@ function escAttr(v){return v==null?'':String(v)
   .replace(/>/g,'&gt;')
   .replace(/\r?\n/g,' ');}
 
-// Núcleo del dinero. Devuelve {sub, iva, desc, tot, arts, pzs} con el mismo
-// redondeo en todos los contextos (remisión y cotización comparten este motor).
-// `redondear` opcional: si se omite usa el flag de sesión _redondearRem (global
-// del HTML); al regenerar un PDF guardado se pasa el modo que tenía esa remisión.
+// Núcleo del dinero: cada importe, descuento e IVA se redondea por renglón.
+// `historico` conserva el cálculo anterior SOLO al reimprimir una remisión vieja.
 function _calcTot(arr,descPct,redondear,historico){
-  // El DESCUENTO se aplica al SUBTOTAL ANTES del IVA: el IVA se calcula sobre la
-  // base ya descontada (estándar de facturación MX). Así descontar también baja el IVA.
-  let sub=0,iva=0,arts=0,pzs=0;
   const pct=(+descPct||0)/100;
-  arr.forEach(it=>{const q=+it.qty||0,p=+it.precio||0,v=+it.iva||0;
-    if(q>0)pzs+=q; // piezas incluyen regalos (salen del inventario)
-    if(q>0&&p>0&&!it.regalo){const base=q*p;sub+=base;iva+=base*(1-pct)*(v/100);arts++;} // REGALO no se cobra
+  let subC=0,descC=0,ivaC=0,arts=0,pzs=0;
+  let subViejo=0,ivaViejo=0;
+  (arr||[]).forEach(it=>{
+    const q=+it.qty||0,p=+it.precio||0,v=+it.iva||0;
+    if(q>0)pzs+=q;
+    if(!(q>0&&p>0)||it.regalo)return;
+    arts++;
+    if(historico===true){subViejo+=q*p;ivaViejo+=q*p*(1-pct)*(v/100);return;}
+    const importeC=Math.round(q*p*100+1e-7);
+    const descuentoC=Math.round(importeC*pct+1e-7);
+    const baseC=importeC-descuentoC;
+    subC+=importeC;descC+=descuentoC;
+    ivaC+=Math.round(baseC*v/100+1e-7);
   });
-  const desc=sub*pct,totRaw=sub-desc+iva;
-  // Regla de Miguel (2026-09-25, auditoría H-18): una venta CON IVA nunca se
-  // redondea al peso -- el total tiene que cuadrar al centavo con su IVA para
-  // poder facturarse (Facturación la rechazaba: $1,160.41 vs $1,160). El
-  // redondeo al peso queda solo para ventas donde ningún renglón cobrado lleva IVA.
-  // `historico`=true SOLO al regenerar el PDF/desglose de una remisión YA
-  // guardada: respeta el modo con el que se cobró entonces, para que el
-  // documento viejo no cambie de total (las nuevas guardan el modo efectivo,
-  // ver redondeoEfectivo).
-  const pedido=(redondear===undefined)?_redondearRem:redondear;
-  const redon=pedido && (historico===true || !(iva>0));
-  return{sub,iva,desc,tot:redon?Math.round(totRaw):Math.round(totRaw*100)/100,arts,pzs};
+  if(historico===true){
+    const descViejo=subViejo*pct, bruto=subViejo-descViejo+ivaViejo;
+    const redon=!!redondear && (historico===true || !(ivaViejo>0));
+    return{sub:subViejo,iva:ivaViejo,desc:descViejo,
+           tot:redon?Math.round(bruto):Math.round(bruto*100)/100,arts,pzs};
+  }
+  return{sub:subC/100,iva:ivaC/100,desc:descC/100,
+         tot:(subC-descC+ivaC)/100,arts,pzs};
 }
 
-// Modo de redondeo que DE VERDAD se aplica a estos renglones (regla H-18): el
-// que pidió el usuario, salvo que algún renglón cobrado lleve IVA. Es lo que se
-// guarda en la remisión, para que regenerar su PDF dé el mismo total.
-function redondeoEfectivo(arr,redondear){
-  const conIva=(arr||[]).some(it=>(+it.qty>0)&&(+it.precio>0)&&!it.regalo&&(+it.iva>0));
-  return !!redondear && !conIva;
-}
+function redondeoEfectivo(){return false;}
 
 // Costo correcto para medir margen (2026-07-30, pedido de Miguel): el IVA que
 // pagas al comprar solo se recupera si la venta también lleva IVA (se acredita
@@ -84,6 +79,16 @@ function redondeoEfectivo(arr,redondear){
 function costoEfectivo(it){
   const sinIva=+it.costo||0, conIva=+it.costoIva||sinIva;
   return (+it.iva>0)?sinIva:conIva;
+}
+
+function margenLinea(it, descPct){
+  const q=+it.qty||0;
+  const tot=_calcTot([it], descPct, false);
+  const ingreso=Math.round((tot.sub-tot.desc)*100)/100;
+  const costo=q*costoEfectivo(it);
+  const utilidad=ingreso-costo;
+  return {ingreso,costo,utilidad,
+    margenPct:ingreso>0?Math.round(utilidad/ingreso*1000)/10:null};
 }
 
 // Regla de pago válido (R-02). Un abono/pago_completo debe ser un número finito > 0.
@@ -269,6 +274,15 @@ function pagosValidosDe(rem){
   return ps.filter(p=>p&&p.tipo!=='anulacion'&&!p._rechazado&&!anulados.has(p.uuid));
 }
 
+// Pagos que de verdad entraron POR ESTE CELULAR (para corte de caja y "cobrado
+// hoy"). Re-auditoría 2026-09-25 (N-19, mejora B7): el renglón `ajuste_erp` ("Saldo
+// inicial ERP") NO es un cobro de hoy -- resume lo que se cobró en el mostrador
+// del ERP, sin método y con la fecha en que se PUBLICÓ la venta. Cuenta para el
+// saldo (por eso pagosValidosDe lo conserva), pero no para el efectivo del día.
+function pagosDeCajaDe(rem){
+  return pagosValidosDe(rem).filter(p=>p.tipo!=='ajuste_erp');
+}
+
 // ── #1 CORTE DE CAJA ────────────────────────────────────────────────────────
 // "¿cuánto efectivo debe haber en la caja AHORA?" — pagos de UNA fecha, dentro
 // de un rango de horas (hFin exclusivo), agrupados por método de pago.
@@ -280,7 +294,7 @@ function corteDeCaja(remisiones, fechaTxt, hIni, hFin){
   const ini=(hIni==null?0:+hIni), fin=(hFin==null?24:+hFin);
   const porMetodo={}; const detalle=[]; let total=0;
   (remisiones||[]).forEach(r=>{
-    pagosValidosDe(r).forEach(p=>{
+    pagosDeCajaDe(r).forEach(p=>{
       if(p.fecha!==fechaTxt) return;
       const monto=+p.monto||0; if(!(monto>0)) return;
       const hh = p.hora ? parseInt(String(p.hora).split(':')[0],10) : NaN;
@@ -371,7 +385,10 @@ function diasPagoPorCliente(remisiones){
   (remisiones||[]).forEach(r=>{
     if(!r||r.estado==='cancelada') return;
     const fRem=parseFechaMX(r.fecha); if(!fRem) return;
-    const validos=pagosValidosDe(r);
+    // N-19b (2026-09-25): sin el renglón técnico `ajuste_erp` -- su fecha es la de PUBLICACIÓN,
+    // no la del cobro, y falsearía los días de cobro (una venta cobrada en mostrador sin fecha
+    // conocida simplemente no entra a la estadística).
+    const validos=pagosDeCajaDe(r);
     const liquida=validos.filter(p=>p.tipo==='pago_completo'||(+p.saldo_despues)===0);
     if(!liquida.length) return;
     const fPago=parseFechaMX(liquida[liquida.length-1].fecha); if(!fPago) return;
@@ -438,10 +455,10 @@ function renglonValido(it){
 
 // Exportar para los tests de Node sin afectar al navegador (allí no existe `module`).
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { esc, escAttr, fmt, n2l, words, _calcTot, redondeoEfectivo, costoEfectivo, pagoValido,
+  module.exports = { esc, escAttr, fmt, n2l, words, _calcTot, redondeoEfectivo, costoEfectivo, margenLinea, pagoValido,
                       descuentoValido, renglonValido, telWA, msgCobroWA, tasaIvaLbl,
                       rentabilidadPorProducto, simulaEscenarioPrecio,
-                      parseFechaMX, pagosValidosDe, corteDeCaja, costosQueSubieron,
+                      parseFechaMX, pagosValidosDe, pagosDeCajaDe, corteDeCaja, costosQueSubieron,
                       deudaCliente, diasPagoPorCliente, utilidadOperacion,
                       parseMonto, formatearMontoTexto };
 }

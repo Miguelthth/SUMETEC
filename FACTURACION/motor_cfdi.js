@@ -29,7 +29,7 @@ if (typeof module !== 'undefined' && module.exports) {
   _calcTot_ = _calcTot; // global del navegador
 }
 
-function _r2(n){ return Math.round((+n) * 100) / 100; }
+function _r2(n){ return Math.round((+n) * 100 + 1e-7) / 100; }
 
 // RFC válido: persona moral (3 letras) o física (4) + 6 dígitos fecha + 3 homoclave.
 // Acepta el genérico nacional XAXX010101000 (factura global / público en general).
@@ -145,34 +145,15 @@ function construirCFDI(remision, opciones){
   if (conceptos.length && conceptos.every(c => c.tasa === 0)) advertencias.push('La factura saldrá SIN IVA (todos los renglones en 0%). Confirma que es correcto.');
 
   // ── Cuadre EXACTO contra el total REAL que pagó el cliente ──
-  // Objetivo = Total guardado de la remisión (columna del ERP). Si no viene, se
-  // recomputa con _calcTot. El residuo de redondeo (≤5¢) se ABSORBE en el último
-  // concepto para que la factura totalice EXACTAMENTE lo que pagó el cliente (C-3).
+  // Objetivo = total guardado de la remisión. Con la regla por renglón de A1,
+  // cualquier diferencia es un dato inconsistente y bloquea la factura.
   const objetivo = (remision && remision.total != null && +remision.total > 0)
     ? _r2(+remision.total)
     : _calcTot_(items, remision && remision.descPct, !!(remision && remision.redondear)).tot;
-  // Tope de absorción: el CFDI redondea descuento e IVA A CADA CONCEPTO por
-  // separado (2 renglones redondeados por línea), mientras que _calcTot_ redondea
-  // UNA sola vez al final -- con muchas líneas esa diferencia de redondeo se
-  // acumula. Tope fijo de 5¢ (bueno para remisiones chicas) rechazaba con "revisar
-  // IVA mixto" remisiones de 15-20+ líneas que en realidad cuadraban perfecto
-  // (visto: 20 líneas, descuento exacto, diferencia real $0.14). Cota: máx 1¢ de
-  // drift por cada renglón con IVA (2 redondeos de 0.5¢ cada uno) + 2¢ de piso
-  // para remisiones chicas -- topado a $2 para no tragarse un IVA mixto real.
-  const conIva = conceptos.filter(c => c.impuestos).length;
-  const tope = Math.min(2, Math.max(0.05, 0.01 * conIva + 0.02));
-  let tot = _totales(conceptos);
-  let diff = _r2(objetivo - tot.total);
-  if (conceptos.length && diff !== 0 && Math.abs(diff) <= tope) {
-    var last = null;
-    for (var k = conceptos.length - 1; k >= 0; k--) { if (conceptos[k].impuestos) { last = conceptos[k]; break; } }
-    if (last) { last.impuestos.importe = _r2(last.impuestos.importe + diff); }
-    else { last = conceptos[conceptos.length - 1]; last.importe = _r2(last.importe + diff); }
-    tot = _totales(conceptos);
-    diff = _r2(objetivo - tot.total);
-  }
-  if (Math.abs(diff) > tope) {
-    errores.push('El total de la factura ($' + tot.total + ') no cuadra con la remisión ($' + objetivo + '). Diferencia: $' + diff + '. Revisa IVA mixto o datos de la venta.');
+  const tot = _totales(conceptos);
+  const diff = _r2(objetivo - tot.total);
+  if (diff !== 0) {
+    errores.push('El total de la factura ($' + tot.total + ') no cuadra con la remisión ($' + objetivo + '). Diferencia: $' + diff + '. Revisa los importes, descuentos e IVA por renglón.');
   }
 
   const ok = errores.length === 0;
@@ -271,26 +252,9 @@ function construirFacturaGlobal(remisiones, opciones){
   if (tasasMal.length) errores.push('Tasas de IVA no válidas en alguna remisión: ' + [...new Set(tasasMal)].join(', ') + '.');
   if (porConfirmar.length) advertencias.push('Hay claves SAT POR CONFIRMAR con tu contador: ' + [...new Set(porConfirmar)].join(', ') + '.');
 
-  // Mismo tope de absorción que construirCFDI (redondeo por concepto vs. suma
-  // de totales ya redondeados de cada remisión) — ver esa función para el porqué.
-  // OJO: aquí el drift lo generan los RENGLONES FUENTE de las remisiones (cada
-  // uno redondeado con su propio IVA/descuento), no los conceptos agrupados
-  // por tasa que arma la factura global (a lo más 3: 0%/8%/16%). Contar
-  // `conceptos.length` aquí topaba a $0.05 remisiones de 15-20+ renglones que
-  // cuadraban perfecto y las rechazaba como "revisar IVA mixto" (H-02,
-  // hallazgo 2026-09-09) — el tope debe crecer con los renglones de origen,
-  // igual que en construirCFDI.
-  const tope = Math.min(2, Math.max(0.05, 0.01 * renglonesConIva + 0.02));
-  let tot = _totales(conceptos);
-  let diff = _r2(objetivo - tot.total);
-  if (conceptos.length && diff !== 0 && Math.abs(diff) <= tope) {
-    const last = conceptos.slice().reverse().find(c => c.impuestos) || conceptos[conceptos.length - 1];
-    if (last.impuestos) last.impuestos.importe = _r2(last.impuestos.importe + diff);
-    else last.importe = _r2(last.importe + diff);
-    tot = _totales(conceptos);
-    diff = _r2(objetivo - tot.total);
-  }
-  if (Math.abs(diff) > tope) {
+  const tot = _totales(conceptos);
+  const diff = _r2(objetivo - tot.total);
+  if (diff !== 0) {
     errores.push('El total de la factura global ($' + tot.total + ') no cuadra contra la suma de remisiones ($' + objetivo + '). Diferencia: $' + diff + '.');
   }
 
