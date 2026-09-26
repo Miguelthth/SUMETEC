@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#023561">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="logos/sumetec-compras.png" type="image/png">
+  <link rel="apple-touch-icon" href="logos/sumetec-compras.png">
+  <!-- tema-inicial.js va ANTES del CSS (elige día/noche sin parpadeo) --
+       mismo tema del ERP, generado por 16.- IDENTIDAD-NEGOCIO/generar_tema.py.
+       No editar sumetec-tema.css ni tema-inicial.js a mano. -->
+  <script src="tema-inicial.js"></script>
+  <link rel="stylesheet" href="sumetec-tema.css">
+  <link rel="stylesheet" href="actualizacion.css">
+  <link rel="stylesheet" href="estilos.css?v=20260924a">
+  <link rel="stylesheet" href="acceso.css">
+  <title>SUMETEC Compras</title>
+</head>
+<body>
+  <header class="sm-barra">
+    <span class="barra-titulos"><span class="barra-kicker">SUMETEC</span><span class="sm-barra-titulo">Compras</span></span>
+    <button type="button" id="estado" class="sm-chip sm-chip-boton" style="margin-left:auto" aria-label="Estado de envío (toca para enviar pendientes)">Sin conexión</button>
+    <button type="button" class="btn-barra" id="btnMasMenu" aria-haspopup="true" aria-expanded="false" aria-controls="masMenu" aria-label="Más opciones"><span class="btn-barra-puntos" aria-hidden="true">⋮</span></button>
+  </header>
+
+  <!-- Rediseño 2026-09-24: enviar, tema y versión salen de la pantalla a este
+       menú (mismo patrón que Dirección y Gastos). -->
+  <div id="masMenu" class="mas-menu" hidden>
+    <div class="mas-menu-grupo">
+      <span class="mas-menu-titulo">Este celular</span>
+      <button type="button" id="enviar-compras"><i class="bi bi-cloud-arrow-up"></i> Enviar compras pendientes</button>
+    </div>
+    <div class="mas-menu-grupo">
+      <span class="mas-menu-titulo">Ajustes</span>
+      <button type="button" onclick="_cerrarMasMenu_();alternarTemaSumetec()"><i class="bi bi-moon-stars"></i> Modo claro / oscuro</button>
+      <button type="button" onclick="_cerrarMasMenu_();limpiarCacheLocal()" title="Borrar copias guardadas en este teléfono"><i class="bi bi-eraser"></i> Borrar copias de este teléfono</button>
+      <button type="button" id="badgeVersion" onclick="_cerrarMasMenu_();_mostrarVersionInstalada()" title="Ver actualización de software"><i class="bi bi-info-circle"></i> Actualización de software</button>
+    </div>
+  </div>
+
+  <div class="hoja">
+    <main id="app"></main>
+  </div>
+
+  <dialog id="eq-modal">
+    <form method="dialog" onsubmit="return false">
+      <h2>Vincular código del proveedor</h2>
+      <p class="text-muted" style="font-size:13px">Dile a la app a qué producto tuyo equivale este código. Queda guardado: la próxima vez se traduce solo.</p>
+      <label class="form-label" for="eq-cprov">Código del proveedor<input id="eq-cprov" class="form-control mono" readonly></label>
+      <label class="form-label" for="eq-mio">Mi código<input id="eq-mio" class="form-control mono" list="dl-productos-compra" autocomplete="off" maxlength="10" oninput="_eqMioCambio_()"></label>
+      <div id="eq-sugerencias" style="font-size:12px;margin-bottom:6px"></div>
+      <div id="eq-mio-ayuda" class="text-muted" style="font-size:12px;margin-bottom:6px"></div>
+      <label class="form-label" style="display:flex;gap:8px;align-items:center"><input id="eq-nuevo" type="checkbox" onchange="_eqMioCambio_()"> Es un producto nuevo (crearlo)</label>
+      <label class="form-label" for="eq-desc" id="eq-desc-wrap" style="display:none">Descripción del producto nuevo<input id="eq-desc" class="form-control"></label>
+      <label class="form-label" for="eq-factor">Factor: piezas mías por cada unidad del proveedor (caja de 100 → 100; pieza → 1)<input id="eq-factor" class="form-control" type="number" min="0.0001" step="0.0001" value="1"></label>
+      <p id="eq-error" class="text-rojo" role="alert"></p>
+      <div class="fila">
+        <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('eq-modal').close()">Cancelar</button>
+        <button type="button" class="btn btn-success" onclick="_guardarEquivalenciaCompra_()"><i class="bi bi-check-circle"></i> Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="evidencia-modal">
+    <form method="dialog">
+      <h2>¿Tienes foto del ticket o factura?</h2>
+      <p class="text-muted">Sirve de evidencia de esta compra. Puedes omitirla, pero queda registrada como "sin evidencia".</p>
+      <div class="fila">
+        <button type="submit" value="foto" class="btn btn-success"><i class="bi bi-camera"></i> Tomar foto</button>
+        <button type="submit" value="omitir" class="btn btn-outline-secondary">Omitir</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="vincular" class="sumetec-acceso" style="--acento:#54c99a">
+    <form method="dialog" class="sumetec-acceso-panel">
+      <div class="sumetec-acceso-cabecera">
+        <div class="sumetec-acceso-marca">Compras · SUMETEC<small>● En línea</small></div>
+<details id="ayuda-compras" class="sumetec-acceso-ayuda sumetec-acceso-ayuda--solo-enlace"><summary aria-label="Información para vincular">i</summary>
+          <div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración la dirección de conexión y el código para este teléfono. Copia cada dato tal como te lo compartan.</p><p>Elige un PIN de al menos cuatro números y guárdalo en un lugar seguro. Si el código no funciona, pide uno nuevo.</p><p>Si olvidas tu PIN, vuelve a vincular este teléfono. Lo que tengas pendiente se conserva.</p></div>
+        </details>
+      </div>
+      <div class="sumetec-acceso-intro">
+        <div class="sumetec-acceso-candado" aria-hidden="true">🔒</div>
+        <h2>Vincular teléfono</h2>
+        <p class="sumetec-acceso-descripcion">Conecta este equipo de forma segura.</p>
+      </div>
+      <div class="sumetec-acceso-campos">
+        <div class="sumetec-acceso-campo sumetec-acceso-campo--extra"><label for="url">URL del servidor</label><input id="url" class="form-control" placeholder="https://script.google.com/.../exec" inputmode="url" autocomplete="off"></div>
+        <div class="sumetec-acceso-campo sumetec-acceso-campo--principal"><label for="codigo">Código de vinculación</label><input id="codigo" class="form-control" style="text-transform:uppercase" placeholder="8 caracteres" maxlength="8" autocapitalize="characters"></div>
+        <div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="pin">PIN privado</label><input id="pin" class="form-control" type="password" inputmode="numeric" placeholder="Mínimo 4 dígitos"></div>
+      </div>
+      <p id="vincular-estado" class="sumetec-acceso-error" role="status" aria-live="polite"></p>
+      <button id="enlazar" class="sumetec-acceso-boton" value="default">Vincular</button>
+      <button type="button" class="sumetec-acceso-enlace" aria-controls="ayuda-compras" aria-expanded="false" onclick="sumetecAbrirAyuda('ayuda-compras')">¿Necesitas ayuda?</button>
+    </form>
+  </dialog>
+
+  <dialog id="pin-modal">
+    <form method="dialog">
+      <h2>PIN de este teléfono</h2>
+      <label class="form-label" for="pin-modal-input">PIN</label>
+      <input id="pin-modal-input" class="form-control" type="password" inputmode="numeric" autocomplete="off" required>
+      <p id="pin-modal-error" class="text-rojo" role="alert"></p>
+      <details style="margin:0 0 8px;font-size:.85rem"><summary>¿Olvidaste tu PIN?</summary>
+        <p style="margin:6px 0 4px">No se puede recuperar. Primero, en Apps Script del Cotizador ejecuta <b>GENERAR_CODIGO_VINCULACION</b> y copia el código (vale 10 min). Luego pulsa el botón: vincula el teléfono otra vez con un PIN nuevo. Lo pendiente de enviar no se pierde.</p>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="reiniciarVinculo()">Vincular de nuevo</button></details>
+      <div class="fila">
+        <button type="button" value="cancel" class="btn btn-outline-secondary" onclick="this.closest('dialog').close('cancel')">Cancelar</button>
+        <button type="submit" value="ok" class="btn btn-success"><i class="bi bi-check-circle"></i> Continuar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="version.js"></script>
+  <script src="seguridad.js"></script>
+  <script src="compras.js"></script>
+  <script src="acceso.js"></script>
+  <script src="app.js"></script>
+  <div id="sumetecActualizacion" role="status" aria-live="assertive"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje">⚙</span><strong>Actualizando SUMETEC</strong><p>Espera un momento…</p></div></div>
+  <script src="actualizacion.js"></script>
+</body>
+</html>

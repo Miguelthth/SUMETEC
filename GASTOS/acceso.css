@@ -1,0 +1,107 @@
+/* Pantalla de vinculación común de las cinco apps SUMETEC. */
+.sumetec-acceso {
+  --acento: #d99c2b;
+  --acceso-tope: max(40px, calc(env(safe-area-inset-top) + 8px));
+  --acceso-intro: 300px;
+  --acceso-fila: 82px;
+  --acceso-campos: calc(var(--acceso-fila) * 3);
+  --acceso-error: 40px;
+  --acceso-ayuda-fila: 40px;
+  position: fixed; inset: 0; z-index: 2147483000;
+  box-sizing: border-box; overflow-x: hidden; overflow-y: auto;
+  background: #071d2d; color: #f6fbff;
+  padding: 0 20px max(20px, env(safe-area-inset-bottom));
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}
+div.sumetec-acceso { align-items: flex-start; justify-content: center; }
+dialog.sumetec-acceso {
+  width: 100%; height: 100%; max-width: none; max-height: none;
+  margin: 0; border: 0; border-radius: 0;
+}
+dialog.sumetec-acceso[open] { display: flex; align-items: flex-start; justify-content: center; }
+dialog.sumetec-acceso::backdrop { background: #071d2d; }
+.sumetec-acceso::before {
+  content: ""; position: fixed; top: 30%; right: 0;
+  width: min(58vw, 280px); height: min(58vw, 280px);
+  background: url("logos/sumetec-marca.png") 65px center / contain no-repeat;
+  opacity: .09; pointer-events: none;
+}
+.sumetec-acceso-panel {
+  position: relative; z-index: 1; box-sizing: border-box;
+  width: min(100%, 380px); min-width: 0; margin: 0 auto;
+  padding-top: var(--acceso-tope);
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 48px var(--acceso-intro) var(--acceso-campos) var(--acceso-error) 48px var(--acceso-ayuda-fila);
+}
+.sumetec-acceso-cabecera {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  grid-row: 1; box-sizing: border-box; height: 48px;
+  border-bottom: 3px solid var(--acento); padding: 0 0 9px;
+  margin: 0;
+}
+.sumetec-acceso-marca { font-size: 17px; font-weight: 750; line-height: 1.25; color: #fff; }
+.sumetec-acceso-marca small { display: block; margin-top: 3px; font-size: 11px; font-weight: 500; color: #8ee6bd; }
+.sumetec-acceso-ayuda { position: relative; z-index: 2; }
+.sumetec-acceso-ayuda summary {
+  display: grid; place-items: center; width: 36px; height: 36px;
+  border: 2px solid var(--acento); border-radius: 50%;
+  color: var(--acento); font-size: 20px; font-weight: 700; cursor: pointer;
+  list-style: none;
+}
+.sumetec-acceso-ayuda summary::-webkit-details-marker { display: none; }
+.sumetec-acceso-ayuda--solo-enlace summary { display: none; }
+.sumetec-acceso-ayuda[open] .sumetec-acceso-ayuda-contenido {
+  position: fixed; right: 20px; bottom: max(68px, calc(env(safe-area-inset-bottom) + 44px)); width: min(310px, calc(100vw - 42px));
+  box-sizing: border-box; padding: 15px 17px; border-radius: 12px;
+  background: #17364b; color: #eef7fb; border: 1px solid #527087;
+  box-shadow: 0 14px 32px #0008; font-size: 13px; line-height: 1.5;
+}
+.sumetec-acceso-ayuda-contenido p, .sumetec-acceso-ayuda-contenido ol { margin: 0 0 8px; }
+.sumetec-acceso-ayuda-contenido :last-child { margin-bottom: 0; }
+.sumetec-acceso-candado {
+  display: grid; place-items: center; width: 76px; height: 76px;
+  border: 2px solid var(--acento); border-radius: 50%;
+  margin: 0 auto 14px; font-size: 36px;
+}
+.sumetec-acceso-intro {
+  grid-row: 2; box-sizing: border-box; display: flex;
+  flex-direction: column; justify-content: flex-end;
+  padding-bottom: 20px;
+}
+.sumetec-acceso h2 { text-align: center; color: #fff; font-size: 22px; line-height: 1.25; margin: 0 0 6px; text-transform: none; letter-spacing: normal; }
+.sumetec-acceso-descripcion { text-align: center; color: #b9cad6; font-size: 13px; margin: 0; }
+.sumetec-acceso-campos {
+  grid-row: 3; min-width: 0; display: grid;
+  grid-template-rows: repeat(3, var(--acceso-fila));
+}
+.sumetec-acceso-campo { min-width: 0; align-self: start; }
+.sumetec-acceso-campo--extra { grid-row: 1; }
+.sumetec-acceso-campo--principal { grid-row: 2; }
+.sumetec-acceso-campo--secundario { grid-row: 3; }
+.sumetec-acceso label { display: block; color: #edf5fa; font-size: 13px; font-weight: 600; margin: 13px 0 6px; }
+.sumetec-acceso-campo label { margin: 0 0 6px; }
+.sumetec-acceso input {
+  box-sizing: border-box; display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 46px;
+  padding: 11px 13px; border: 1px solid var(--acento); border-radius: 9px;
+  background: #122d41; color: #fff; font: inherit; font-size: 15px;
+}
+.sumetec-acceso input::placeholder { color: #a7b9c5; }
+.sumetec-acceso input:focus-visible, .sumetec-acceso summary:focus-visible,
+.sumetec-acceso button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.sumetec-acceso .sumetec-acceso-boton {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  grid-row: 5; box-sizing: border-box; width: 100%; min-height: 48px; margin: 0;
+  border: 0; border-radius: 9px; background: var(--acento); color: #102335;
+  font: inherit; font-weight: 750; font-size: 15px; cursor: pointer;
+}
+.sumetec-acceso .sumetec-acceso-boton:disabled { opacity: .65; cursor: wait; }
+.sumetec-acceso .sumetec-acceso-boton.sumetec-entrando::before {
+  content: ""; display: block; width: 22px; height: 22px;
+  background: url("logos/sumetec-marca.png") center / contain no-repeat;
+  animation: sumetec-giro-entrada 1s linear infinite;
+}
+.sumetec-acceso-enlace { grid-row: 6; display: block; align-self: start; height: 22px; min-height: 22px; padding: 0; margin: 12px auto 0; color: var(--acento); background: none; border: 0; text-decoration: underline; font: inherit; font-size: 12px; line-height: 22px; cursor: pointer; }
+.sumetec-acceso-error { grid-row: 4; min-height: 0; max-height: 30px; overflow: auto; margin: 0; color: #ffb0b0; font-size: 13px; line-height: 1.2; text-align: center; align-self: center; }
+body.sin-sesion > header, body.sin-sesion > #masMenu { visibility: hidden; }
+@keyframes sumetec-giro-entrada { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sumetec-acceso .sumetec-entrando::before { animation-duration: 3s; } }

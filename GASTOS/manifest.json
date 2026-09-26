@@ -1,0 +1,16 @@
+{
+  "name": "SUMETEC Gastos",
+  "short_name": "Gastos",
+  "start_url": "./gastos.html",
+  "display": "standalone",
+  "background_color": "#057448",
+  "theme_color": "#023561",
+  "icons": [
+    {
+      "src": "logos/sumetec-gastos.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

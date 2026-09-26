@@ -1,0 +1,381 @@
+/* estilos.css -- SOLO lo específico de Dirección (layout, navegación, cajón
+   de billetes, historial, prioridades). Los colores, la letra, los botones,
+   campos y tarjetas base vienen de sumetec-tema.css (generado del ERP por
+   16.- IDENTIDAD-NEGOCIO/generar_tema.py -- no editar ese archivo a mano).
+   Todo lo de aquí usa los tokens --sm-* del tema; nunca un color propio. */
+
+body { max-width: 720px; margin: 0 auto; padding: 0 0 calc(96px + env(safe-area-inset-bottom)); }
+
+.hoja { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Navegación inferior (rediseño 2026-09-24): al alcance del pulgar,
+   siempre visible. Mismos data-vista; la sección activa lleva la marca
+   verde arriba del icono. ── */
+.sm-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 720px; margin: 0 auto;
+  padding: 4px 6px max(8px, env(safe-area-inset-bottom));
+  background: var(--sm-surface); border-top: 1px solid var(--sm-line);
+  box-shadow: 0 -10px 26px rgb(8 43 70 / .10);
+}
+.btn-nav {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  min-height: 56px; padding: 6px 2px;
+  font: inherit; font-size: 11.5px; font-weight: 500;
+  color: var(--sm-muted);
+  background: none; border: none; border-radius: var(--sm-r-sm);
+  cursor: pointer;
+  transition: color var(--sm-motion-standard) var(--sm-motion-ease);
+}
+.btn-nav .bi { font-size: 21px; }
+.btn-nav::before {
+  content: ""; position: absolute; top: 0; left: 50%;
+  width: 28px; height: 3px; margin-left: -14px; border-radius: 0 0 3px 3px;
+  background: transparent;
+  transition: background var(--sm-motion-standard) var(--sm-motion-ease);
+}
+.btn-nav.activo { color: var(--sm-ink); font-weight: 600; }
+.btn-nav.activo .bi { color: var(--sm-green-texto); }
+.btn-nav.activo::before { background: var(--sm-green); }
+body.sin-sesion .sm-nav { visibility: hidden; }
+
+/* ── Barra superior: dice en qué sección estás ── */
+.barra-titulos { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.15; }
+.barra-kicker { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: rgb(255 255 255 / .72); }
+.sm-barra .sm-barra-titulo { font-size: 17px; }
+.btn-barra-puntos { font-size: 22px; line-height: 1; }
+#app h1 { display: none; }
+
+/* ── Chip de estado permanente -- el texto se queda blanco (mismo que el
+   .sm-chip original, sobre el fondo translúcido de la barra); el color
+   de estado vive SOLO en el punto (currentColor lo hereda del span). ── */
+.sm-chip-boton { border: none; cursor: pointer; font: inherit; }
+.sm-chip-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; color: #eef0f2; }
+#estado.chip-en-linea .sm-chip-punto { color: #6fe093; }
+#estado.chip-pendientes .sm-chip-punto, #estado.chip-sin-red .sm-chip-punto { color: #ffce6b; }
+#estado.chip-enviando .sm-chip-punto { color: #8ec4ff; }
+
+/* ── Menú "☰ Más", agrupado por categoría ── */
+.mas-menu[hidden] { display: none; }
+.mas-menu {
+  position: fixed; top: 60px; right: 12px; z-index: 30;
+  width: 250px; max-width: calc(100vw - 24px);
+  background: var(--sm-surface); border: 1px solid var(--sm-line);
+  border-radius: var(--sm-r-md); box-shadow: var(--sm-shadow-sereno);
+  padding: 10px; display: flex; flex-direction: column; gap: 14px;
+}
+.mas-menu-grupo { display: flex; flex-direction: column; gap: 2px; }
+.mas-menu-titulo {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--sm-muted); padding: 4px 8px 2px;
+}
+.mas-menu-grupo button {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 8px; text-align: left;
+  font: inherit; font-size: 13.5px; color: var(--sm-ink);
+  background: none; border: none; border-radius: var(--sm-r-sm); cursor: pointer;
+}
+.mas-menu-grupo button:hover { background: var(--sm-control-fondo); }
+
+.fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ── Caja: campos secundarios colapsables en celular (siempre visibles en
+   escritorio -- ver .campos-mas / .btn-mas-campos en formularioCajaDireccion) ── */
+.btn-mas-campos {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 40px; padding: 6px 2px; margin: 0;
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--sm-accent);
+  background: none; border: none; border-top: 1px solid var(--sm-line); cursor: pointer;
+}
+.btn-mas-campos .resumen-campos { font-weight: 400; font-size: 11.5px; color: var(--sm-muted); }
+.campos-mas { display: none; flex-direction: column; gap: 10px; }
+.campos-mas.abierto { display: flex; }
+@media (min-width: 640px) {
+  .btn-mas-campos { display: none; }
+  .campos-mas { display: flex !important; }
+}
+
+/* ── Caja: lista de movimientos de hoy (renderMovimientosCaja, caja.js) ── */
+#lista-caja-cuerpo ul {
+  list-style: none; padding: 0; margin: 10px 0 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+#lista-caja-cuerpo li {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px; font-size: 13px;
+  border: 1px solid var(--sm-line); border-radius: var(--sm-r-sm);
+}
+#lista-caja-cuerpo li.anulado { opacity: .6; }
+#lista-caja-cuerpo li .mov-info { flex: 1; min-width: 0; }
+#lista-caja-cuerpo li .mov-linea1 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+#lista-caja-cuerpo li .mov-monto { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#lista-caja-cuerpo li .mov-monto.pos { color: var(--sm-green-texto); }
+#lista-caja-cuerpo li .mov-monto.neg { color: #b3261e; }
+#lista-caja-cuerpo li .mov-monto.neutro { color: var(--sm-muted, #6b7280); }
+#lista-caja-cuerpo li .mov-tipo { font-size: 13px; font-weight: 600; }
+#lista-caja-cuerpo li .mov-linea2 {
+  display: block; font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11.5px; color: var(--sm-muted); margin-top: 2px;
+}
+#lista-caja-cuerpo li .mov-anulado-tag { font-size: 11px; font-weight: 700; color: var(--sm-aviso); }
+#lista-caja-cuerpo button.anular {
+  flex: none; min-height: 40px; padding: 4px 11px;
+  font: inherit; font-size: 12px; font-weight: 600;
+  color: var(--sm-accent); background: transparent;
+  border: 1px solid var(--sm-border-soft); border-radius: var(--sm-r-sm);
+  cursor: pointer;
+}
+
+/* ── Resumen ── */
+.metricas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.metricas .card-body { padding: 12px 14px; }
+.metricas .num { text-align: left; font-size: 20px; font-weight: 700; }
+.oficial { color: var(--sm-muted); font-size: 12.5px; }
+
+/* Bug real (visto en el CSS, 2026-09-11): esta sección y "Qué necesita tu
+   atención" usaban un fondo oscuro fijo (#172b3b) con texto heredado casi
+   del mismo tono (#102a43) -- texto oscuro sobre fondo oscuro, casi
+   ilegible en cualquier tema. Con .card del tema el fondo/tinta ya voltean
+   solos entre día y noche. */
+.pendientes .card-body p { margin: 0 0 4px; }
+.pendientes small { color: var(--sm-muted); }
+
+.prioridades-erp h2 { margin-bottom: 8px; }
+.prioridades { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .5rem; }
+.prioridades li {
+  border: 1px solid var(--sm-line);
+  border-left-width: 4px;
+  border-radius: var(--sm-r-sm);
+  padding: .6rem .8rem;
+  background: var(--sm-glass-tarjeta-fondo);
+}
+.prioridades li.nivel-danger { border-left-color: var(--sm-chart-4); }
+.prioridades li.nivel-warning { border-left-color: var(--sm-aviso); }
+.prioridades li.nivel-info, .prioridades li.nivel-secondary { border-left-color: var(--sm-accent); }
+.prioridades .detalle, .prioridades .pantalla { display: block; font-size: .85rem; color: var(--sm-muted); }
+.sin-prioridades { color: var(--sm-muted); }
+
+/* ── Corte: "El cajón" (F2 del plan de diseño, 2026-09-11) ──
+   Único lugar de toda la app con colores propios, fuera del tema del ERP --
+   decisión explícita de Miguel (PLAN_DISENO_TEMA_ERP §1): son los colores
+   reales de los billetes/monedas mexicanos, no de marca. La denominación
+   siempre va escrita en texto grande junto al color -- el color nunca es la
+   única señal (persona con daltonismo la sigue leyendo igual). */
+:root {
+  --billete-1000: #8e5fd1;  /* lila */
+  --billete-500: #2f6fd6;   /* azul */
+  --billete-200: #1f8a2d;   /* verde */
+  --billete-100: #c0392b;   /* rojo */
+  --billete-50: #c0298a;    /* magenta */
+  --billete-20: #17a2b8;    /* turquesa */
+  --billete-10: #9aa5ad;    /* plata */
+  --billete-5: #b6c0c8;     /* plata clara */
+  --billete-2: #b08d57;     /* bronce */
+  --billete-0-5: #cdb37a;   /* bronce claro */
+}
+
+/* Rediseño 2026-09-24: el billetero es una tabla -- una fila por
+   denominación con −, cantidad, + y subtotal. Sin color de billete
+   (decisión de Miguel al aprobar la propuesta); los tokens de arriba se
+   conservan para _htmlBarraEfectivo. */
+#denominaciones-corte.billetero { display: block; min-width: 0; border: 0; padding: 0; margin: 0; }
+#denominaciones-corte legend { padding: 0 0 6px; }
+.denominacion {
+  display: grid; grid-template-columns: 58px 44px minmax(52px, 72px) 44px minmax(0, 1fr);
+  align-items: center; gap: 4px;
+  min-height: 48px; padding: 0 4px;
+  border-bottom: 1px solid var(--sm-line);
+}
+.denominacion:first-of-type { border-top: 1px solid var(--sm-line); }
+.billete-etiqueta { font-size: 14px; font-weight: 600; color: var(--sm-ink); font-variant-numeric: tabular-nums; }
+.billete-boton {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px;
+  font-size: 20px; font-weight: 600; line-height: 1;
+  color: var(--sm-accent); background: none;
+  border: 0; border-radius: var(--sm-r-sm); cursor: pointer;
+}
+.billete-boton:hover { background: var(--sm-surface-2); }
+.billete-boton:active { background: color-mix(in srgb, var(--sm-accent) 14%, transparent); }
+.billete-menos { color: var(--sm-muted); }
+.denominacion input.cant-denominacion {
+  width: 100%; box-sizing: border-box; min-height: 40px; text-align: center;
+  font: inherit; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums;
+  color: var(--sm-control-tinta); background: var(--sm-control-fondo);
+  border: 1px solid var(--sm-border-soft); border-radius: var(--sm-r-xs);
+  padding: 2px;
+}
+.denominacion:not(.con-cantidad) input.cant-denominacion { color: var(--sm-muted); }
+.billete-subtotal { text-align: right; font-size: 13px; color: var(--sm-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.denominacion.con-cantidad .billete-subtotal { color: var(--sm-body-text); }
+@media (max-width: 340px) {
+  .denominacion { grid-template-columns: 48px 40px minmax(44px, 1fr) 40px minmax(0, 1fr); }
+  .billete-boton { width: 40px; }
+}
+
+/* ── Corte: dos columnas en escritorio -- billetero a la izquierda, arqueo
+   fijo (sticky) a la derecha; envuelve #form-corte + #resultado-corte sin
+   tocar su HTML/JS interno, mismo patrón que Remisiones. ── */
+@media (min-width: 900px) {
+  .corte-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+  #resultado-corte, .corte-layout #form-corte ~ #resultado-corte { position: sticky; top: 72px; }
+}
+
+/* ── Objetivos táctiles: 44px mínimo (Miguel captura de pie, con prisa) ── */
+#form-caja .form-control, #form-caja .form-select,
+#form-corte .form-control, #form-corte .form-select { min-height: 44px; }
+
+/* La barra se llena con los mismos colores, proporcional a cuánto pesa cada
+   denominación en el total contado (_segmentosEfectivo, corte.js). */
+.barra-efectivo {
+  display: flex; height: 10px; border-radius: var(--sm-r-pill); overflow: hidden;
+  background: var(--sm-line);
+}
+.barra-efectivo span { height: 100%; transition: width var(--sm-motion-standard) var(--sm-motion-ease); }
+
+/* ── Compra: dato leído por la IA ── */
+.ia-tocado { background: color-mix(in srgb, var(--sm-aviso) 16%, var(--sm-control-fondo)); border-color: var(--sm-aviso) !important; }
+
+/* ── Compras: líneas y pagos ── */
+#lineas-compra, #pagos-compra { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 8px; }
+#lineas-compra li, #pagos-compra li { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; }
+#lineas-compra li { grid-template-columns: 1fr 2fr 1fr 1fr auto; }
+#lineas-compra input, #pagos-compra input, #pagos-compra select { min-width: 0; }
+
+/* ── Compras: historial reciente ── */
+.historial-compras { list-style: none; padding: 0; margin: .5rem 0 0; display: flex; flex-direction: column; gap: .5rem; }
+.historial-item {
+  border: 1px solid var(--sm-line); border-radius: var(--sm-r-sm); padding: .6rem .8rem;
+  display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center;
+}
+.historial-item .proveedor { font-weight: 600; }
+.historial-item .fecha { color: var(--sm-muted); width: 100%; font-size: .85rem; }
+.leyenda { color: var(--sm-muted); font-size: .85rem; margin: .3rem 0; }
+.vacio { color: var(--sm-muted); }
+
+#pin-modal h2 { text-align: center; }
+
+/* ── Mensaje flotante (toast): el tema le da el vidrio, aquí la posición ── */
+#toast { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 1000; display: none; max-width: 688px; margin: 0 auto; }
+#toast.show { display: block; }
+
+/* ── Inventario (F4 del plan de diseño, 2026-09-11) ── */
+.fila-producto {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--sm-line);
+}
+.fila-producto:last-child { border-bottom: 0; }
+.fila-producto .info { flex: 1; min-width: 0; }
+.fila-producto .codigo { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; color: var(--sm-muted); }
+.fila-producto .btn { min-height: 40px; padding: 6px 10px; }
+.inv-cantidad { width: 84px; flex: 0 0 84px; text-align: right; }
+.inv-cat { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; cursor: pointer; }
+.inv-cat-todo { font-weight: 600; border-bottom: 1px solid var(--sm-line); margin-bottom: 2px; padding: 8px 0; }
+.inv-sello { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; }
+.inv-sello .btn { flex-shrink: 0; min-height: 36px; padding: 4px 10px; font-size: 12px; }
+.inv-acciones { display: grid; gap: 8px; }
+.inv-teorico { cursor: pointer; text-decoration: underline dotted; }
+.inv-nuevo { color: var(--sm-accent); font-size: 11px; font-weight: 700; }
+/* Pegada debajo de la barra de arriba (.sm-barra mide 56px). */
+.inv-barra {
+  position: sticky; top: 56px; z-index: 5;
+  padding: 8px 14px; font-size: 12px; color: var(--sm-muted);
+  background: var(--sm-surface); border: 1px solid var(--sm-line);
+  border-radius: var(--sm-r-sm); box-shadow: var(--sm-shadow-sereno);
+}
+
+/* C2: sin sesión no se ve ningún dato detrás del candado */
+body.sin-sesion .hoja, body.sin-sesion #app { visibility: hidden; }
+
+/* ═══ Rediseño 2026-09-24 (propuesta "antes y después" aprobada) ═══════
+   Solo presentación; todo con tokens --sm-* del tema del ERP. Respaldo en
+   _backups/2026-09-24_rediseno_antes_despues/. */
+#toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
+
+/* Resumen: sello de frescura, cifra principal, cuadrícula compacta */
+.dir-sello { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--sm-muted); }
+.dir-sello > .bi { color: var(--sm-green-texto); font-size: 15px; }
+.dir-sello .oficial { flex: 1; min-width: 0; margin: 0; }
+.btn-sello {
+  flex: none; display: inline-flex; align-items: center; gap: 5px;
+  min-height: 40px; padding: 0 10px;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--sm-accent);
+  background: none; border: 0; border-radius: var(--sm-r-sm); cursor: pointer;
+}
+.btn-sello:hover { background: var(--sm-surface-2); }
+.dir-heroe { display: flex; flex-direction: column; gap: 6px; }
+.dir-heroe span { font-size: 13px; color: var(--sm-muted); }
+.dir-heroe strong { font-size: 36px; font-weight: 600; letter-spacing: -.02em; line-height: 1.05; color: var(--sm-ink); font-variant-numeric: tabular-nums; }
+.dir-heroe::after { content: ""; width: 56px; height: 3px; margin-top: 4px; border-radius: 2px; background: var(--sm-green); }
+.metricas { gap: 1px; background: var(--sm-line); border: 1px solid var(--sm-line); border-radius: var(--sm-r-md); overflow: hidden; }
+.metrica { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; background: var(--sm-surface); font-size: 12px; color: var(--sm-muted); }
+.metrica .num { font-size: 16px; font-weight: 600; text-align: left; color: var(--sm-ink); font-variant-numeric: tabular-nums; }
+.metrica-ancha { grid-column: 1 / -1; }
+.prioridades li { display: flex; flex-direction: column; gap: 3px; }
+.prioridad-cabeza { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.prioridad-nivel { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: var(--sm-r-pill); }
+.nivel-danger .prioridad-nivel { color: var(--sm-chart-4); background: color-mix(in srgb, var(--sm-chart-4) 12%, transparent); }
+.nivel-warning .prioridad-nivel { color: var(--sm-aviso); background: color-mix(in srgb, var(--sm-aviso) 14%, transparent); }
+.nivel-info .prioridad-nivel, .nivel-secondary .prioridad-nivel { color: var(--sm-accent); background: color-mix(in srgb, var(--sm-accent) 12%, transparent); }
+.prioridades .pantalla { color: var(--sm-accent); font-weight: 600; font-size: .8rem; }
+.pendientes-linea { display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: var(--sm-muted); }
+.pendientes-linea > .bi { font-size: 16px; margin-top: 1px; }
+.pendientes-linea h2 { margin: 0 0 2px; font-size: 13px; color: var(--sm-ink); }
+.pendientes-linea p { margin: 0; }
+
+/* Caja: tipo de movimiento en chips, monto grande */
+.sm-oculto { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; margin: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; opacity: 0; pointer-events: none; }
+.caja-clases { display: flex; flex-wrap: wrap; gap: 6px; }
+.caja-chip {
+  min-height: 44px; padding: 0 14px;
+  font: inherit; font-size: 13px; font-weight: 500; color: var(--sm-body-text);
+  background: var(--sm-surface); border: 1px solid var(--sm-border-soft); border-radius: var(--sm-r-pill);
+  cursor: pointer;
+}
+.caja-chip[aria-pressed="true"] { color: var(--sm-ink); font-weight: 600; border-color: var(--sm-green); background: color-mix(in srgb, var(--sm-green) 12%, var(--sm-surface)); box-shadow: inset 0 0 0 1px var(--sm-green); }
+#form-caja .caja-monto { min-height: 56px; font-size: 24px; font-variant-numeric: tabular-nums; }
+
+/* Corte: arqueo en vivo (fijo arriba mientras cuentas) + aviso como banner */
+.arqueo-vivo {
+  position: sticky; top: 60px; z-index: 6;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 14px;
+  background: var(--sm-surface); border: 1px solid var(--sm-line);
+  border-radius: var(--sm-r-md); box-shadow: var(--sm-shadow-sereno);
+}
+.arqueo-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.arqueo-cifras div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.arqueo-cifras span { font-size: 11.5px; color: var(--sm-muted); }
+.arqueo-cifras strong { font-size: 16px; font-weight: 600; color: var(--sm-ink); font-variant-numeric: tabular-nums; }
+.arqueo-cifras strong.text-verde { color: var(--sm-green-texto); }
+.arqueo-cifras strong.text-aviso { color: var(--sm-aviso); }
+.arqueo-cifras strong.text-rojo { color: var(--sm-chart-4); }
+.arqueo-barra { height: 6px; border-radius: var(--sm-r-pill); background: var(--sm-line); overflow: hidden; }
+.arqueo-barra span { display: block; width: 0; height: 100%; background: var(--sm-green); transition: width var(--sm-motion-standard) var(--sm-motion-ease); }
+.arqueo-nota { margin: 0; font-size: 12px; color: var(--sm-muted); }
+.aviso-banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; font-size: 13px; line-height: 1.45; color: var(--sm-body-text);
+  background: color-mix(in srgb, var(--sm-aviso) 10%, var(--sm-surface));
+  border: 1px solid color-mix(in srgb, var(--sm-aviso) 40%, transparent);
+  border-radius: var(--sm-r-sm);
+}
+.aviso-banner .bi { flex: none; margin-top: 1px; font-size: 16px; color: var(--sm-aviso); }
+.corte-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.corte-contado { display: none; }
+
+/* Inventario: avisos como etiquetas, herramientas en una lista */
+.inv-cat { min-height: 44px; }
+.inv-cat-nombre { flex: 1; min-width: 0; }
+.inv-tag { display: inline-flex; align-items: center; flex: none; padding: 2px 8px; font-size: 11px; font-weight: 600; border: 1px solid currentColor; border-radius: var(--sm-r-pill); }
+.inv-acciones { display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; }
+.inv-acciones .btn {
+  justify-content: flex-start; gap: 10px;
+  min-height: 48px; padding: 0 14px;
+  font-weight: 500; text-align: left; color: var(--sm-ink);
+  background: none; border: 0; border-bottom: 1px solid var(--sm-line); border-radius: 0;
+}
+.inv-acciones .btn:last-child { border-bottom: 0; }
+.inv-acciones .btn .bi { color: var(--sm-icon-muted); }

@@ -1,0 +1,182 @@
+/* estilos.css -- SOLO lo específico de Compras (layout, historial, IA
+   tocada). Los colores, la letra, botones, campos y tarjetas base vienen de
+   sumetec-tema.css (generado del ERP por 16.- IDENTIDAD-NEGOCIO/
+   generar_tema.py -- no editar ese archivo a mano). Copiado y recortado de
+   14.- SUMETEC DIRECCION/estilos.css (sin nav, sin denominaciones de
+   Corte -- Compras es una sola pantalla). */
+
+body { max-width: 900px; margin: 0 auto; padding: 0 0 calc(96px + env(safe-area-inset-bottom)); }
+
+.hoja { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+.fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ── Compras: chip de estado con punto de color (siempre visible) ── */
+.sm-chip-punto { width: 7px; height: 7px; border-radius: 999px; background: rgb(255 255 255 / .6); flex: none; }
+.sm-chip--ok .sm-chip-punto { background: var(--sm-green); }
+.sm-chip--warn .sm-chip-punto { background: var(--sm-chart-3); }
+.sm-chip--info .sm-chip-punto { background: var(--sm-chart-1); }
+.sm-chip--err { background: color-mix(in srgb, var(--sm-chart-4) 40%, rgb(255 255 255 / .16)); border-color: color-mix(in srgb, var(--sm-chart-4) 60%, rgb(255 255 255 / .22)); }
+.sm-chip--err .sm-chip-punto { background: #fff; box-shadow: 0 0 0 3px color-mix(in srgb, var(--sm-chart-4) 55%, transparent); }
+
+/* ── Compras: pestañas Capturar / Historial ── */
+/* Rediseño 2026-09-24: control segmentado de una fila */
+.compras-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; padding: 3px; border: 1px solid var(--sm-border-soft); border-radius: 10px; background: var(--sm-surface-2); }
+.compras-tab { appearance: none; min-height: 44px; border: none; background: none; cursor: pointer; font: inherit; font-weight: 500; font-size: 14px; color: var(--sm-muted); border-radius: 7px; }
+.compras-tab.activa { color: var(--sm-ink); font-weight: 600; background: var(--sm-surface); box-shadow: 0 1px 3px rgb(8 43 70 / .14), inset 0 0 0 1px var(--sm-accent); }
+.compras-panel[hidden] { display: none; }
+
+/* ── Compras: cámara primero (vía principal de captura, como en Gastos) ── */
+.compras-foto-cta { display: flex; flex-direction: column; }
+.visually-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ── Compras: campos secundarios colapsables ── */
+.compras-detalles { border: 1px solid var(--sm-line); border-radius: var(--sm-r-sm); background: var(--sm-surface-2); }
+.compras-detalles summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 8px; padding: 11px 12px; font-weight: 600; font-size: 13px; color: var(--sm-navy); }
+.compras-detalles summary::-webkit-details-marker { display: none; }
+.compras-detalles-resumen { font-weight: 400; font-size: 11.5px; color: var(--sm-muted); }
+.compras-detalles[open] summary { border-bottom: 1px solid var(--sm-line); }
+.compras-detalles-body { padding: 12px; display: grid; gap: 10px; }
+.compras-detalles-body ul { list-style: none; padding: 0; margin: 0; }
+
+/* ── Compras: layout de captura -- en escritorio, campos a la izquierda y
+   Subtotal/IVA/Total/Condición/Guardar fijos (sticky) a la derecha. ── */
+.compras-form-grid { display: grid; gap: 16px; }
+.compras-campos { display: grid; gap: 10px; }
+.compras-resumen { display: grid; gap: 10px; align-content: start; }
+@media (min-width: 900px) {
+  .compras-form-grid { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+  .compras-resumen { position: sticky; top: 16px; }
+}
+
+/* ── Compra: dato leído por la IA ── */
+.ia-tocado { background: color-mix(in srgb, var(--sm-aviso) 16%, var(--sm-control-fondo)); border-color: var(--sm-aviso) !important; }
+
+/* ── Compras: líneas y pagos ── */
+#lineas-compra, #pagos-compra { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 8px; }
+#lineas-compra li, #pagos-compra li { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; }
+#lineas-compra li { grid-template-columns: 1fr 2fr 1fr 1fr auto; }
+#lineas-compra input, #pagos-compra input, #pagos-compra select { min-width: 0; }
+
+@media (max-width: 480px) {
+  #lineas-compra li, #pagos-compra li {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 8px;
+    border: 1px solid var(--sm-line);
+    border-radius: var(--sm-r-sm);
+    background: var(--sm-surface-2);
+  }
+  #lineas-compra li {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "codigo quitar"
+      "descripcion descripcion"
+      "cantidad costo";
+  }
+  #pagos-compra li {
+    grid-template-areas:
+      "fecha fecha"
+      "monto quitar"
+      "metodo metodo";
+  }
+  #lineas-compra .codigo { grid-area: codigo; }
+  #lineas-compra .descripcion { grid-area: descripcion; }
+  #lineas-compra .cantidad { grid-area: cantidad; }
+  #lineas-compra .costo { grid-area: costo; }
+  #pagos-compra .fecha { grid-area: fecha; }
+  #pagos-compra .monto { grid-area: monto; }
+  #pagos-compra .metodo { grid-area: metodo; }
+  #lineas-compra .quitar, #pagos-compra .quitar {
+    grid-area: quitar;
+    justify-self: end;
+    width: 44px;
+    padding: 0;
+  }
+}
+
+/* ── Compras: historial reciente ── */
+.historial-compras { list-style: none; padding: 0; margin: .5rem 0 0; display: flex; flex-direction: column; gap: .5rem; }
+.historial-item {
+  border: 1px solid var(--sm-line); border-radius: var(--sm-r-sm); padding: .6rem .8rem;
+  display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center;
+}
+.historial-item .proveedor { font-weight: 600; }
+.historial-item .fecha { color: var(--sm-muted); width: 100%; font-size: .85rem; }
+.leyenda { color: var(--sm-muted); font-size: .85rem; margin: .3rem 0; }
+.vacio { color: var(--sm-muted); }
+
+/* C2: sin sesión no se ve ningún dato detrás del candado */
+body.sin-sesion .hoja, body.sin-sesion #app { visibility: hidden; }
+
+/* ═══ Rediseño 2026-09-24 (mismo procedimiento que Gastos y Dirección) ═══
+   Solo presentación, tokens --sm-* del tema del ERP. Respaldo en
+   _backups/2026-09-24_rediseno/. */
+/* Barra superior ligera + menú ⋮ */
+.barra-titulos { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.15; }
+.barra-kicker { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: rgb(255 255 255 / .72); }
+.sm-barra .sm-barra-titulo { font-size: 17px; }
+.sm-chip-boton { cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; white-space: nowrap; color: inherit; }
+.btn-barra-puntos { font-size: 22px; line-height: 1; }
+.sm-barra .btn-barra { min-width: 44px; min-height: 44px; }
+.mas-menu[hidden] { display: none; }
+.mas-menu {
+  position: fixed; top: 60px; right: 12px; z-index: 30;
+  width: 260px; max-width: calc(100vw - 24px);
+  background: var(--sm-surface); border: 1px solid var(--sm-line);
+  border-radius: var(--sm-r-md); box-shadow: var(--sm-shadow-sereno);
+  padding: 10px; display: flex; flex-direction: column; gap: 14px;
+}
+.mas-menu-grupo { display: flex; flex-direction: column; gap: 2px; }
+.mas-menu-titulo { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--sm-muted); padding: 4px 8px 2px; }
+.mas-menu-grupo button {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 8px; text-align: left;
+  font: inherit; font-size: 13.5px; color: var(--sm-ink);
+  background: none; border: none; border-radius: var(--sm-r-sm); cursor: pointer;
+}
+.mas-menu-grupo button:hover { background: var(--sm-surface-2); }
+.mas-menu-grupo .bi { color: var(--sm-icon-muted); }
+.mas-menu-cuenta { margin-left: auto; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: var(--sm-r-pill); color: var(--sm-aviso); background: color-mix(in srgb, var(--sm-aviso) 14%, transparent); }
+#app h1 { display: none; }
+
+/* Foto como acción principal */
+.compras-foto-btn { min-height: 56px; font-size: 15px; }
+
+/* Subtotal grande, IVA en chips, IVA/Total lado a lado */
+#form-compra .compras-monto { min-height: 52px; font-size: 20px; font-variant-numeric: tabular-nums; }
+.compras-iva-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.compras-iva-etiqueta { font-size: 12px; color: var(--sm-muted); margin-right: 4px; }
+.compras-chip {
+  min-width: 60px; min-height: 44px; padding: 0 14px;
+  font: inherit; font-size: 14px; font-weight: 500; color: var(--sm-body-text);
+  background: var(--sm-surface); border: 1px solid var(--sm-border-soft); border-radius: var(--sm-r-pill); cursor: pointer;
+}
+.compras-chip[aria-pressed="true"] { color: var(--sm-ink); font-weight: 600; border-color: var(--sm-accent); background: color-mix(in srgb, var(--sm-accent) 12%, var(--sm-surface)); box-shadow: inset 0 0 0 1px var(--sm-accent); }
+.compras-importes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+/* Condición segmentada */
+.sm-oculto { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; margin: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; opacity: 0; pointer-events: none; }
+.compras-condicion { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; padding: 3px; border: 1px solid var(--sm-border-soft); border-radius: 10px; background: var(--sm-surface-2); }
+.compras-seg { min-height: 44px; font: inherit; font-size: 14px; font-weight: 500; color: var(--sm-muted); background: none; border: 0; border-radius: 7px; cursor: pointer; }
+.compras-seg[aria-pressed="true"] { color: var(--sm-ink); font-weight: 600; background: var(--sm-surface); box-shadow: 0 1px 3px rgb(8 43 70 / .14), inset 0 0 0 1px var(--sm-accent); }
+
+/* Total fijo junto a Guardar */
+.compras-barra-guardar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px max(12px, env(safe-area-inset-bottom));
+  background: var(--sm-surface); border-top: 1px solid var(--sm-line);
+  box-shadow: 0 -10px 26px rgb(8 43 70 / .12);
+}
+.compras-barra-total { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.compras-barra-total strong { font-size: 20px; font-weight: 600; color: var(--sm-ink); font-variant-numeric: tabular-nums; }
+.compras-barra-total span { font-size: 11.5px; color: var(--sm-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compras-barra-guardar .btn { flex: none; min-width: 130px; min-height: 48px; font-size: 15px; }
+@media (min-width: 900px) {
+  .compras-barra-guardar { left: 50%; right: auto; bottom: 16px; width: min(860px, calc(100% - 32px)); transform: translateX(-50%); border: 1px solid var(--sm-line); border-radius: 14px; }
+}
+.ia-tocado + .compras-barra-total { outline: 0; }
+
+/* Historial legible */
+.historial-item { min-height: 52px; }
+.historial-item .total { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }

@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SUMETEC – Gastos</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="logos/sumetec-gastos.png" type="image/png">
+<link rel="apple-touch-icon" href="logos/sumetec-gastos.png">
+<meta name="theme-color" content="#023561">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gastos">
+<!-- tema-inicial.js ANTES del CSS (elige día/noche sin parpadeo) -- mismo
+     tema del ERP, generado por 16.- IDENTIDAD-NEGOCIO/generar_tema.py. No
+     editar sumetec-tema.css ni tema-inicial.js a mano. Sin botón manual de
+     día/noche aquí a propósito (F5b, 2026-09-11): sigue el sistema solo,
+     sin agregar un control nuevo a la barra de Gastos. -->
+<script src="tema-inicial.js"></script>
+<link rel="stylesheet" href="sumetec-tema.css">
+<link rel="stylesheet" href="actualizacion.css">
+<link rel="stylesheet" href="acceso.css">
+<style>
+/* Todos los tokens (--sm-glass-*, --sm-bg, --sm-navy, etc.) y la letra IBM
+   Plex vienen de sumetec-tema.css (F5b, 2026-09-11) -- ANTES este bloque
+   traía sus propios valores fijos, aproximados al ERP a mano; ahora son los
+   reales, y voltean solos entre día y noche. Las reglas de aquí abajo son
+   la convención PROPIA de Gastos (.btn / .btn.secondary / .btn.danger,
+   distinta a la de Dirección/Compras) -- se conservan tal cual, solo
+   cambiaron los colores fijos por los tokens del tema. */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;background:var(--sm-bg);color:var(--sm-ink);padding-bottom:max(80px,env(safe-area-inset-bottom))}
+
+header{
+  position:relative;isolation:isolate;overflow:hidden;
+  background:var(--sm-glass-nav-fondo);color:#fff;padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  border-bottom:1px solid var(--sm-glass-nav-borde);
+  -webkit-backdrop-filter:blur(var(--sm-glass-nav-blur)) saturate(150%);
+  backdrop-filter:blur(var(--sm-glass-nav-blur)) saturate(150%);
+  box-shadow:0 10px 26px rgb(2 25 45 / .28), inset 0 1px 0 var(--sm-glass-nav-reflejo);
+}
+header h1{font-size:16px;font-weight:700;position:relative;z-index:2}
+header>*{position:relative;z-index:2}
+
+.card,.toast,.btn{position:relative;isolation:isolate;overflow:hidden}
+
+.card{
+  background:var(--sm-glass-tarjeta-fondo);border-radius:10px;padding:14px;margin:12px;
+  border:1px solid var(--sm-glass-superficie-borde);
+  -webkit-backdrop-filter:blur(var(--sm-glass-superficie-blur)) saturate(130%);
+  backdrop-filter:blur(var(--sm-glass-superficie-blur)) saturate(130%);
+  box-shadow:0 6px 18px var(--sm-glass-superficie-sombra), inset 0 1px 0 rgb(255 255 255 / .5);
+  transition:transform .2s ease, box-shadow .2s ease;
+}
+
+.btn{
+  background:color-mix(in srgb, var(--sm-green) 82%, transparent);color:#fff;border:none;border-radius:8px;
+  padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;
+  border:1px solid rgb(255 255 255 / .38);
+  -webkit-backdrop-filter:blur(10px) saturate(140%);
+  backdrop-filter:blur(10px) saturate(140%);
+  box-shadow:0 4px 12px rgb(2 53 97 / .2), inset 0 1px 0 rgb(255 255 255 / .4);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.btn.secondary{background:color-mix(in srgb, var(--sm-accent) 82%, transparent)}
+.btn.danger{background:color-mix(in srgb, var(--sm-chart-4) 82%, transparent)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:active{transform:translateY(1px);box-shadow:0 2px 6px rgb(2 53 97 / .22), inset 0 1px 0 rgb(255 255 255 / .3)}
+
+/* Anillo de luz reactivo al cursor/toque -- capa decorativa, sin clic, debajo
+   del contenido. Igual mecanismo que liquid-glass-theme.js del ERP: solo se
+   activa en el elemento bajo el puntero y no se mueve nada mas. */
+header::after,.card::after,.btn::after{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;
+  transition:opacity .16s ease;
+  background:radial-gradient(220px circle at var(--sm-liquid-x,50%) var(--sm-liquid-y,50%), var(--sm-glass-superficie-luz), transparent 68%);
+}
+header::after{background:radial-gradient(260px circle at var(--sm-liquid-x,50%) var(--sm-liquid-y,50%), var(--sm-glass-nav-luz), transparent 70%)}
+header.sm-liquid-activa::after,.card.sm-liquid-activa::after,.btn.sm-liquid-activa::after{opacity:1}
+.card.sm-liquid-activa{transform:translateY(-2px);box-shadow:0 12px 24px var(--sm-glass-superficie-sombra), inset 0 1px 0 rgb(255 255 255 / .55)}
+
+select,input{width:100%;padding:8px;border:1px solid var(--sm-border-soft);border-radius:6px;font-size:14px;font-family:inherit;margin-top:4px;background:var(--sm-surface);color:var(--sm-ink)}
+select,input:not([type=radio]){min-height:44px}
+input[type=radio]{width:24px;height:24px}
+.sm-header-meta{margin-left:auto;display:flex;gap:8px}
+.sm-header-chip{padding:2px 8px;border:0;border-radius:10px;background:rgba(255,255,255,.2);color:#fff;font-size:11px;font-family:inherit;cursor:pointer}
+.gasto-bloque{padding:0;margin:0 0 16px;border:0}
+.gasto-bloque legend{padding:0;margin-bottom:8px;font-size:14px;font-weight:700}
+.gasto-modos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:6px 0}
+.gasto-modo{display:flex;align-items:center;gap:6px;min-height:48px;cursor:pointer;font-size:12.5px}
+.gasto-resumen{margin-top:10px;font-size:13px;padding:8px;background:var(--sm-surface-2);border-radius:6px}
+.gasto-acciones{margin-top:12px}
+.gasto-reciente{min-width:0;overflow:hidden}
+.gasto-foto-preview{display:none;max-width:100%;width:100%;max-height:240px;border:1px solid var(--sm-border-soft);border-radius:6px;margin-top:8px;object-fit:contain}
+/* En el teléfono, Safari acerca la pantalla si el campo mide menos de 16px. */
+@media (pointer: coarse){select,input{font-size:16px}}
+@media (pointer: coarse){.sm-header-chip{min-width:44px;min-height:44px;padding:8px;font-size:14px}}
+.fila-producto{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--sm-line)}
+.fila-producto .info{flex:1}
+.fila-producto .codigo{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--sm-muted)}
+.fila-producto input[type=number]{width:80px;text-align:right}
+.pendiente-item{align-items:flex-start;gap:10px;padding:12px}
+.pendiente-item .info{min-width:0;overflow-wrap:anywhere}
+.pendiente-acciones{display:flex;gap:8px}
+.pendiente-accion{width:44px;min-width:44px;height:44px;min-height:44px;padding:0}
+@media (max-width:360px){.pendiente-item{display:grid;grid-template-columns:1fr}.pendiente-acciones{justify-content:flex-end}}
+#tokenGate{display:none}
+.toast{
+  position:fixed;bottom:16px;left:16px;right:16px;z-index:1000;display:none;
+  background:color-mix(in srgb, var(--sm-ink) 82%, transparent);color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;
+  border:1px solid rgb(255 255 255 / .12);
+  -webkit-backdrop-filter:blur(16px) saturate(140%);
+  backdrop-filter:blur(16px) saturate(140%);
+}
+.toast.show{display:block}
+#badgePendientes{cursor:pointer}
+.ia-tocado{background:color-mix(in srgb, var(--sm-aviso) 16%, var(--sm-surface));border-color:var(--sm-aviso)}
+.sm-status-chip{display:inline-flex;align-items:center;gap:5px}
+.sm-status-dot{width:7px;height:7px;border-radius:50%;background:#3ecf7e;display:inline-block;flex:none}
+.sm-status-chip.offline .sm-status-dot{background:#e0a233}
+.sm-status-chip.sending .sm-status-dot{background:#4a9de0}
+.sm-status-chip.stuck .sm-status-dot{background:#e0524a;box-shadow:0 0 0 3px rgb(224 82 74 / .3)}
+.gasto-mas-toggle{width:100%;margin-top:10px;height:38px;border:1px dashed var(--sm-border-soft);border-radius:6px;background:transparent;color:var(--sm-muted);font-size:12.5px;font-weight:600;cursor:pointer}
+.gasto-ocr-principal{width:100%;height:48px;border-radius:8px;margin-bottom:6px;font-size:14px}
+.gasto-ocr-ayuda{font-size:11px;color:var(--sm-muted);text-align:center;margin-bottom:14px}
+.gasto-reciente-fila{cursor:pointer;position:relative}
+.gasto-reciente-dup{font-size:11px;color:var(--sm-green);font-weight:600;border:1px solid var(--sm-border-soft);border-radius:5px;padding:2px 7px;flex:none;margin-left:8px}
+.gasto-evidencia-extra{display:none}
+@media (min-width:900px){
+  .gastos-layout{display:grid;grid-template-columns:1.3fr 0.9fr;gap:0 16px;align-items:start}
+  .gastos-layout .card{margin:12px}
+  .gastos-col-lateral{position:sticky;top:12px}
+  .gasto-mas-toggle{display:none}
+  .gasto-evidencia-extra{display:block!important}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .card,.btn,header::after,.card::after,.btn::after{transition:none!important}
+  .card.sm-liquid-activa{transform:none}
+  .btn:active{transform:none}
+}
+@media (prefers-reduced-transparency: reduce){
+  header,.card,.toast,.btn{background:var(--sm-navy);-webkit-backdrop-filter:none;backdrop-filter:none}
+  .card{background:var(--sm-surface)}
+  .btn{background:var(--sm-green)}
+  .btn.secondary{background:var(--sm-accent)}
+  .btn.danger{background:var(--sm-chart-4)}
+  .toast{background:var(--sm-ink)}
+  header::after,.card::after,.btn::after{display:none}
+}
+@supports not (backdrop-filter: blur(1px)){
+  header{background:var(--sm-navy)}
+  .card{background:var(--sm-surface)}
+  .btn{background:var(--sm-green)}
+  .btn.secondary{background:var(--sm-accent)}
+  .btn.danger{background:var(--sm-chart-4)}
+  .toast{background:var(--sm-ink)}
+}
+@media (max-width: 600px){
+  header{flex-wrap:wrap;padding:max(8px,env(safe-area-inset-top)) 10px 8px;min-height:56px}
+  header h1{font-size:15px}
+  .sm-header-chip{min-width:44px;min-height:44px;padding:8px;border:1px solid rgb(255 255 255 / .38);border-radius:8px}
+  .card{margin:8px;padding:12px}
+  select,input{font-size:16px}
+  .btn,button{min-height:48px}
+}
+
+/* ── Rediseño 2026-09-24 (propuesta "antes y después" aprobada) ──────────
+   Solo presentación: mismos ids, mismas funciones, mismos datos. Colores y
+   letra siguen saliendo de sumetec-tema.css (tokens --sm-*). Respaldo del
+   archivo anterior en _backups/2026-09-24_rediseno_antes_despues/. */
+/* 1. Barra superior ligera */
+header h1{display:flex;flex-direction:column;gap:1px;line-height:1.15;font-weight:600}
+.sm-kicker{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;opacity:.72}
+.sm-header-meta .sm-status-chip{border-radius:999px;white-space:nowrap}
+.sm-header-meta .sm-menu-boton{font-size:22px;line-height:1;background:transparent;border-color:transparent}
+.gasto-menu{position:fixed;top:64px;right:10px;z-index:60;width:260px;max-width:calc(100vw - 20px);display:flex;flex-direction:column;gap:2px;padding:8px;background:var(--sm-surface);color:var(--sm-ink);border:1px solid var(--sm-line);border-radius:var(--sm-r-md);box-shadow:var(--sm-shadow-sereno)}
+.gasto-menu[hidden]{display:none}
+.gasto-menu-titulo{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--sm-muted);padding:6px 8px 4px}
+.gasto-menu button{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 8px;border:0;border-radius:var(--sm-r-sm);background:none;color:var(--sm-ink);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.gasto-menu button:hover{background:var(--sm-surface-2)}
+.gasto-menu .bi{font-size:16px;color:var(--sm-icon-muted)}
+.gasto-menu-separador{height:1px;margin:4px 8px;background:var(--sm-line)}
+.gasto-menu .gasto-menu-peligro,.gasto-menu .gasto-menu-peligro .bi{color:var(--sm-chart-4)}
+/* 2. Total del día arriba */
+.gasto-hoy{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;margin:14px 16px 2px}
+.gasto-hoy-etiqueta{width:100%;font-size:12px;color:var(--sm-muted)}
+.gasto-hoy-total{font-size:30px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--sm-ink)}
+.gasto-hoy-cuenta{flex:none;white-space:nowrap;font-size:12.5px;color:var(--sm-muted)}
+/* 3. Una acción principal para el ticket */
+.gasto-ticket{display:grid;grid-template-columns:minmax(0,1fr) 56px;gap:8px}
+.gasto-ticket .gasto-ocr-principal{height:56px;margin:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px}
+.gasto-archivo{display:flex;align-items:center;justify-content:center;height:56px;border:1px solid var(--sm-border-soft);border-radius:8px;background:var(--sm-surface);color:var(--sm-accent);font-size:20px;cursor:pointer}
+.gasto-archivo:hover{background:var(--sm-surface-2)}
+.gasto-ocr-ayuda{text-align:left;line-height:1.45;margin:8px 0 14px}
+/* 4. Modo de importe segmentado (los radios siguen ahí, invisibles) */
+.gasto-modos{grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:3px;margin:6px 0 12px;border:1px solid var(--sm-border-soft);border-radius:10px;background:var(--sm-surface-2)}
+.gasto-modo{position:relative;justify-content:center;text-align:center;min-height:44px;padding:4px 6px;border-radius:7px;font-weight:500;line-height:1.2;color:var(--sm-muted)}
+.gasto-modo input[type=radio]{position:absolute;inset:0;width:100%;height:100%;min-height:0;margin:0;opacity:0;cursor:pointer}
+.gasto-modo:has(input:checked){background:var(--sm-surface);color:var(--sm-ink);font-weight:600;box-shadow:0 1px 3px rgb(8 43 70 / .14),inset 0 0 0 1px var(--sm-accent)}
+.gasto-modo:has(input:focus-visible){outline:2px solid var(--sm-accent);outline-offset:1px}
+#app .gasto-monto{min-height:52px;font-size:20px;font-variant-numeric:tabular-nums}
+/* 5. IVA en chips (el <select> sigue siendo la fuente del valor) */
+.gasto-select-oculto{position:absolute;width:1px;height:1px;min-height:0;padding:0;margin:0;overflow:hidden;clip:rect(0 0 0 0);border:0;opacity:0;pointer-events:none}
+.gasto-iva-chips{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px}
+.gasto-iva-chip{min-width:60px;min-height:44px;padding:0 14px;border:1px solid var(--sm-border-soft);border-radius:999px;background:var(--sm-surface);color:var(--sm-body-text);font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.gasto-iva-chip[aria-pressed="true"]{border-color:var(--sm-accent);background:color-mix(in srgb,var(--sm-accent) 12%,var(--sm-surface));color:var(--sm-ink);font-weight:600;box-shadow:inset 0 0 0 1px var(--sm-accent)}
+.gasto-iva-chips.ia-tocado{padding:4px;border-radius:999px;background:color-mix(in srgb,var(--sm-aviso) 16%,transparent)}
+/* 6. Total fijo junto a Guardar */
+.gasto-barra-guardar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;align-items:center;gap:12px;padding:10px 16px max(12px,env(safe-area-inset-bottom));background:var(--sm-surface);border-top:1px solid var(--sm-line);box-shadow:0 -10px 26px rgb(8 43 70 / .12)}
+.gasto-barra-guardar .gasto-resumen{flex:1;min-width:0;margin:0;padding:0;background:none;display:flex;flex-direction:column;gap:2px}
+.gasto-resumen-total{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--sm-ink)}
+.gasto-resumen-desglose,.gasto-resumen-vacio{font-size:11.5px;color:var(--sm-muted)}
+.gasto-resumen-error{font-size:12px;line-height:1.3;color:var(--sm-chart-4)}
+.gasto-barra-guardar #gasGuardar{flex:none;min-width:130px;min-height:48px;font-size:15px}
+#gasGuardar.gasto-no-listo{opacity:.55}
+body{padding-bottom:max(110px,calc(90px + env(safe-area-inset-bottom)))}
+.toast{bottom:96px}
+@media (min-width:900px){.gasto-barra-guardar{left:50%;right:auto;bottom:16px;width:min(760px,calc(100% - 32px));transform:translateX(-50%);border:1px solid var(--sm-line);border-radius:14px}}
+/* 7. Opcionales con resumen */
+.gasto-mas-toggle{display:flex;align-items:center;gap:10px;height:auto;min-height:52px;padding:6px 12px;border:1px solid var(--sm-border-soft);border-radius:8px;background:var(--sm-surface);color:var(--sm-ink);text-align:left;font-weight:500}
+.gasto-mas-titulo{font-size:14px}
+.gasto-mas-resumen{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:400;color:var(--sm-muted)}
+.gasto-mas-flecha{color:var(--sm-muted)}
+/* 8. Recientes limpios */
+.gasto-recientes-titulo{display:block;margin-bottom:4px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--sm-muted)}
+.gasto-reciente-fila{min-height:52px}
+.gasto-reciente-fila:hover{background:var(--sm-surface-2)}
+.gasto-reciente-dup{border:0;padding:0 4px;font-size:17px;color:var(--sm-accent)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="tituloApp"><span class="sm-kicker">SUMETEC</span>Gastos</h1>
+  <div class="sm-header-meta">
+    <button id="badgePendientes" class="sm-header-chip sm-status-chip" type="button" onclick="verColaPendiente()" aria-label="Ver estado y pendientes de envío"><span class="sm-status-dot"></span><span id="badgePendientesTexto">En línea</span></button>
+    <button id="btnMenuGastos" class="sm-header-chip sm-menu-boton" type="button" onclick="_toggleMenuGastos_()" aria-haspopup="true" aria-expanded="false" aria-controls="menuGastos" aria-label="Más opciones">⋮</button>
+  </div>
+</header>
+
+<div id="menuGastos" class="gasto-menu" hidden>
+  <span class="gasto-menu-titulo">Este teléfono</span>
+  <button type="button" onclick="_cerrarMenuGastos_();verColaPendiente()"><i class="bi bi-cloud-arrow-up"></i> Cola pendiente de envío</button>
+  <button type="button" onclick="_cerrarMenuGastos_();exportarGastosCSV()"><i class="bi bi-download"></i> Exportar gastos (.csv)</button>
+  <button type="button" onclick="_cerrarMenuGastos_();_mostrarVersionInstalada()" title="Ver actualización de software"><i class="bi bi-info-circle"></i> Versión instalada</button>
+  <div class="gasto-menu-separador"></div>
+  <button type="button" class="gasto-menu-peligro" onclick="_cerrarMenuGastos_();limpiarCacheLocal()"><i class="bi bi-trash"></i> Borrar copias de este teléfono</button>
+</div>
+
+<div id="app"></div>
+
+<div id="tokenGate" class="sumetec-acceso" style="--acento:#f06452">
+  <div class="sumetec-acceso-panel">
+    <div class="sumetec-acceso-cabecera">
+      <div class="sumetec-acceso-marca">Gastos · SUMETEC<small>● En línea</small></div>
+<details id="ayuda-gastos" class="sumetec-acceso-ayuda sumetec-acceso-ayuda--solo-enlace"><summary aria-label="Información para vincular">i</summary>
+        <div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración la clave de acceso de este teléfono. Escribe tu nombre como quieres que aparezca en los gastos.</p><p>La clave se guarda solo en este teléfono. Si cambias de celular, vuelve a pedirla.</p></div>
+      </details>
+    </div>
+    <div class="sumetec-acceso-intro">
+      <div class="sumetec-acceso-candado" aria-hidden="true">🔒</div>
+      <h2>Vincular teléfono</h2>
+      <p class="sumetec-acceso-descripcion">Conecta este equipo de forma segura.</p>
+    </div>
+    <div class="sumetec-acceso-campos">
+      <div class="sumetec-acceso-campo sumetec-acceso-campo--principal"><label for="tg_nombre">Tu nombre</label><input id="tg_nombre" type="text" autocomplete="name" placeholder="Tu nombre"></div>
+      <div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="tg_input">Token de acceso</label><input id="tg_input" type="password" autocomplete="off" placeholder="Token de acceso"></div>
+    </div>
+    <p id="tg_error" class="sumetec-acceso-error" role="alert" aria-live="polite"></p>
+    <button id="tg_btn" type="button" class="sumetec-acceso-boton" onclick="_tgGuardar()">Vincular</button>
+    <button type="button" class="sumetec-acceso-enlace" aria-controls="ayuda-gastos" aria-expanded="false" onclick="sumetecAbrirAyuda('ayuda-gastos')">¿Necesitas ayuda?</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="acceso.js"></script>
+<script>
+// ── Token: compartido por origen con remision.html (localStorage) ──────────
+let API_TOKEN = (localStorage.getItem('api_token') || '').trim();
+let _gastosAccesoAutorizado = false;
+const _GASTOS_HUELLA_VALIDADA = 'sumetec_gastos_token_validado';
+
+// Ecosistema centralizado (2026-09): valores de fábrica IDÉNTICOS a los que
+// ya estaban horneados aquí -- si el ERP nunca publica nada, el
+// comportamiento no cambia. Ver _cargarConfiguracionEcosistema_ más abajo.
+let FOTO_TOPE_KB_PUBLICADO = 250;
+// Mejora (2026-09-02, confirmado por Miguel): a partir de este total, pedir
+// confirmación explícita antes de guardar el gasto -- suele ser un cero de
+// más al teclear, no un límite que bloquee gastos grandes reales.
+const UMBRAL_GASTO_ATIPICO = 2000;
+
+// Escapa texto y valores de atributo HTML (mismo comportamiento que
+// esc()/escAttr() en calculos.js -- inline aquí porque inventario.html no
+// carga ese archivo). Necesario: descripciones de tornillería traen `"`
+// literal (medidas en pulgadas, ej. TORNILLO 1/4" x 2") que rompería el
+// atributo value="..." o el HTML si se interpola sin escapar.
+function esc(v) {
+  return v == null ? '' : String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function toast(msg, ms) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { t.className = 'toast'; }, ms || 3000);
+}
+
+// Menú ⋮ (rediseño 2026-09-24): cola, exportar, versión y borrar copias
+// salieron de la pantalla de captura. Mismas funciones de siempre.
+function _toggleMenuGastos_(forzar) {
+  const m = document.getElementById('menuGastos');
+  const b = document.getElementById('btnMenuGastos');
+  if (!m) return;
+  const abrir = forzar === undefined ? m.hidden : !!forzar;
+  m.hidden = !abrir;
+  if (b) b.setAttribute('aria-expanded', String(abrir));
+}
+function _cerrarMenuGastos_() { _toggleMenuGastos_(false); }
+document.addEventListener('click', e => {
+  const m = document.getElementById('menuGastos');
+  const b = document.getElementById('btnMenuGastos');
+  if (!m || m.hidden || m.contains(e.target) || (b && b.contains(e.target))) return;
+  _cerrarMenuGastos_();
+});
+
+function _tokenGateCheck() {
+  const mostrar = !_gastosAccesoAutorizado;
+  const gate = document.getElementById('tokenGate');
+  gate.style.display = mostrar ? 'flex' : 'none';
+  sumetecBloquearFondo(gate, mostrar);
+  // Si el nombre ya se capturó desde remision.html (mismo origen), precargarlo.
+  if (mostrar) {
+    const nEl = document.getElementById('tg_nombre');
+    const yaTiene = _leerVendedorCompartido();
+    if (nEl && yaTiene && !nEl.value) nEl.value = yaTiene;
+  }
+}
+// I-5: "vendedor" se guarda en la MISMA clave 'r_empresa' que usa remision.html
+// (mismo origen de GitHub Pages -> mismo localStorage) -- así el nombre
+// capturado en cualquiera de las dos apps sirve para las dos, sin duplicar
+// captura ni inventar una clave nueva.
+function _leerVendedorCompartido() {
+  try { return (JSON.parse(localStorage.getItem('r_empresa') || '{}').vendedor || '').trim(); }
+  catch (_) { return ''; }
+}
+function _guardarVendedorCompartido(nombre) {
+  let obj = {};
+  try { obj = JSON.parse(localStorage.getItem('r_empresa') || '{}') || {}; } catch (_) { obj = {}; }
+  obj.vendedor = nombre;
+  localStorage.setItem('r_empresa', JSON.stringify(obj));
+}
+async function _validarTokenGastos_(token) {
+  const ctrl = new AbortController();
+  const tiempo = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const r = await fetch(getScriptUrl(), { method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ tipo: 'ping', token }), signal: ctrl.signal });
+    if (!r.ok) throw Error('TOKEN_INVALIDO');
+    const respuesta = await r.json();
+    if (!respuesta || respuesta.ok !== true) throw Error('TOKEN_INVALIDO');
+  } finally { clearTimeout(tiempo); }
+}
+async function _tgGuardar() {
+  const v = (document.getElementById('tg_input').value || '').trim();
+  const nombre = (document.getElementById('tg_nombre').value || '').trim();
+  const error = document.getElementById('tg_error');
+  if (!nombre || !v) { error.textContent = 'Escribe tu nombre y el token.'; return; }
+  error.textContent = '';
+  const boton = document.getElementById('tg_btn');
+  sumetecEntrando(boton, true);
+  try {
+    await _validarTokenGastos_(v);
+    await sumetecMarcarAccesoValidado(v, _GASTOS_HUELLA_VALIDADA);
+  } catch (e) {
+    if (e.message === 'TOKEN_INVALIDO') { error.textContent = 'El servidor rechazó el token.'; sumetecEntrando(boton, false); return; }
+    if (!await sumetecAccesoValidadoAntes(v, _GASTOS_HUELLA_VALIDADA)) {
+      error.textContent = 'No se pudo validar. Revisa tu conexión e inténtalo otra vez.';
+      sumetecEntrando(boton, false); return;
+    }
+  }
+  _guardarVendedorCompartido(nombre);
+  API_TOKEN = v;
+  localStorage.setItem('api_token', v);
+  _gastosAccesoAutorizado = true;
+  _tokenGateCheck();
+  _iniciarAppSegunModo_();
+  _cargarConfiguracionEcosistema_();
+  sumetecEntrando(boton, false);
+}
+
+// Punto de entrada único. Desde 2026-09-11 (F5 del plan de diseño) Gastos
+// ya no tiene modo Inventario -- el conteo se mudó a la app de Dirección
+// (14.- SUMETEC DIRECCION/inventario.js). Se conserva el nombre: lo usan
+// el arranque de abajo y configuracion_ecosistema.test.js.
+function _iniciarAppSegunModo_() {
+  renderGastos();
+}
+
+// ── URL del servidor: MISMA que remisiones (remision.html::URL_SERVIDOR).
+//    Solo cambia si creas una implementación NUEVA del Apps Script. ──
+const URL_SERVIDOR = 'https://script.google.com/macros/s/AKfycbxQ3o4Fapo78sEbAAsMoGjyjMrcsL7lMXRwwig0r2ZhRAwi_Ukdi3CHkGrilpcTsgrK/exec';
+
+function getScriptUrl() { return URL_SERVIDOR; }
+
+// ── Cola offline / persistencia local (helpers usados por catálogo, conteo
+// en curso y cola de envío) ─────────────────────────────────────────────────
+function leerSeguro(clave, porDefecto) {
+  try { const v = localStorage.getItem(clave); return v === null ? porDefecto : JSON.parse(v); }
+  catch (_) { return porDefecto; }
+}
+function guardarSeguro(clave, valorObj) {
+  try { localStorage.setItem(clave, JSON.stringify(valorObj)); return true; }
+  catch (_) { return false; }
+}
+function _dedupeCola_(cola, id) { return cola.some(e => e.id === id); }
+
+// Se conserva SOLO para armar el teorico_ref de un conteo que quedó a medias
+// al llegar la versión sin Inventario (ver _enviarConteoHuerfano_): lee el
+// último stock teórico que este teléfono guardó. Función pura.
+function _construirStockTeoricoMap(filas) {
+  const m = new Map();
+  if (!Array.isArray(filas)) return m;
+  filas.forEach(f => {
+    const cod = String(f.CODIGO || '').trim();
+    if (!cod) return;
+    const stock = Number(f.STOCK_TEORICO);
+    if (isNaN(stock)) return;
+    // Mejora 3 (2026-07-29): de qué se compone el teórico -- ENTRADAS
+    // (compras)/SALIDAS (ventas)/AJUSTES (carga inicial + conteos +
+    // correcciones manuales, el ERP no las distingue entre sí -- ver
+    // routers/inventario.py::_calcular_stock). Columnas nuevas, aditivas: si
+    // el celular tiene un caché viejo de antes de esto, caen a 0 sin tronar.
+    const entradas = Number(f.ENTRADAS); const salidas = Number(f.SALIDAS); const ajuste = Number(f.AJUSTES);
+    m.set(cod.toLowerCase(), {
+      stock, desc: f.DESCRIPCION || '',
+      entradas: isNaN(entradas) ? 0 : entradas,
+      salidas: isNaN(salidas) ? 0 : salidas,
+      ajuste: isNaN(ajuste) ? 0 : ajuste,
+    });
+  });
+  return m;
+}
+
+function _haceCuanto_(ts) {
+  const min = Math.round((Date.now() - ts) / 60000);
+  if (min < 1) return 'un momento';
+  if (min < 60) return min + ' min';
+  const h = Math.round(min / 60);
+  if (h < 24) return h + ' h';
+  return Math.round(h / 24) + ' días';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── BLOQUE GASTOS (J-1/J-2/J-3, 2026-07-22) ─────────────────────────────────
+// Espejo del cálculo de servicios/gastos.py::calcular_montos_gasto -- el
+// servidor de Apps Script y el ERP NUNCA recalculan, solo guardan lo que
+// sale de aquí (misma regla "espejo" que ya rige remisiones/pagos).
+// ═══════════════════════════════════════════════════════════════════════════
+
+function _calcularMontosGasto_(modo, montoSinIva, ivaPct, totalConIva, ivaPesos) {
+  // '' -> null (no 0): un <select>/<input> vacío no debe colarse como "0%"
+  // válido -- Number('') es 0, no NaN, así que hay que cortarlo aparte.
+  const num = v => { if (v === '' || v == null) return null; const n = Number(v); return isNaN(n) ? null : n; };
+  modo = (modo || 'A').toUpperCase();
+
+  if (modo === 'B') {
+    const total = num(totalConIva), pct = num(ivaPct);
+    const errores = [];
+    if (total === null || total < 0) errores.push('El TOTAL debe ser un número (ej. 500.00) y no negativo.');
+    if (pct === null || [0, 0.08, 0.16].indexOf(pct) === -1) errores.push('La tasa de IVA debe ser 0%, 8% o 16%.');
+    if (errores.length) return { errores };
+    const monto = pct ? total / (1 + pct) : total;
+    return { monto, pct, ivaMonto: total - monto, total, errores: [] };
+  }
+
+  if (modo === 'C') {
+    const total = num(totalConIva), ivaMonto = num(ivaPesos);
+    const errores = [];
+    if (total === null || total < 0) errores.push('El TOTAL debe ser un número (ej. 500.00) y no negativo.');
+    if (ivaMonto === null || ivaMonto < 0) errores.push('El IVA (en pesos, el que dice tu ticket/CFDI) debe ser un número y no negativo.');
+    if (!errores.length && ivaMonto >= total) errores.push('El IVA no puede ser mayor o igual al TOTAL.');
+    if (errores.length) return { errores };
+    const monto = total - ivaMonto;
+    const pct = monto > 0 ? ivaMonto / monto : 0;
+    return { monto, pct, ivaMonto, total, errores: [] };
+  }
+
+  // Modo A (default): base + tasa, el sistema suma el IVA.
+  const monto = num(montoSinIva), pct = num(ivaPct);
+  const errores = [];
+  if (monto === null || monto < 0) errores.push('El MONTO debe ser un número (ej. 150.00) y no negativo.');
+  if (pct === null || pct < 0) errores.push('El IVA debe ser un número (0, 0.08 o 0.16).');
+  if (errores.length) return { errores };
+  return { monto, pct, ivaMonto: monto * pct, total: monto + monto * pct, errores: [] };
+}
+
+// ── Listas de tipos de gasto / formas de pago (publicadas por el ERP,
+// services/publicar.py::csv_listas_gasto) -- se cachean igual que el
+// catálogo/stock teórico: sin señal se usa la última copia guardada. ────────
+let TIPOS_GASTO = [];
+let FORMAS_PAGO = [];
+let PROVEEDORES_GASTO = []; // Mejora 7: ERP + escritos en campo
+
+function _guardarListasGastoCache_(filas) {
+  guardarSeguro('listas_gasto_cache', { ts: Date.now(), filas });
+}
+function _repartirListasGasto_(filas) {
+  TIPOS_GASTO = (filas || []).filter(f => String(f.CLASE || '').toUpperCase() === 'TIPO').map(f => f.NOMBRE);
+  FORMAS_PAGO = (filas || []).filter(f => String(f.CLASE || '').toUpperCase() === 'FORMA').map(f => f.NOMBRE);
+  PROVEEDORES_GASTO = (filas || []).filter(f => String(f.CLASE || '').toUpperCase() === 'PROVEEDOR').map(f => f.NOMBRE);
+  _pintarOpcionesGasto_();
+}
+
+// _cargarListasGasto_() es fire-and-forget (no bloquea el render del
+// formulario) -- si la respuesta llega DESPUÉS de que renderGastos() ya pintó
+// los <select> con TIPOS_GASTO/FORMAS_PAGO todavía vacíos, hay que repintarlos
+// aquí o el usuario se queda viendo solo "— elige —" sin poder capturar el
+// gasto. No-op si el usuario ya se salió de Gastos (los <select> no existen).
+function _pintarOpcionesGasto_() {
+  const selTipo = document.getElementById('gas_tipo');
+  if (selTipo) {
+    const actual = selTipo.value;
+    selTipo.innerHTML = '<option value="">— elige —</option>' + TIPOS_GASTO.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+    selTipo.value = actual;
+  }
+  const dlProv = document.getElementById('dl_gas_proveedor');
+  if (dlProv) dlProv.innerHTML = PROVEEDORES_GASTO.map(p => `<option value="${esc(p)}">`).join('');
+  const selForma = document.getElementById('gas_forma');
+  if (selForma) {
+    const actual = selForma.value;
+    selForma.innerHTML = '<option value="">— elige —</option>' + FORMAS_PAGO.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+    selForma.value = actual;
+  }
+}
+// Mejora (2026-09-02): mismo aviso de frescura que ya existe para el catálogo
+// en Inventario (avisoCache/CATALOGO_FRESCO) -- Gastos no tenía ninguno, y
+// las listas de tipo/forma también pueden quedarse viejas sin señal.
+function _htmlAntiguedadListasGasto_() {
+  const cache = leerSeguro('listas_gasto_cache', null);
+  if (!cache || !cache.ts) return '';
+  return `<div class="card" style="margin-bottom:0;font-size:12px;color:var(--sm-muted)">Listas actualizadas hace ${_haceCuanto_(cache.ts)}</div>`;
+}
+async function _cargarListasGasto_() {
+  if (!navigator.onLine || !API_TOKEN) {
+    const cache = leerSeguro('listas_gasto_cache', null);
+    if (cache && cache.filas) _repartirListasGasto_(cache.filas);
+    return;
+  }
+  try {
+    const url = getScriptUrl();
+    const res = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ tipo: 'listas_gasto', token: API_TOKEN }),
+    });
+    const filas = await res.json();
+    if (!Array.isArray(filas)) throw new Error('respuesta inválida');
+    _repartirListasGasto_(filas);
+    _guardarListasGastoCache_(filas);
+  } catch (_) {
+    const cache = leerSeguro('listas_gasto_cache', null);
+    if (cache && cache.filas) _repartirListasGasto_(cache.filas);
+  }
+}
+
+// Ecosistema centralizado (2026-09): solo la sección GASTOS (política OCR,
+// umbral de frescura del stock, tope de foto) -- se llama UNA vez al abrir
+// la app, no en cada renderGastos() como listas_gasto (esto cambia poco).
+function _aplicarConfigGastosPublicada_(gastos) {
+  if (!gastos) return;
+  if (typeof gastos.foto_tope_kb === 'number' && gastos.foto_tope_kb > 0) {
+    FOTO_TOPE_KB_PUBLICADO = gastos.foto_tope_kb;
+  }
+}
+async function _cargarConfiguracionEcosistema_() {
+  if (!navigator.onLine || !API_TOKEN) {
+    const cache = leerSeguro('config_ecosistema_cache', null);
+    if (cache && cache.datos) _aplicarConfigGastosPublicada_(cache.datos.GASTOS);
+    return;
+  }
+  try {
+    const url = getScriptUrl();
+    const res = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ tipo: 'configuracion', token: API_TOKEN }),
+    });
+    const r = await res.json();
+    if (!r || !r.ok || !r.datos) throw new Error('respuesta inválida');
+    guardarSeguro('config_ecosistema_cache', { ts: r.ts || '', datos: r.datos });
+    _aplicarConfigGastosPublicada_(r.datos.GASTOS);
+  } catch (_) {
+    const cache = leerSeguro('config_ecosistema_cache', null);
+    if (cache && cache.datos) _aplicarConfigGastosPublicada_(cache.datos.GASTOS);
+  }
+}
+
+// ── Foto del ticket: opcional, se manda como base64 (mismo criterio que el
+// PDF de una remisión) -- si el archivo es grande el POST tarda más, pero
+// nunca bloquea el guardado local (se encola igual, con o sin foto lista). ──
+function _leerArchivoComoB64_(file) {
+  return new Promise((resolve) => {
+    if (!file) { resolve(''); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Compresión de la foto del ticket (2026-08-27, plan OCR Fase 1) ───────────
+// Una foto de celular sin comprimir pesa 4-8 MB; en base64 crece ~37% más, y
+// se guarda TAL CUAL dentro de cola_gastos (localStorage). El origen de esta
+// app es el MISMO que remision.html (mismo repo GitHub Pages) -- localStorage
+// es por origen, no por pestaña -- así que 1-2 fotos sin comprimir pueden
+// llenar la cuota compartida (~5MB) y tumbar también datos del Cotizador
+// (cobros, folios, borradores). Comprimir a ~200KB es una reducción de ~40x.
+// Un ticket es texto sobre papel: a 1600px de lado se lee perfecto, para el
+// ojo y para el OCR.
+function _escalarLado_(ancho, alto, maxLado) {
+  const mayor = Math.max(ancho, alto);
+  if (mayor <= maxLado) return { w: ancho, h: alto }; // nunca agrandar
+  const factor = maxLado / mayor;
+  return { w: Math.round(ancho * factor), h: Math.round(alto * factor) };
+}
+
+// A2 (2026-09-23): el selector de archivos (galería/HEIC/PDF) pasa su archivo al mismo flujo de la cámara.
+function _archivoGastoElegido_() {
+  const src = document.getElementById('gas_archivo'), dst = document.getElementById('gas_foto');
+  if (!src || !dst || !src.files || !src.files[0]) return;
+  try { const dt = new DataTransfer(); dt.items.add(src.files[0]); dst.files = dt.files; } catch (_) { return; }
+  src.value = '';
+  _onFotoGastoElegida_();
+}
+
+function _comprimirImagen_(file, maxLado, calidad) {
+  maxLado = maxLado || 1600;
+  calidad = calidad || 0.72;
+  return new Promise((resolve) => {
+    if (!file) { resolve(''); return; }
+    // Cualquier fallo en el camino de compresión regresa al comportamiento de
+    // hoy (foto sin comprimir) -- el gasto NUNCA se pierde por la foto, mismo
+    // criterio que ya rige _leerArchivoComoB64_ arriba.
+    const fallback = () => _leerArchivoComoB64_(file).then(resolve);
+    try {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const { w, h } = _escalarLado_(img.naturalWidth || img.width, img.naturalHeight || img.height, maxLado);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          _exportarConCalidadDecreciente_(canvas, calidad).then(resolve).catch(fallback);
+        } catch (e) { URL.revokeObjectURL(url); fallback(); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); fallback(); };
+      img.src = url;
+    } catch (e) { fallback(); }
+  });
+}
+
+// Reintenta con calidad más baja si el JPEG sigue pesando arriba de 250KB.
+// Si ni al piso de calidad baja lo suficiente, usa lo que haya -- nunca
+// bloquea el guardado por perseguir un tamaño perfecto.
+function _exportarConCalidadDecreciente_(canvas, calidadInicial) {
+  const TOPE_BYTES = FOTO_TOPE_KB_PUBLICADO * 1024;
+  const PISO_CALIDAD = 0.45;
+  return new Promise((resolve, reject) => {
+    const intentar = (q) => {
+      canvas.toBlob((blob) => {
+        if (!blob) { reject(new Error('toBlob vacío')); return; }
+        if (blob.size > TOPE_BYTES && q > PISO_CALIDAD) {
+          intentar(Math.max(PISO_CALIDAD, +(q - 0.1).toFixed(2)));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+        reader.onerror = () => reject(new Error('FileReader falló'));
+        reader.readAsDataURL(blob);
+      }, 'image/jpeg', q);
+    };
+    intentar(calidadInicial);
+  });
+}
+
+function _cambiarModoGasto_(modo) {
+  ['A', 'B', 'C'].forEach(m => {
+    const el = document.getElementById('gasCampos' + m);
+    if (el) el.style.display = (m === modo) ? '' : 'none';
+  });
+  _actualizarPreviewGasto_();
+}
+
+function _actualizarPreviewGasto_() {
+  const modo = (document.querySelector('input[name="gasModo"]:checked') || {}).value || 'A';
+  const r = _calcularMontosGasto_(modo,
+    document.getElementById('gas_montoA')?.value,
+    modo === 'A' ? document.getElementById('gas_ivaA')?.value : document.getElementById('gas_ivaB')?.value,
+    // Bug real corregido (2026-08-27, plan OCR Fase 3): modo B y modo C tenían
+    // el MISMO id "gas_totalBC" en dos <input> distintos -- getElementById
+    // siempre devuelve el primero en el DOM (el de B), así que en modo C lo
+    // que el usuario escribía en el campo visible nunca se leía. Modo C ahora
+    // tiene su propio id "gas_totalC".
+    (modo === 'C' ? document.getElementById('gas_totalC') : document.getElementById('gas_totalBC'))?.value,
+    document.getElementById('gas_ivaC')?.value);
+  _sincronizarChipsIva_();
+  _resumenMasCamposGasto_();
+  const prev = document.getElementById('gasPreview');
+  if (!prev) return;
+  const val = id => ((document.getElementById(id) || {}).value || '').trim();
+  const vacio = modo === 'A' ? !val('gas_montoA') : modo === 'B' ? !val('gas_totalBC') : (!val('gas_totalC') && !val('gas_ivaC'));
+  const listo = !vacio && !(r.errores && r.errores.length) && !!val('gas_concepto');
+  const btn = document.getElementById('gasGuardar');
+  if (btn) btn.classList.toggle('gasto-no-listo', !listo);
+  if (vacio) {
+    prev.innerHTML = '<strong class="gasto-resumen-total">$0.00</strong><span class="gasto-resumen-vacio">Captura importe e IVA</span>';
+  } else if (r.errores && r.errores.length) {
+    prev.innerHTML = '<span class="gasto-resumen-error">' + esc(r.errores[0]) + '</span>';
+  } else {
+    prev.innerHTML = `<strong class="gasto-resumen-total">Total: $${r.total.toFixed(2)}</strong><span class="gasto-resumen-desglose">Base: $${r.monto.toFixed(2)} · IVA: $${r.ivaMonto.toFixed(2)}</span>`;
+  }
+}
+
+// IVA en chips (rediseño 2026-09-24): el valor sigue viviendo en los mismos
+// <select id="gas_ivaA"/"gas_ivaB"> que leen el cálculo, el OCR y el guardado;
+// el chip solo lo escribe y dispara 'change' (el mismo onchange de siempre).
+function _htmlChipsIva_(selId) {
+  return `<div class="gasto-iva-chips" role="group" aria-label="Tasa de IVA" data-sel="${selId}">` +
+    [['0.16', '16%'], ['0.08', '8%'], ['0', '0%']].map(([v, l]) =>
+      `<button type="button" class="gasto-iva-chip" data-valor="${v}" aria-pressed="false" onclick="_elegirIvaGasto_(this)">${l}</button>`).join('') +
+    '</div>';
+}
+function _elegirIvaGasto_(btn) {
+  const grupo = btn.closest('.gasto-iva-chips');
+  const sel = grupo && document.getElementById(grupo.dataset.sel);
+  if (!sel) return;
+  sel.value = btn.dataset.valor;
+  sel.dispatchEvent(new Event('change', { bubbles: true }));
+}
+function _sincronizarChipsIva_() {
+  document.querySelectorAll('.gasto-iva-chips').forEach(grupo => {
+    const sel = document.getElementById(grupo.dataset.sel);
+    if (!sel) return;
+    grupo.classList.toggle('ia-tocado', sel.classList.contains('ia-tocado'));
+    grupo.querySelectorAll('.gasto-iva-chip').forEach(b =>
+      b.setAttribute('aria-pressed', String(sel.value !== '' && Number(sel.value) === Number(b.dataset.valor))));
+  });
+}
+function _resumenMasCamposGasto_() {
+  const r = document.getElementById('gasMasResumen');
+  if (!r) return;
+  const p = ((document.getElementById('gas_proveedor') || {}).value || '').trim();
+  const u = ((document.getElementById('gas_uuid_cfdi') || {}).value || '').trim();
+  r.textContent = (p || 'Sin proveedor') + ' · ' + (u ? 'con UUID' : 'sin UUID');
+}
+
+function renderGastos() {
+  // Cada render fresco del formulario parte de cero: si no se resetearan
+  // aquí, un ticket leído por OCR y luego abandonado (salir de la pantalla y
+  // volver, sin guardar) podría "heredarse" en silencio al siguiente gasto
+  // que se capture sin foto -- el input de archivo se recrea vacío, pero
+  // estas dos variables de módulo sobrevivían al re-render.
+  _gastoTocadoPorOcr = false;
+  _gastoFotoComprimidaB64 = '';
+  _cargarListasGasto_(); // best-effort, no bloquea el render del formulario
+  const opcionesTipo = TIPOS_GASTO.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  const opcionesForma = FORMAS_PAGO.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+  const recientes = leerSeguro('gastos_recientes', []);
+  const proveedorRecordado = leerSeguro('gasto_ultimo_proveedor', '');
+  const hoyStr = _fechaLocal_();
+  const gastosHoy = recientes.filter(g => g.fecha === hoyStr);
+  const totalHoy = gastosHoy.reduce((s, g) => s + (+g.total || 0), 0);
+  const hoyHtml = `<div class="gasto-hoy">
+      <span class="gasto-hoy-etiqueta">Hoy en este teléfono</span>
+      <strong class="gasto-hoy-total">$${totalHoy.toFixed(2)}</strong>
+      <span class="gasto-hoy-cuenta">${gastosHoy.length} gasto${gastosHoy.length === 1 ? '' : 's'}</span>
+    </div>`;
+  const filasRecientes = recientes.length ? recientes.slice(0, 5).map((g, i) => `
+    <div class="fila-producto gasto-reciente gasto-reciente-fila" role="button" tabindex="0" aria-label="Repetir ${esc(g.concepto)}" onclick="_duplicarGastoReciente_(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();_duplicarGastoReciente_(${i})}">
+      <div class="info">
+        <div>${esc(g.concepto)}</div>
+        <div class="codigo">${esc(g.tipoGasto || '')} · ${esc(g.fecha)}</div>
+      </div>
+      <strong>$${(+g.total || 0).toFixed(2)}</strong>
+      <span class="gasto-reciente-dup" aria-hidden="true"><i class="bi bi-arrow-repeat"></i></span>
+    </div>`).join('') : '<p style="font-size:13px;color:var(--sm-muted);padding:4px 0">Sin gastos capturados todavía en este celular.</p>';
+
+  document.getElementById('app').innerHTML = `
+    ${_htmlConteoHuerfano_()}
+    ${_htmlAntiguedadListasGasto_()}
+    ${hoyHtml}
+    <div class="gastos-layout">
+    <div class="card">
+      <div class="gasto-bloque">
+      <input type="file" id="gas_foto" accept="image/*" capture="environment" onchange="_onFotoGastoElegida_()" style="display:none">
+      <input type="file" id="gas_archivo" accept="image/*,.heic,.heif,application/pdf" onchange="_archivoGastoElegido_()" style="display:none">
+      <div class="gasto-ticket">
+        <button id="gasBtnOcrTop" class="btn gasto-ocr-principal" type="button" onclick="document.getElementById('gas_foto').click()"><i class="bi bi-camera"></i> Tomar foto del ticket</button>
+        <label for="gas_archivo" class="gasto-archivo" title="Elegir archivo (foto, HEIC o PDF)" aria-label="Elegir archivo (foto, HEIC o PDF)"><i class="bi bi-file-earmark-text"></i></label>
+      </div>
+      <div class="gasto-ocr-ayuda">La IA llena fecha, total, IVA y proveedor. Tú lo revisas antes de guardar. El botón de archivo acepta foto, HEIC o PDF.</div>
+      <img id="gasFotoPreview" class="gasto-foto-preview" alt="Vista previa de la foto del ticket">
+      <button id="gasBtnOcr" class="btn secondary" type="button" style="width:100%;margin-top:8px;display:none" onclick="_leerTicketConIA_()">🔍 Leer ticket otra vez</button>
+      <div id="gasOcrEstado" style="font-size:12px;color:var(--sm-muted);margin-top:4px"></div>
+      </div>
+      <fieldset class="gasto-bloque gasto-datos">
+        <legend>1. Datos del gasto</legend>
+      <label style="font-size:13px;font-weight:600">Fecha</label>
+      <input type="date" id="gas_fecha" value="${_fechaLocal_()}">
+      <label style="font-size:13px;font-weight:600;margin-top:8px;display:block">Concepto</label>
+      <input type="text" id="gas_concepto" placeholder="Ej. Gasolina de la camioneta" oninput="_actualizarPreviewGasto_()">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div>
+          <label style="font-size:13px;font-weight:600;display:block">Tipo de gasto</label>
+          <select id="gas_tipo"><option value="">— elige —</option>${opcionesTipo}</select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:600;display:block">Forma de pago</label>
+          <select id="gas_forma"><option value="">— elige —</option>${opcionesForma}</select>
+        </div>
+      </div>
+      </fieldset>
+
+      <fieldset class="gasto-bloque gasto-importes">
+        <legend>2. Importe</legend>
+      <label style="font-size:13px;font-weight:600;display:block">¿Cómo lo vas a capturar?</label>
+      <div class="gasto-modos" role="radiogroup" aria-label="Forma de capturar el importe">
+        <label class="gasto-modo">
+          <input type="radio" name="gasModo" value="A" checked onchange="_cambiarModoGasto_('A')"> Base + IVA
+        </label>
+        <label class="gasto-modo">
+          <input type="radio" name="gasModo" value="B" onchange="_cambiarModoGasto_('B')"> Total con IVA
+        </label>
+        <label class="gasto-modo">
+          <input type="radio" name="gasModo" value="C" onchange="_cambiarModoGasto_('C')"> Total + IVA exacto
+        </label>
+      </div>
+
+      <div id="gasCamposA">
+        <label style="font-size:12px;color:var(--sm-muted)">Monto sin IVA</label>
+        <input type="number" step="0.01" min="0" id="gas_montoA" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
+        <label style="font-size:12px;color:var(--sm-muted);margin-top:10px;display:block">IVA</label>
+        <select id="gas_ivaA" class="gasto-select-oculto" aria-hidden="true" tabindex="-1" onchange="_actualizarPreviewGasto_()">
+          <option value="" selected>— elige —</option><option value="0.16">16%</option><option value="0.08">8%</option><option value="0">0% (sin IVA)</option>
+        </select>
+        ${_htmlChipsIva_('gas_ivaA')}
+      </div>
+      <div id="gasCamposB" style="display:none">
+        <label style="font-size:12px;color:var(--sm-muted)">Total (ya con IVA incluido)</label>
+        <input type="number" step="0.01" min="0" id="gas_totalBC" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
+        <label style="font-size:12px;color:var(--sm-muted);margin-top:10px;display:block">Tasa de IVA</label>
+        <select id="gas_ivaB" class="gasto-select-oculto" aria-hidden="true" tabindex="-1" onchange="_actualizarPreviewGasto_()">
+          <option value="" selected>— elige —</option><option value="0.16">16%</option><option value="0.08">8%</option><option value="0">0% (sin IVA)</option>
+        </select>
+        ${_htmlChipsIva_('gas_ivaB')}
+      </div>
+      <div id="gasCamposC" style="display:none">
+        <label style="font-size:12px;color:var(--sm-muted)">Total (el que dice el ticket)</label>
+        <input type="number" step="0.01" min="0" id="gas_totalC" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
+        <label style="font-size:12px;color:var(--sm-muted);margin-top:6px;display:block">IVA en pesos (el que dice el ticket/CFDI — gasolina, IEPS)</label>
+        <input type="number" step="0.01" min="0" id="gas_ivaC" inputmode="decimal" oninput="_actualizarPreviewGasto_()">
+      </div>
+      </fieldset>
+
+      <fieldset class="gasto-bloque gasto-evidencia">
+        <legend>3. Datos opcionales</legend>
+      <button type="button" class="gasto-mas-toggle" aria-expanded="false" aria-controls="gasMasCampos" onclick="_toggleMasCamposGasto_(this)"><span class="gasto-mas-titulo">Proveedor y CFDI</span><span id="gasMasResumen" class="gasto-mas-resumen"></span><span class="gasto-mas-flecha" aria-hidden="true">▾</span></button>
+      <div id="gasMasCampos" class="gasto-evidencia-extra">
+      <label style="font-size:12px;color:var(--sm-muted);margin-top:10px;display:block">Proveedor (opcional)</label>
+      <input type="text" id="gas_proveedor" placeholder="Ej. Tornimaster" value="${esc(proveedorRecordado)}" list="dl_gas_proveedor" autocomplete="off" oninput="_resumenMasCamposGasto_()"><datalist id="dl_gas_proveedor"></datalist>
+      ${proveedorRecordado ? '<div style="font-size:10.5px;color:var(--sm-muted);margin-top:2px">💡 tu último proveedor — bórralo si es otro</div>' : ''}
+
+      <label style="font-size:12px;color:var(--sm-muted);margin-top:10px;display:block">🧾 UUID del CFDI (opcional, si ya tienes la factura)</label>
+      <input type="text" id="gas_uuid_cfdi" placeholder="folio fiscal del XML" oninput="_resumenMasCamposGasto_()">
+      </div>
+      </fieldset>
+
+    </div>
+    <div class="gastos-col-lateral">
+    <div class="card">
+      <span class="gasto-recientes-titulo">Recientes · toca para repetir</span>
+      ${filasRecientes}
+    </div>
+    </div>
+    </div>
+    <div class="gasto-barra-guardar">
+      <div id="gasPreview" class="gasto-resumen" aria-live="polite"></div>
+      <button id="gasGuardar" class="btn" type="button" onclick="_guardarGasto_()">Guardar</button>
+    </div>`;
+  _cambiarModoGasto_('A');
+}
+
+function _toggleMasCamposGasto_(btn) {
+  const panel = document.getElementById('gasMasCampos');
+  if (!panel) return;
+  const abierto = panel.style.display === 'block';
+  panel.style.display = abierto ? 'none' : 'block';
+  btn.setAttribute('aria-expanded', String(!abierto));
+  const flecha = btn.querySelector('.gasto-mas-flecha');
+  if (flecha) flecha.textContent = abierto ? '▾' : '▴';
+}
+
+// Mejora: copiar un gasto reciente para no recapturar concepto/tipo/forma en
+// gastos que se repiten seguido (gasolina, casetas). El total se pasa a modo
+// B (Total con IVA) porque gastos_recientes solo guarda el total, no el
+// desglose monto/IVA original -- el usuario confirma la tasa de IVA.
+function _duplicarGastoReciente_(indice) {
+  const recientes = leerSeguro('gastos_recientes', []);
+  const g = recientes[indice];
+  if (!g) return;
+  const elConcepto = document.getElementById('gas_concepto');
+  const elTipo = document.getElementById('gas_tipo');
+  const elForma = document.getElementById('gas_forma');
+  const elFecha = document.getElementById('gas_fecha');
+  if (elConcepto) elConcepto.value = g.concepto || '';
+  if (elTipo && g.tipoGasto) elTipo.value = g.tipoGasto;
+  if (elForma && g.formaPago) elForma.value = g.formaPago;
+  if (elFecha) elFecha.value = _fechaLocal_();
+  const radioB = document.querySelector('input[name="gasModo"][value="B"]');
+  if (radioB) { radioB.checked = true; _cambiarModoGasto_('B'); }
+  const elTotal = document.getElementById('gas_totalBC');
+  if (elTotal) elTotal.value = (+g.total || 0).toFixed(2);
+  _actualizarPreviewGasto_();
+  toast('Datos copiados de tu gasto anterior — revisa el importe y el IVA.', 4000);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Estatus de Evidencia (plan OCR Fase 2, 2026-08-27) ────────────────────────
+// Se calcula en el celular y SIEMPRE viaja en el payload (nunca en blanco) --
+// así la columna "Estatus de Evidencia" se autocrea en la hoja desde el
+// PRIMER gasto capturado tras el despliegue (ver services/puente.py::CAMPOS,
+// que sí la exige en el contrato). CFDI pesa más que la foto -- si ya hay
+// factura, la foto del ticket es evidencia extra, no la principal.
+function _estatusEvidenciaGasto_(tieneFoto, uuidCfdi, tocadoPorOcr) {
+  if (uuidCfdi) return 'CFDI';
+  if (tieneFoto && tocadoPorOcr) return 'FOTO+OCR';
+  if (tieneFoto) return 'FOTO';
+  return 'MANUAL';
+}
+
+// ── OCR de tickets (plan OCR Fase 3, 2026-08-27) ──────────────────────────────
+// Botón explícito, NUNCA automático (§3.3 del plan) -- la llamada al Apps
+// Script (tipo:'ocr_ticket') solo ocurre cuando el usuario presiona "Leer
+// ticket", una sola vez, ANTES de encolar. Si viviera dentro del guardado,
+// cada reintento offline volvería a pagar la lectura de la imagen.
+let _gastoTocadoPorOcr = false;
+let _gastoFotoComprimidaB64 = ''; // cache: evita comprimir 2 veces (preview + OCR)
+
+// "DD/MM/YYYY" -> "YYYY-MM-DD" (formato de <input type=date>). null si no es
+// una fecha válida o no viene en ese formato.
+function _parsearFechaOcr_(str) {
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(str || '').trim());
+  if (!m) return null;
+  const dd = +m[1], mm = +m[2], yyyy = +m[3];
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+  const p = n => String(n).padStart(2, '0');
+  return `${yyyy}-${p(mm)}-${p(dd)}`;
+}
+
+// Traduce la respuesta del OCR a QUÉ hacer con el formulario -- función pura
+// (sin tocar el DOM) para poder probarla. Nunca lanza; ante cualquier duda,
+// { aplicado:false } y el formulario se queda como estaba (captura manual).
+function _aplicarOcrAGasto_(resp) {
+  const NADA = { aplicado: false };
+  if (!resp || resp.ok !== true || !resp.campos) return NADA;
+  if (resp.confianza == null || resp.confianza < 50) return NADA;
+  const c = resp.campos;
+  const total = Number(c.total);
+  if (!(total > 0)) return NADA; // total ausente o 0 -> no hay nada que aplicar
+  const out = { aplicado: true, proveedor: String(c.proveedor || '').trim(), fecha: null, total };
+  const fechaOk = _parsearFechaOcr_(c.fecha);
+  // Solo se usa si es válida y no es futura (comparado contra la fecha de hoy
+  // del propio celular) -- una fecha del año que viene se ignora, se queda
+  // la de hoy que ya trae el formulario.
+  if (fechaOk && fechaOk <= _fechaLocal_()) out.fecha = fechaOk;
+  const iva = Number(c.iva);
+  if (iva > 0) {
+    // Total + IVA exacto del papel -> modo C, sin recalcular nada (regla del
+    // espejo: nunca se vuelve a multiplicar un IVA que ya viene en el ticket).
+    out.modo = 'C';
+    out.ivaMonto = iva;
+  } else {
+    // Solo vino el total -> modo B con la tasa default de la app (16%).
+    out.modo = 'B';
+    out.ivaPct = '0.16';
+  }
+  return out;
+}
+
+function _onFotoGastoElegida_() {
+  _gastoTocadoPorOcr = false;
+  _gastoFotoComprimidaB64 = '';
+  const fotoInput = document.getElementById('gas_foto');
+  const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
+  const preview = document.getElementById('gasFotoPreview');
+  const btnOcr = document.getElementById('gasBtnOcr');
+  const estado = document.getElementById('gasOcrEstado');
+  if (estado) estado.textContent = '';
+  if (!file) {
+    if (preview) { preview.style.display = 'none'; preview.src = ''; }
+    if (btnOcr) btnOcr.style.display = 'none';
+    return;
+  }
+  if (preview) {
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+  }
+  if (btnOcr) {
+    btnOcr.style.display = 'block';
+    const online = navigator.onLine;
+    btnOcr.disabled = !online;
+    btnOcr.textContent = online ? '🔍 Leer ticket otra vez' : '🔍 Leer ticket (sin señal)';
+  }
+  // El botón principal ya es "Tomar foto y leer ticket" -- elegir la foto
+  // desde ahí dispara la lectura sola, sin un segundo toque. "Leer ticket
+  // otra vez" queda visible solo para reintentar si la primera lectura falló.
+  if (navigator.onLine) _leerTicketConIA_();
+}
+
+// Marca un campo como "tocado por la IA" (fondo suave) -- la marca desaparece
+// sola en cuanto el usuario edita ESE campo (Paso 3.4 del plan: "Todos los
+// campos quedan editables... la leyenda desaparece si el usuario lo edita").
+function _marcarTocadoPorIA_(el) {
+  if (!el) return;
+  el.classList.add('ia-tocado');
+  const quitar = () => el.classList.remove('ia-tocado');
+  el.addEventListener('input', quitar, { once: true });
+  el.addEventListener('change', quitar, { once: true });
+}
+
+async function _leerTicketConIA_() {
+  const btnOcr = document.getElementById('gasBtnOcr');
+  const estado = document.getElementById('gasOcrEstado');
+  const fotoInput = document.getElementById('gas_foto');
+  const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
+  if (!file || !navigator.onLine) return;
+  const url = getScriptUrl();
+  if (!url || !API_TOKEN) return;
+  if (btnOcr) { btnOcr.disabled = true; btnOcr.textContent = 'Leyendo…'; }
+  if (estado) estado.textContent = '';
+  try {
+    // Comprime UNA vez y la reusa para el guardado -- así el ticket no se
+    // comprime dos veces ni se lee dos veces por accidente.
+    if (!_gastoFotoComprimidaB64) _gastoFotoComprimidaB64 = await _comprimirImagen_(file);
+    const res = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ tipo: 'ocr_ticket', token: API_TOKEN, foto: _gastoFotoComprimidaB64 }),
+    });
+    const resp = await res.json();
+    const r = _aplicarOcrAGasto_(resp);
+    if (!r.aplicado) {
+      _gastoTocadoPorOcr = false;
+      toast('No se pudo leer bien el ticket — captúralo a mano.', 4000);
+      if (estado) estado.textContent = '⚠️ No se pudo leer, captura a mano.';
+      return;
+    }
+    _gastoTocadoPorOcr = true;
+    // Modo + montos (nunca se recalculan, van tal cual los devolvió el OCR).
+    const radioModo = document.querySelector(`input[name="gasModo"][value="${r.modo}"]`);
+    if (radioModo) { radioModo.checked = true; _cambiarModoGasto_(r.modo); }
+    if (r.modo === 'C') {
+      const elTotal = document.getElementById('gas_totalC');
+      const elIva = document.getElementById('gas_ivaC');
+      if (elTotal) { elTotal.value = r.total.toFixed(2); _marcarTocadoPorIA_(elTotal); }
+      if (elIva) { elIva.value = r.ivaMonto.toFixed(2); _marcarTocadoPorIA_(elIva); }
+    } else {
+      const elTotal = document.getElementById('gas_totalBC');
+      const elIvaSel = document.getElementById('gas_ivaB');
+      if (elTotal) { elTotal.value = r.total.toFixed(2); _marcarTocadoPorIA_(elTotal); }
+      if (elIvaSel) { elIvaSel.value = r.ivaPct; _marcarTocadoPorIA_(elIvaSel); }
+    }
+    if (r.proveedor) {
+      const elProv = document.getElementById('gas_proveedor');
+      if (elProv) { elProv.value = r.proveedor; _marcarTocadoPorIA_(elProv); }
+    }
+    if (r.fecha) {
+      const elFecha = document.getElementById('gas_fecha');
+      if (elFecha) { elFecha.value = r.fecha; _marcarTocadoPorIA_(elFecha); }
+    }
+    _actualizarPreviewGasto_();
+    if (estado) estado.textContent = '✅ IA — revísalo antes de guardar.';
+    toast('✅ Ticket leído. Revisa los datos antes de guardar.', 4000);
+  } catch (e) {
+    _gastoTocadoPorOcr = false;
+    toast('No se pudo leer el ticket (sin señal o error). Captúralo a mano.', 4000);
+    if (estado) estado.textContent = '⚠️ Error de lectura, captura a mano.';
+  } finally {
+    if (btnOcr) { btnOcr.disabled = !navigator.onLine; btnOcr.textContent = navigator.onLine ? '🔍 Leer ticket' : '🔍 Leer ticket (sin señal)'; }
+  }
+}
+
+// Un solo gasto a la vez. Entre el toque del botón y el encolado hay un
+// `await` (la compresión de la foto), y sin este candado dos toques durante
+// esa espera corrían la función completa dos veces: cada pasada generaba su
+// propio crypto.randomUUID(), así que la protección anti-duplicado del
+// servidor (que compara IDs) los veía como gastos distintos y registraba dos
+// veces el mismo ticket, con sus dos salidas de caja.
+let _guardandoGasto = false;
+async function _guardarGasto_() {
+  if (_guardandoGasto) return;
+  _guardandoGasto = true;
+  try {
+  const fecha = document.getElementById('gas_fecha').value || _fechaLocal_();
+  const concepto = (document.getElementById('gas_concepto').value || '').trim();
+  const tipoGasto = document.getElementById('gas_tipo').value || '';
+  const forma = document.getElementById('gas_forma').value || '';
+  const modo = (document.querySelector('input[name="gasModo"]:checked') || {}).value || 'A';
+  if (!concepto) { toast('Escribe el concepto del gasto.'); return; }
+  if (!tipoGasto) { toast('Elige el tipo de gasto.'); return; }
+  if (!forma) { toast('Elige la forma de pago.'); return; }
+
+  const r = _calcularMontosGasto_(modo,
+    document.getElementById('gas_montoA')?.value,
+    modo === 'A' ? document.getElementById('gas_ivaA')?.value : document.getElementById('gas_ivaB')?.value,
+    (modo === 'C' ? document.getElementById('gas_totalC') : document.getElementById('gas_totalBC'))?.value,
+    document.getElementById('gas_ivaC')?.value);
+  if (r.errores && r.errores.length) { toast(r.errores[0]); return; }
+  // Mejora (2026-09-02): un total grande suele ser un cero de más al teclear
+  // -- una sola confirmación explícita, no bloquea gastos grandes reales.
+  if (r.total >= UMBRAL_GASTO_ATIPICO && !confirm(_mensajeConfirmacionAtipico_(r.total, tipoGasto))) return;
+
+  const fotoInput = document.getElementById('gas_foto');
+  const fotoFile = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
+  // Reusa la compresión que ya hizo _leerTicketConIA_ si el usuario pasó por
+  // ahí -- nunca comprime la misma foto dos veces.
+  const fotoB64 = _gastoFotoComprimidaB64 || await _comprimirImagen_(fotoFile);
+  const uuidCfdi = (document.getElementById('gas_uuid_cfdi').value || '').trim();
+  const proveedor = (document.getElementById('gas_proveedor')?.value || '').trim();
+  const estatusEvidencia = _estatusEvidenciaGasto_(!!fotoB64, uuidCfdi, _gastoTocadoPorOcr);
+
+  const id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
+             : 'gto_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
+  const payload = {
+    tipo: 'gasto', id, fecha, concepto, tipoGasto, modo,
+    montoSinIva: r.monto.toFixed(2), ivaPct: r.pct, ivaMonto: r.ivaMonto.toFixed(2),
+    total: r.total.toFixed(2), formaPago: forma, foto: fotoB64, uuidCfdi,
+    proveedor, estatusEvidencia,
+    device: _leerVendedorCompartido(),
+  };
+  if (proveedor) guardarSeguro('gasto_ultimo_proveedor', proveedor);
+  const guardadoEnCola = _encolarGasto_(payload);
+
+  const recientes = leerSeguro('gastos_recientes', []);
+  recientes.unshift({ concepto, tipoGasto, fecha, total: r.total, formaPago: forma });
+  guardarSeguro('gastos_recientes', recientes.slice(0, 20));
+
+  // Bug real corregido (2026-09-02): cuando la cola no cabía en localStorage,
+  // _encolarGasto_ YA avisaba "puede perderse" (8s) -- pero esta línea de
+  // aquí, inmediatamente después, le pintaba encima el toast de éxito y lo
+  // tapaba, así que el aviso real nunca se alcanzaba a leer. Mismo criterio
+  // que usaba el conteo de Inventario (_colaFallo, F5): si no se guardó, NO
+  // se dice que se guardó.
+  // 2026-09-09: además de no decir "guardado", cuando la cola NO aceptó el
+  // gasto hay que CONSERVAR la captura. Antes se seguía derecho a limpiar la
+  // foto comprimida y a repintar la pantalla, así que el usuario leía "puede
+  // perderse" y al voltear ya no tenía nada que reintentar: el expediente
+  // (foto incluida) se había borrado. `gastos_recientes` no lo sustituye,
+  // solo guarda concepto/tipo/fecha/total/forma.
+  if (!guardadoEnCola) return;
+
+  toast('✅ Gasto guardado y en cola de envío.');
+  _gastoTocadoPorOcr = false;
+  _gastoFotoComprimidaB64 = '';
+  renderGastos();
+  } finally {
+    _guardandoGasto = false;
+  }
+}
+
+function _encolarGasto_(payload) {
+  const cola = leerSeguro('cola_gastos', []);
+  if (!_dedupeCola_(cola, payload.id)) cola.push({ ...payload, ts: Date.now(), _try: 0 });
+  // Aviso proactivo (2026-08-27, plan OCR Fase 1): con la foto ya comprimida
+  // (~200KB) esto solo debería dispararse si se acumularon MUCHOS gastos sin
+  // señal -- avisa antes de chocar con la cuota, no bloquea nada.
+  if (JSON.stringify(cola).length > 3000000) {
+    toast('⚠️ La cola de envío está muy pesada. Conéctate a internet para vaciarla antes de capturar más gastos con foto.', 6000);
+  }
+  const guardado = guardarSeguro('cola_gastos', cola);
+  actualizarBadgePendientes();
+  if (!guardado) {
+    toast('⚠️ No se pudo guardar en la cola (memoria del teléfono llena). Este gasto puede perderse -- libera espacio o repórtalo.', 8000);
+    return false;
+  }
+  procesarColaGastos();
+  return true;
+}
+
+// Mejora: si hay historial de este tipo de gasto en el celular, compara
+// contra su promedio -- "¿es correcto?" a secas no ayuda a detectar un cero
+// de más si no sabes de memoria cuánto sueles gastar en eso.
+function _mensajeConfirmacionAtipico_(total, tipoGasto) {
+  const recientes = leerSeguro('gastos_recientes', []);
+  const mismos = recientes.filter(g => g.tipoGasto === tipoGasto && (+g.total || 0) > 0);
+  if (!mismos.length) return 'El total es $' + total.toFixed(2) + ', ¿es correcto?';
+  const promedio = mismos.reduce((s, g) => s + (+g.total || 0), 0) / mismos.length;
+  return 'El total es $' + total.toFixed(2) + '. Los gastos de "' + tipoGasto + '" en este celular promedian $' + promedio.toFixed(2) + '. ¿Es correcto?';
+}
+
+let _procGastoEnCurso = false;
+async function procesarColaGastos() {
+  if (_procGastoEnCurso || !navigator.onLine) return;
+  const url = getScriptUrl();
+  if (!url || !API_TOKEN) return;
+  const cola = leerSeguro('cola_gastos', []);
+  if (!cola.length) return;
+  _procGastoEnCurso = true;
+  actualizarBadgePendientes();
+  try {
+    for (const item of [...cola]) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ ...item, token: API_TOKEN }),
+        });
+        const d = await res.json();
+        if (d && d.ok && item.foto && d.fotoOk === false) {
+          // El servidor acepta el gasto aunque Drive rechace la foto: responde
+          // ok:true con fotoOk:false. Antes solo se miraba `d.ok`, así que el
+          // item se borraba de la cola y la evidencia se perdía sin forma de
+          // reenviarla desde la app. Se conserva para reintentar: el servidor
+          // completa la foto sobre la fila que ya existe (rama YA_EXISTIA).
+          _bumpIntentoGasto_(item.id);
+        } else if (d && d.ok) {
+          const actual = leerSeguro('cola_gastos', []).filter(e => e.id !== item.id);
+          guardarSeguro('cola_gastos', actual);
+        } else {
+          _bumpIntentoGasto_(item.id);
+        }
+      } catch (_) {
+        _bumpIntentoGasto_(item.id);
+      }
+    }
+  } finally {
+    _procGastoEnCurso = false;
+    actualizarBadgePendientes();
+  }
+}
+function _bumpIntentoGasto_(id) {
+  const cola = leerSeguro('cola_gastos', []);
+  cola.forEach(e => { if (e.id === id) e._try = (e._try || 0) + 1; });
+  guardarSeguro('cola_gastos', cola);
+}
+
+// Sin esto, un token mal tecleado (o revocado) dejaba la app atorada en esta
+// tarjeta de error para siempre: no había forma de volver a escribir el token
+// salvo borrando datos del navegador a mano (impráctico en bodega, en el celular).
+function _reabrirTokenGate_() {
+  API_TOKEN = '';
+  _gastosAccesoAutorizado = false;
+  localStorage.removeItem('api_token');
+  localStorage.removeItem(_GASTOS_HUELLA_VALIDADA);
+  document.getElementById('app').innerHTML = '';
+  const inp = document.getElementById('tg_input');
+  if (inp) inp.value = '';
+  _tokenGateCheck();
+}
+
+async function _iniciarAccesoGastos_() {
+  _tokenGateCheck();
+  if (!API_TOKEN) return;
+  try {
+    await _validarTokenGastos_(API_TOKEN);
+    await sumetecMarcarAccesoValidado(API_TOKEN, _GASTOS_HUELLA_VALIDADA);
+  } catch (e) {
+    if (e.message === 'TOKEN_INVALIDO') {
+      API_TOKEN = '';
+      localStorage.removeItem('api_token');
+      localStorage.removeItem(_GASTOS_HUELLA_VALIDADA);
+      _tokenGateCheck();
+      return;
+    }
+    if (!await sumetecAccesoValidadoAntes(API_TOKEN, _GASTOS_HUELLA_VALIDADA)) return;
+  }
+  _gastosAccesoAutorizado = true;
+  _tokenGateCheck();
+  _iniciarAppSegunModo_();
+  _cargarConfiguracionEcosistema_();
+}
+_iniciarAccesoGastos_();
+
+// Compartido por exportarConteoCSV() y exportarGastosCSV() -- antes cada uno
+// armaba su propio Blob/link a mano, duplicado.
+function _descargarCSV_(filas, nombreArchivo) {
+  const csv = filas.map(f => f.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Mejora (2026-09-02): gastos_recientes ya guardaba los últimos 20 -- exportar
+// a .csv para pasárselo al contador sin escribirlos a mano. Solo lo que hay
+// EN ESTE celular (no jala del servidor, mismo alcance que "recientes").
+function exportarGastosCSV() {
+  const recientes = leerSeguro('gastos_recientes', []);
+  if (!recientes.length) { toast('Sin gastos capturados todavía en este celular.'); return; }
+  const filas = [['Fecha', 'Concepto', 'Tipo', 'Forma de pago', 'Total']];
+  recientes.forEach(g => filas.push([g.fecha, g.concepto, g.tipoGasto || '', g.formaPago || '', (+g.total || 0).toFixed(2)]));
+  _descargarCSV_(filas, `gastos_${_fechaLocal_()}.csv`);
+}
+
+// ── Candado de cierre/edición (F4) ──
+// A3 (2026-09-23): el código de seguridad ya NO está escrito aquí. El ERP publica solo su
+// huella SHA-256 (Administración -> Ecosistema); se compara con la huella de lo que escribes.
+const SAL_CODIGO_CAMPO = 'sumetec-campo|';
+async function _huellaCodigo_(c) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(SAL_CODIGO_CAMPO + c));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function _huellaCodigoPublicada_() {
+  try {
+    const c = leerSeguro('config_ecosistema_cache', null);
+    return (c && c.datos && c.datos.SEGURIDAD && c.datos.SEGURIDAD.hash_codigo) || '';
+  } catch (_) { return ''; }
+}
+// true = correcto; false = incorrecto; texto = motivo (aún no hay código publicado).
+async function _codigoCorrecto_(c) {
+  const h = _huellaCodigoPublicada_();
+  if (!h) return 'Aún no hay código de seguridad publicado en este teléfono: en el ERP entra a Administración → Ecosistema, guarda y sincroniza; luego abre la app con señal.';
+  return (await _huellaCodigo_(String(c).trim())) === h;
+}
+
+// Mismo diálogo que Dirección (no prompt() nativo). validar(texto) -> true|false|texto.
+function pedirCodigoSeguridad(texto, validar) {
+  return new Promise(resolve => {
+    const dlg = document.getElementById('codigo-modal'), input = document.getElementById('codigo-modal-input');
+    const error = document.getElementById('codigo-modal-error'), form = dlg.querySelector('form');
+    document.getElementById('codigo-modal-texto').textContent = texto || 'Escribe el código de seguridad.';
+    error.textContent = ''; input.value = ''; dlg.returnValue = '';
+    const fin = ok => { form.removeEventListener('submit', enviar); dlg.removeEventListener('close', alCerrar); resolve(ok); };
+    const enviar = async ev => {
+      ev.preventDefault();
+      const r = await validar(input.value.trim());
+      if (r === true) { dlg.close('ok'); return; }
+      error.textContent = typeof r === 'string' ? r : 'Código incorrecto, intenta de nuevo.';
+      input.value = ''; input.focus();
+    };
+    const alCerrar = () => fin(dlg.returnValue === 'ok');
+    form.addEventListener('submit', enviar);
+    dlg.addEventListener('close', alCerrar);
+    dlg.showModal(); input.focus();
+  });
+}
+
+// Fecha LOCAL (no UTC): toISOString() usa UTC y corría la fecha del conteo un
+// día antes de ~17:00 hora local al llegar al servidor. yyyy-mm-dd en hora
+// local evita cualquier conversión de zona horaria en el camino.
+function _fechaLocal_() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// ── Armar payload de envío (F1: blanco no viaja, 0 explícito sí) ─────────────
+// Propuesta 4 (2026-09-10): cada renglón lleva el teórico que se vio en
+// pantalla (teorico_ref, null si el celular no tenía ese producto) y la sesión
+// lleva cuándo publicó el ERP ese teórico (referencia_ts). El ERP lo usa solo
+// para mostrar si la referencia cambió entre el conteo y su revisión -- el
+// ajuste se sigue calculando allá, nunca con este número.
+function _armarPayloadConteo_(conteo, fechaISO, stockMap, referenciaTs) {
+  const items = conteo.items
+    .filter(it => it.cantidad !== null)
+    .map(it => {
+      const e = stockMap ? stockMap.get(String(it.codigo || '').toLowerCase()) : null;
+      return { codigo: it.codigo, descripcion: it.descripcion, cantidad: it.cantidad,
+               teorico_ref: e ? e.stock : null };
+    });
+  return {
+    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
+        : 'cnt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9),
+    fecha: fechaISO,
+    categoria: conteo.categoria,
+    contador: conteo.contador || '',
+    referencia_ts: referenciaTs || '',
+    items: items,
+  };
+}
+
+_tokenGateCheck();
+
+let _procConteoEnCurso = false;
+
+// ── Conteo a medias al llegar esta versión (F5, 2026-09-11) ────────────────
+// Inventario se mudó a la app de Dirección. Los conteos YA cerrados siguen en
+// 'cola_conteo' y se envían solos como siempre (procesarColaConteo, abajo).
+// Pero un conteo SIN cerrar en 'conteo_actual' no se puede pasar a Dirección
+// (cada app guarda sus datos por separado) y ya no hay pantalla para
+// terminarlo aquí -- en vez de perderlo en silencio, se ofrece enviarlo como
+// está (solo lo contado) o exportarlo. Nunca se borra antes de estar a salvo
+// en la cola.
+function _conteoHuerfano_() {
+  const c = leerSeguro('conteo_actual', null);
+  if (!c || c.cerrado || !Array.isArray(c.items)) return null;
+  const contados = c.items.filter(it => it.cantidad !== null).length;
+  return contados ? { conteo: c, contados } : null;
+}
+
+function _htmlConteoHuerfano_() {
+  const h = _conteoHuerfano_();
+  if (!h) return '';
+  return `<div class="card" style="border-left:4px solid var(--sm-aviso)">
+    <strong style="font-size:13px">📋 Tienes un conteo sin cerrar: ${esc(h.conteo.categoria)} (${h.contados}/${h.conteo.items.length} contados)</strong>
+    <p style="font-size:12px;color:var(--sm-muted);margin:4px 0 8px">Inventario ahora vive en la app de Dirección. Para no perder lo que ya contaste, envíalo como está (solo lo que contaste; lo que no tocaste queda fuera) o expórtalo.</p>
+    <button class="btn" style="width:100%" onclick="_enviarConteoHuerfano_()">Cerrar y enviar lo contado</button>
+    <button class="btn secondary" style="width:100%;margin-top:8px" onclick="_exportarConteoHuerfano_()">⬇️ Exportar (.csv)</button>
+  </div>`;
+}
+
+async function _enviarConteoHuerfano_() {
+  const h = _conteoHuerfano_();
+  if (!h) return;
+  if (!confirm('¿Cerrar y enviar este conteo con los ' + h.contados + ' producto(s) que contaste? Lo que no tocaste NO se envía.')) return;
+  if (!await pedirCodigoSeguridad('Código de seguridad: autoriza CERRAR y enviar este conteo.', c => _codigoCorrecto_(c))) return;
+  const c = h.conteo;
+  if (!c.contador) c.contador = _leerVendedorCompartido() || '';
+  const cacheST = leerSeguro('stock_teorico_cache', null);
+  const payload = _armarPayloadConteo_(c, _fechaLocal_(),
+    _construirStockTeoricoMap(cacheST && cacheST.filas), cacheST && cacheST.ts);
+  const cola = leerSeguro('cola_conteo', []);
+  if (!_dedupeCola_(cola, payload.id)) cola.push({ ...payload, ts: Date.now(), _try: 0 });
+  if (!guardarSeguro('cola_conteo', cola)) {
+    toast('⚠️ No se pudo guardar en la cola (memoria del teléfono llena). El conteo sigue guardado aquí -- libera espacio y vuelve a intentar.', 8000);
+    return;
+  }
+  localStorage.removeItem('conteo_actual'); // ya está a salvo en la cola
+  actualizarBadgePendientes();
+  procesarColaConteo();
+  toast('Conteo en cola de envío.');
+  renderGastos();
+}
+
+function _exportarConteoHuerfano_() {
+  const h = _conteoHuerfano_();
+  if (!h) return;
+  const filas = [['Codigo', 'Descripcion', 'Cantidad']];
+  h.conteo.items.forEach(it => { if (it.cantidad !== null) filas.push([it.codigo, it.descripcion, it.cantidad]); });
+  const nombreCat = String(h.conteo.categoria || 'conteo').replace(/[^a-z0-9]+/gi, '_');
+  _descargarCSV_(filas, `conteo_${nombreCat}_${_fechaLocal_()}.csv`);
+}
+
+const MAX_INTENTOS_AVISO = 10; // ~5 min a 30s/intento: a partir de aquí se marca "atascado" en la UI de cola
+
+async function procesarColaConteo() {
+  if (_procConteoEnCurso || !navigator.onLine) return;
+  const url = getScriptUrl();
+  if (!url || !API_TOKEN) return;
+  const cola = leerSeguro('cola_conteo', []);
+  if (!cola.length) return;
+  _procConteoEnCurso = true;
+  actualizarBadgePendientes();
+  try {
+    for (const item of [...cola]) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ tipo: 'conteo_inventario', token: API_TOKEN, ...item }),
+        });
+        const d = await res.json();
+        if (d && d.ok) {
+          const actual = leerSeguro('cola_conteo', []);
+          // Carrera real (2026-09-09): si el usuario corrigió una cantidad
+          // MIENTRAS esta petición viajaba, _reencolarCorreccion_ reescribió
+          // la cola pero lo que llegó al servidor fue la versión vieja. Antes
+          // se borraba por ID sin comparar, así que la corrección desaparecía
+          // en silencio y el ERP ajustaba con el dato equivocado.
+          // No se reenvía con el mismo ID a propósito: el ERP es idempotente
+          // por origen_conteo (services/importar.py::importar_conteo) y lo
+          // ignoraría, dejando creer que se corrigió. Se avisa, con el mismo
+          // criterio que _reencolarCorreccion_ ya usa para "ya se había
+          // enviado".
+          const enCola = actual.find(e => e.id === item.id);
+          if (enCola && JSON.stringify(enCola.items) !== JSON.stringify(item.items)) {
+            toast('⚠️ Corregiste una cantidad mientras el conteo se enviaba: viajó la cantidad anterior. Avisa para un ajuste manual en el ERP o cuenta ese producto en un conteo nuevo.', 9000);
+          }
+          guardarSeguro('cola_conteo', actual.filter(e => e.id !== item.id));
+        } else {
+          _bumpIntentoConteo(item.id);
+        }
+      } catch (_) {
+        _bumpIntentoConteo(item.id);
+      }
+    }
+  } finally {
+    _procConteoEnCurso = false;
+    actualizarBadgePendientes();
+  }
+}
+
+function _bumpIntentoConteo(id) {
+  const cola = leerSeguro('cola_conteo', []);
+  cola.forEach(e => { if (e.id === id) e._try = (e._try || 0) + 1; });
+  guardarSeguro('cola_conteo', cola);
+}
+
+// J-1: la campana ahora suma AMBAS colas (conteo + gastos) -- un pendiente es
+// un pendiente, sin importar de qué pestaña salió.
+function actualizarBadgePendientes() {
+  const colaC = leerSeguro('cola_conteo', []);
+  const colaG = leerSeguro('cola_gastos', []);
+  const todas = colaC.concat(colaG);
+  const n = todas.length;
+  const atascados = todas.filter(e => (e._try || 0) >= MAX_INTENTOS_AVISO).length;
+  const el = document.getElementById('badgePendientes');
+  const txt = document.getElementById('badgePendientesTexto');
+  if (!el || !txt) return;
+  el.classList.remove('offline', 'sending', 'stuck');
+  if (atascados) {
+    el.classList.add('stuck');
+    txt.textContent = 'Atascado · ' + atascados;
+  } else if (!navigator.onLine) {
+    el.classList.add('offline');
+    txt.textContent = n ? ('Sin red · ' + n) : 'Sin red';
+  } else if (_procGastoEnCurso || _procConteoEnCurso) {
+    el.classList.add('sending');
+    txt.textContent = 'Enviando ' + n + '…';
+  } else if (n) {
+    txt.textContent = n + ' pendiente' + (n > 1 ? 's' : '');
+  } else {
+    txt.textContent = 'En línea';
+  }
+}
+
+// ── Borrar copias locales (2026-09-24) ──────────────────────────────────────
+// Para cuando se borra algo en el servidor (p. ej. la carpeta de Drive) y el
+// teléfono sigue mostrando la copia vieja. SOLO borra caché que se vuelve a
+// bajar del servidor. Bloquea si hay algo sin enviar (colas o conteo en curso),
+// si no hay señal o el servidor no contesta. Doble confirmación: aviso + teclear
+// BORRAR. Nunca toca colas, conteo en curso, token ni nombre de vendedor.
+const _CLAVES_CACHE_GASTOS = ['listas_gasto_cache', 'config_ecosistema_cache', 'stock_teorico_cache', 'gastos_recientes'];
+function _pendientesParaLimpiar_() {
+  return leerSeguro('cola_gastos', []).length + leerSeguro('cola_conteo', []).length +
+    (leerSeguro('conteo_actual', null) ? 1 : 0);
+}
+async function _servidorEnLinea_() {
+  if (!navigator.onLine || !API_TOKEN) return false;
+  try {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 10000);
+    const r = await fetch(getScriptUrl(), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ tipo: 'ping', token: API_TOKEN }), signal: ctrl.signal });
+    clearTimeout(t);
+    if (!r.ok) return false;
+    let d = null; try { d = await r.json(); } catch (_) {}
+    return !(d && d.ok === false);
+  } catch (_) { return false; }
+}
+async function limpiarCacheLocal() {
+  if (!navigator.onLine) { toast('Sin conexión — conéctate para poder borrar.', 4000); return; }
+  const pend = _pendientesParaLimpiar_();
+  if (pend > 0) { toast('Hay ' + pend + ' pendiente(s) sin enviar (o un conteo en curso) — no se borró nada.', 5000); return; }
+  toast('Confirmando con el servidor…', 2500);
+  if (!(await _servidorEnLinea_())) { toast('El servidor no contestó — no se borró nada.', 5000); return; }
+  if (!confirm('Se borrarán las copias guardadas en ESTE teléfono (listas, configuración, stock teórico y últimos gastos).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, token y vendedor NO se borran.\n\n¿Continuar?')) return;
+  const txt = prompt('Segunda confirmación: escribe BORRAR para continuar.');
+  if (String(txt || '').trim().toUpperCase() !== 'BORRAR') { toast('Cancelado — no se borró nada.', 3000); return; }
+  if (_pendientesParaLimpiar_() > 0) { toast('Entró algo a la cola mientras confirmabas — no se borró nada.', 5000); return; }
+  _CLAVES_CACHE_GASTOS.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+  toast('Copias borradas ✓ — recargando…', 2000);
+  setTimeout(() => location.reload(), 900);
+}
+
+// UI de la cola pendiente (F6 + mejora #8, unificada J-1): ve qué falta por
+// mandar de AMBAS colas, con tope visible de intentos, reenviar uno a la vez
+// o descartarlo con aviso.
+function verColaPendiente() {
+  const colaC = leerSeguro('cola_conteo', []).map(e => ({ ...e, _cola: 'conteo' }));
+  const colaG = leerSeguro('cola_gastos', []).map(e => ({ ...e, _cola: 'gasto' }));
+  const cola = colaC.concat(colaG).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  if (!cola.length) { toast('No hay nada pendiente de enviar.'); return; }
+  const filas = cola.map(e => {
+    const atascado = (e._try || 0) >= MAX_INTENTOS_AVISO;
+    const esGasto = e._cola === 'gasto';
+    const desc = esGasto
+      ? esc(e.concepto) + ' — $' + (Number(e.total) || 0).toFixed(2)
+      : esc(e.categoria) + ' — ' + e.items.length + ' producto(s)';
+    return `
+    <div class="fila-producto pendiente-item">
+      <div class="info">
+        <div>${esGasto ? '💰' : '📋'} ${desc}</div>
+        <div class="codigo">Fecha ${esc(e.fecha)} · intento ${e._try || 0}${atascado ? ' ⚠️ atascado' : ''}</div>
+      </div>
+      <div class="pendiente-acciones">
+        <button class="btn secondary pendiente-accion" type="button" aria-label="Reenviar pendiente" title="Reenviar" onclick="_reenviarUno_('${e.id}','${e._cola}')">↻</button>
+        <button class="btn danger pendiente-accion" type="button" aria-label="Descartar pendiente" title="Descartar" onclick="_descartarUno_('${e.id}','${e._cola}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+  const volver = 'renderGastos()';
+  document.getElementById('app').innerHTML = `
+    <div class="card">
+      <strong>Pendientes de enviar (${cola.length})</strong>
+      <p style="font-size:12px;color:var(--sm-muted);margin:4px 0 8px">Se reintentan solos cada 30s con señal. "Atascado" = lleva ${MAX_INTENTOS_AVISO}+ intentos fallidos — revisa el token o avisa.</p>
+      ${filas}
+      <button class="btn secondary" style="width:100%;margin-top:10px" onclick="_reabrirTokenGate_()">🔑 Cambiar token</button>
+      <button class="btn secondary" style="width:100%;margin-top:8px" onclick="${volver}">← Volver</button>
+    </div>`;
+}
+function _reenviarUno_(id, tipoCola) {
+  const clave = tipoCola === 'gasto' ? 'cola_gastos' : 'cola_conteo';
+  const cola = leerSeguro(clave, []);
+  cola.forEach(e => { if (e.id === id) e._try = 0; });
+  guardarSeguro(clave, cola);
+  const proc = tipoCola === 'gasto' ? procesarColaGastos : procesarColaConteo;
+  proc().then(verColaPendiente);
+}
+function _descartarUno_(id, tipoCola) {
+  if (!confirm('¿Descartar este pendiente? Esos datos NO llegarán al ERP y esta acción no se puede deshacer.')) return;
+  const clave = tipoCola === 'gasto' ? 'cola_gastos' : 'cola_conteo';
+  const cola = leerSeguro(clave, []).filter(e => e.id !== id);
+  guardarSeguro(clave, cola);
+  actualizarBadgePendientes();
+  verColaPendiente();
+}
+
+window.addEventListener('online', function () { procesarColaConteo(); procesarColaGastos(); });
+window.addEventListener('offline', actualizarBadgePendientes);
+setInterval(function () { procesarColaConteo(); procesarColaGastos(); }, 30000);
+actualizarBadgePendientes();
+
+// Liquid Glass: reflejo de luz que sigue al cursor -- mismo mecanismo que
+// static/js/liquid-glass-theme.js del ERP (1.- SUMETEC-PY-SQL). Delegado
+// desde document, un solo requestAnimationFrame, sin listener por tarjeta.
+// En pantallas tactiles no hay pointermove de "hover" real, así que el
+// efecto simplemente no se activa -- igual que en el ERP.
+(function () {
+  const SELECTOR = 'header, .card, .btn';
+  let activo = null, pendiente = null, ticking = false;
+  function aplicar() {
+    ticking = false;
+    if (!pendiente) return;
+    const { el, x, y } = pendiente;
+    if (activo && activo !== el) activo.classList.remove('sm-liquid-activa');
+    el.style.setProperty('--sm-liquid-x', x + 'px');
+    el.style.setProperty('--sm-liquid-y', y + 'px');
+    el.classList.add('sm-liquid-activa');
+    activo = el;
+  }
+  document.addEventListener('pointermove', function (ev) {
+    if (ev.pointerType === 'touch') return;
+    const el = ev.target.closest(SELECTOR);
+    if (!el) {
+      if (activo) { activo.classList.remove('sm-liquid-activa'); activo = null; }
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    pendiente = { el, x: ev.clientX - r.left, y: ev.clientY - r.top };
+    if (!ticking) { ticking = true; requestAnimationFrame(aplicar); }
+  }, { passive: true });
+  document.addEventListener('pointerleave', function () {
+    if (activo) { activo.classList.remove('sm-liquid-activa'); activo = null; }
+  }, { passive: true, capture: true });
+})();
+</script>
+
+<script src="./version.js"></script>
+<div id="sumetecActualizacion" role="status" aria-live="assertive"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje">⚙</span><strong>Actualizando SUMETEC</strong><p>Espera un momento…</p></div></div>
+<script src="./actualizacion.js"></script>
+<script>
+// VERSION_DEPLOY y VERSION_CODIGO vienen de version.js (los escribe
+// build_deploy.py en cada corrida): la hora real del build y el mismo hash
+// que sw.js usa como nombre de caché ('sumetec-inv-<código>').
+function _mostrarVersionInstalada() {
+  const codigo = (typeof VERSION_CODIGO !== 'undefined' && VERSION_CODIGO) ? VERSION_CODIGO : null;
+  const v = (typeof VERSION_DEPLOY !== 'undefined' && VERSION_DEPLOY)
+    ? new Date(VERSION_DEPLOY).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'Sin información';
+  const ultima = Number(localStorage.getItem('inv_ultima_actualizacion') || 0);
+  const u = ultima
+    ? new Date(ultima).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'Aún no se ha detectado una actualización nueva en este dispositivo.';
+  alert(`Act. software: ${codigo ? codigo + ' · ' : ''}${v}\nÚltima actualización: ${u}`);
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then((reg) => {
+    // El navegador solo revisa sw.js por su cuenta cada ~24h -- una PWA
+    // abierta desde el ícono de inicio (retomada de segundo plano, sin
+    // recarga completa) puede tardar horas o días en notar que hay una
+    // versión nueva si no se le pregunta activamente. Mismo patrón que
+    // Remisiones (2.- COTIZADOR/remision.html) y Mis Apps.
+    const _revisar = () => reg.update().catch(() => {});
+    setInterval(_revisar, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') _revisar(); });
+    window.addEventListener('online', _revisar);
+    _revisar();
+
+    let huboControlador = !!navigator.serviceWorker.controller;
+    let recargaPendiente = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!huboControlador) { huboControlador = true; return; }
+      localStorage.setItem('inv_ultima_actualizacion', String(Date.now()));
+      if (sessionStorage.getItem('sumetec_gastos_actualizacion')) return;
+      if (hayTrabajoSinGuardarGastos()) { recargaPendiente = true; return; }
+      window.location.reload();
+    });
+    // F5b (2026-09-11, punto 5 del checklist pwa-actualizacion-sin-cache):
+    // antes solo revisaba el campo CON el foco en el momento exacto en que
+    // llegaba la actualización -- un gasto ya llenado pero sin el cursor
+    // encima se perdía igual, y si sí había algo, nunca se reintentaba
+    // después. Mismo patrón que ya usan Dirección y Compras.
+    document.addEventListener('visibilitychange', () => {
+      if (!recargaPendiente || document.visibilityState !== 'hidden') return;
+      if (hayTrabajoSinGuardarGastos()) return;
+      window.location.reload();
+    });
+  }).catch(e => console.warn('SW:', e));
+}
+
+// Bug #1 (2026-09-23): antes cualquier campo con valor contaba como captura en curso, y la
+// pantalla siempre trae valores puestos por la app (fecha de hoy, modo A/B/C, socio, fondo 0):
+// la recarga por actualización se aplazaba para siempre. Ahora solo cuenta lo que el usuario CAMBIÓ.
+function _campoEditadoPorUsuario_(el) {
+  if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return false;
+  if (['file', 'date', 'radio', 'checkbox', 'hidden', 'button', 'submit'].includes(el.type)) return false;
+  return !!el.value && el.value !== el.defaultValue;
+}
+function hayTrabajoSinGuardarGastos() {
+  if (_campoEditadoPorUsuario_(document.activeElement)) return true;
+  const app = document.getElementById('app');
+  if (!app) return false;
+  return [...app.querySelectorAll('input, textarea')].some(_campoEditadoPorUsuario_);
+}
+</script>
+<dialog id="codigo-modal" style="border:1px solid #ccc;border-radius:12px;padding:20px;max-width:340px;width:calc(100% - 32px)">
+  <form method="dialog">
+    <h2 style="font-size:18px;margin:0 0 8px">Código de seguridad</h2>
+    <p id="codigo-modal-texto" style="font-size:13px;color:#666;margin:0 0 10px"></p>
+    <input id="codigo-modal-input" type="password" autocomplete="off" required aria-label="Código de seguridad" style="width:100%;padding:10px;font-size:16px;box-sizing:border-box">
+    <p id="codigo-modal-error" role="alert" style="color:#c0392b;font-size:13px;min-height:1.2em"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" onclick="this.closest('dialog').close('cancel')" style="padding:10px 14px">Cancelar</button>
+      <button type="submit" style="padding:10px 14px;background:#057448;color:#fff;border:0;border-radius:8px">Continuar</button>
+    </div>
+  </form>
+</dialog>
+</body>
+</html>
