@@ -201,6 +201,21 @@ h2{font-size:11px;letter-spacing:.06em}
 .dash-nivel{flex:none;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:99px}
 .nivel-danger .dash-nivel{color:var(--rojo);background:#FDECEA}
 .nivel-warning .dash-nivel{color:var(--ambar);background:#FFF3CD}
+/* Selector de periodo: fechas en dos columnas parejas, botones en su propio renglón */
+.periodo{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.periodo .field{margin:0;min-width:0}
+.periodo-rango,.periodo-acciones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.periodo-btn{min-height:40px;padding:0 12px;border:1px solid var(--border-soft);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.periodo-btn:hover{background:var(--surface2)}
+.periodo-btn.principal{background:var(--accent);border-color:var(--accent);color:#fff}
+.periodo-btn:disabled{opacity:.55;cursor:wait}
+.periodo-atajos{display:flex;flex-wrap:wrap;gap:6px}
+.periodo-chip{min-height:32px;padding:0 10px;border:1px solid var(--border-soft);border-radius:99px;background:var(--surface);color:var(--ink);font:inherit;font-size:12px;cursor:pointer}
+.periodo-chip:hover{background:var(--surface2)}
+.periodo-btn:focus-visible,.periodo-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.aviso-conexion{flex-wrap:wrap;margin-bottom:10px}
+.aviso-conexion[hidden]{display:none}
+.aviso-conexion span{flex:1 1 180px}
 /* Herramientas como lista */
 .fact-tools{border-top:1px solid var(--linea)}
 .fact-tools summary{color:var(--accent)}
@@ -271,16 +286,26 @@ button.fact.peligro:hover{background:#FDECEA}
 <div class="wrap">
   <div class="col lista">
     <h2>Remisiones</h2>
-    <div class="periodo" style="display:flex;gap:8px;align-items:end;margin-bottom:8px">
-      <div class="field" style="flex:1"><label>Desde</label><input type="date" id="periodoDesde"></div>
-      <div class="field" style="flex:1"><label>Hasta</label><input type="date" id="periodoHasta"></div>
-      <button type="button" class="tool-btn" style="padding:8px 14px;border:1px solid var(--border-soft);border-radius:8px;background:var(--surface);cursor:pointer;height:38px" onclick="aplicarPeriodo()">Aplicar</button>
+    <div class="periodo">
+      <div class="periodo-rango">
+        <div class="field"><label for="periodoDesde">Desde</label><input type="date" id="periodoDesde"></div>
+        <div class="field"><label for="periodoHasta">Hasta</label><input type="date" id="periodoHasta"></div>
+      </div>
+      <div class="periodo-acciones">
+        <button type="button" class="periodo-btn principal" onclick="aplicarPeriodo()">Aplicar fechas</button>
+        <button type="button" class="periodo-btn" id="btnRecargarFact" onclick="recargarDatos()" title="Volver a pedir las remisiones al servidor">↻ Actualizar</button>
+      </div>
+      <div class="periodo-atajos">
+        <button type="button" class="periodo-chip" onclick="periodoAtajo(0)">Este mes</button>
+        <button type="button" class="periodo-chip" onclick="periodoAtajo(-1)">Mes anterior</button>
+        <button type="button" class="periodo-chip" onclick="periodoAtajo(-2, true)">Últimos 3 meses</button>
+      </div>
+      <div class="field periodo-mes"><label for="periodoMes">Otro mes</label><input type="month" id="periodoMes" onchange="periodoAtajoMes(this.value)"></div>
     </div>
-    <div class="periodo-atajos" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-      <button type="button" class="tool-btn" style="padding:5px 10px;border:1px solid var(--border-soft);border-radius:8px;background:var(--surface);cursor:pointer" onclick="periodoAtajo(0)">Este mes</button>
-      <button type="button" class="tool-btn" style="padding:5px 10px;border:1px solid var(--border-soft);border-radius:8px;background:var(--surface);cursor:pointer" onclick="periodoAtajo(-1)">Mes anterior</button>
-      <button type="button" class="tool-btn" style="padding:5px 10px;border:1px solid var(--border-soft);border-radius:8px;background:var(--surface);cursor:pointer" onclick="periodoAtajo(-2, true)">Últimos 3 meses</button>
-      <input type="month" id="periodoMes" aria-label="Elegir un mes" style="padding:4px 6px;border:1px solid var(--border-soft);border-radius:8px" onchange="periodoAtajoMes(this.value)">
+    <!-- Falla de conexión: se queda a la vista (el toast se iba en 6 s) y trae su propio Reintentar. -->
+    <div class="dash-aviso nivel-warning aviso-conexion" id="avisoConexion" hidden>
+      <span id="avisoConexionTxt"></span>
+      <button type="button" class="periodo-btn" onclick="recargarDatos()">Reintentar</button>
     </div>
     <div class="filtro" id="filtroTxt">Cargando…</div>
     <div id="dashFact"></div>
@@ -584,7 +609,29 @@ function _conTimeout(promise, ms, etiqueta){
 // Carga (o recarga) REMS para [periodoDesde, periodoHasta]. Separada de init()
 // para que aplicarPeriodo() pueda re-consultar sin repetir la carga del
 // catálogo ni el candado de token.
+// Una falla de conexión deja api.modo en 'demo'; para poder reintentar sin recargar
+// la página se recuerda con qué transporte arrancó la app.
+const _MODO_INICIAL_FACT = api.modo;
+let _cargandoVentas = false;
+function _avisoConexion(texto){
+  const caja = document.getElementById('avisoConexion'), txt = document.getElementById('avisoConexionTxt');
+  if(!caja||!txt) return;
+  txt.textContent = texto||''; caja.hidden = !texto;
+}
+// Botón "↻ Actualizar" / "Reintentar": vuelve a pedir el periodo actual al servidor.
+async function recargarDatos(){
+  if(_cargandoVentas) return;
+  api.modo = _MODO_INICIAL_FACT;
+  selFolio = null;
+  await _cargarVentasDelPeriodo();
+}
 async function _cargarVentasDelPeriodo(){
+  const btnRec = document.getElementById('btnRecargarFact');
+  _cargandoVentas = true; if(btnRec) btnRec.disabled = true;
+  try{ await _cargarVentasDelPeriodoInterno(); }
+  finally{ _cargandoVentas = false; if(btnRec) btnRec.disabled = false; }
+}
+async function _cargarVentasDelPeriodoInterno(){
   if(api.modo!=='demo'){
     document.getElementById('listaRems').innerHTML = '<div class="vacio"><span class="spin"></span>Cargando del servidor…</div>';
     try{
@@ -658,9 +705,14 @@ async function _cargarVentasDelPeriodo(){
         }catch(e){ /* vencidas es informativo, no crítico -- si falla, se omite */ }
       }catch(e){}
       setStatusChip('ok', api.modo==='google' ? '🔒 Conectado · tu cuenta Google' : 'Conectado al backend');
+      _avisoConexion('');
     }catch(e){
       api.modo='demo'; setStatusChip('warn','Backend no disponible — modo demo');
-      toast('No se pudo conectar al servidor ('+String((e&&e.message)||e)+') — mostrando datos de ejemplo.','warn',6000);
+      const _msg = String((e&&e.message)||e);
+      toast('No se pudo conectar al servidor ('+_msg+') — mostrando datos de ejemplo.','warn',6000);
+      _avisoConexion(/^TIMEOUT/.test(_msg)
+        ? 'El servidor tardó demasiado en responder. Lo que ves abajo son datos de ejemplo, no tus ventas.'
+        : 'No se pudo leer el servidor ('+_msg+'). Lo que ves abajo son datos de ejemplo, no tus ventas.');
     }
   } else {
     setOnlineState(isOnline);
@@ -722,6 +774,9 @@ async function init(){
   const dEl = document.getElementById('periodoDesde'), hEl = document.getElementById('periodoHasta');
   if(dEl) dEl.value = _isoLocal(periodoDesde);
   if(hEl) hEl.value = _isoLocal(periodoHasta);
+  // "Otro mes" arranca en el mes actual: vacío se veía como un cuadro gris sin sentido.
+  const mEl = document.getElementById('periodoMes');
+  if(mEl && !mEl.value) mEl.value = _isoLocal(periodoDesde).slice(0,7);
   try{
     // Catálogo fiscal SAT (2026-09-23): primero intenta la red -- el ERP lo
     // publica fresco en Drive (services/publicar.py::publicar_catalogo_fiscal)
