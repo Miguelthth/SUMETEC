@@ -659,17 +659,17 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 </head>
 <body>
 <div class="tb no-print">
+  <!-- El selector de modo vive en la esquina izquierda: la pestaña activa ya dice en qué modo estás. -->
   <div class="tb-brand" id="tbBrand">
-    <span class="ac" id="tbModo">Remisiones</span>
+    <div class="tb-tabs" id="tbTabs">
+      <button class="tb-tab on" id="tabRem" onclick="_activarModoRem()">Remisión</button>
+      <button class="tb-tab" id="tabCot" onclick="abrirCotizacion()">Cotización</button>
+    </div>
   </div>
   <!-- Mejora #5 (menú COTIZADOR 2026-07-14): header vivo -- cartera exacta siempre
        visible sin abrir 📊 Negocio. Oculto si no hay nada por cobrar. -->
   <span id="headerVivo" style="display:none;font-size:12px;font-weight:700;color:#fff;background:rgba(192,57,43,.28);border-radius:20px;padding:5px 12px;white-space:nowrap;max-width:58vw;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;cursor:pointer"></span>
   <!-- Botones modo REMISIÓN (se ocultan en modo cotización) -->
-<div class="tb-tabs" id="tbTabs">
-    <button class="tb-tab on" id="tabRem" onclick="_activarModoRem()">Remisión</button>
-    <button class="tb-tab" id="tabCot" onclick="abrirCotizacion()">Cotización</button>
-  </div>
   <button class="btn btn-g" id="btnNueva" onclick="nuevaRem()" title="Nueva remisión">＋</button>
   <div class="tb-div" id="tbDiv1"></div>
   <button class="btn btn-o" id="btnHist" onclick="verHist()">📋 Historial</button>
@@ -9521,7 +9521,6 @@ function abrirCotizacion(){
 function _activarModoCot(){
   document.querySelector('.page').style.display='none';
   document.getElementById('secCot').style.display='';
-  const modoEl=document.getElementById('tbModo');if(modoEl)modoEl.textContent='Cotizaciones';
   // Ocultar botones de remisiones. I-4: 'badgePendientes' YA NO se oculta --
   // ya cuenta también la cola de cotizaciones (cola_cot_r, ver _pendientesTotal),
   // así que debe seguir visible en modo Cotizaciones para que el contador diga la verdad.
@@ -9564,7 +9563,6 @@ function _activarModoRem(){
 function _ejecutarVolverRem(){
   document.getElementById('secCot').style.display='none';
   document.querySelector('.page').style.display='';
-  const modoEl=document.getElementById('tbModo');if(modoEl)modoEl.textContent='Remisiones';
   // Restaurar botones de remisiones ('badgePendientes' ya no se toca -- ver nota en _activarModoCot)
   ['btnNueva','tbDiv1','btnHist','btnCobros','tbDiv2','btnDescargarPDF']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
