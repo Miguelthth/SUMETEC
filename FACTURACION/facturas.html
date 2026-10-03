@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d3b66">
 <title>SUMETEC — FACTURAS</title>
 <meta name="theme-color" content="#0d3b66">
 <link rel="manifest" href="manifest.json">
@@ -264,6 +265,32 @@ button.fact.peligro:hover{background:#FDECEA}
   body[data-fact-view='detail']{padding-bottom:96px}
   .toast{bottom:96px}
 }
+/* Mejoras móviles 2026-10-03: periodo plegable, filtro fijo, toque cómodo, safe-area */
+html{-webkit-text-size-adjust:100%}
+body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
+button,summary,.rem{touch-action:manipulation}
+.periodo-det>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 14px;margin-bottom:10px;border:1px solid var(--border-soft);border-radius:12px;background:var(--surface);font-size:14px;font-weight:600;cursor:pointer}
+.periodo-det>summary::-webkit-details-marker{display:none}
+.periodo-det>summary::after{content:"Cambiar";color:var(--accent);font-size:13px}
+.periodo-det[open]>summary::after{content:"Ocultar"}
+@media(min-width:701px){.periodo-det>summary{display:none}}
+@media(max-width:700px){
+  .wrap{padding:8px 8px max(8px,env(safe-area-inset-bottom))}
+  .lista-filtro{position:sticky;top:60px;z-index:20;background:var(--surface2);box-shadow:0 6px 10px -8px rgba(8,43,70,.35)}
+  .rem{padding:12px;margin-bottom:10px;border-radius:12px}
+  .rem:active{background:var(--verde2)}
+  .rem .top{font-size:15px}
+  .periodo-chip{min-height:44px;padding:0 14px;font-size:13px}
+  .periodo-btn{min-height:44px}
+  .dash-heroe strong{font-size:30px}
+  .toast{left:12px;right:12px;transform:translateY(80px);max-width:none;bottom:calc(96px + env(safe-area-inset-bottom))}
+  .toast.show{transform:translateY(0)}
+  .barra-facturar{padding-bottom:max(12px,env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(8,43,70,.14)}
+  .barra-facturar button.fact{min-height:52px;font-size:16px}
+  .menu-fact{top:calc(56px + env(safe-area-inset-top));right:8px}
+  .volver-mobile{position:sticky;top:60px;z-index:15;background:var(--surface);border:1px solid var(--border-soft);border-radius:10px;font:inherit;font-weight:600;color:var(--accent)}
+}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 <link rel="stylesheet" href="acceso.css">
 </head>
@@ -286,6 +313,7 @@ button.fact.peligro:hover{background:#FDECEA}
 <div class="wrap">
   <div class="col lista">
     <h2>Remisiones</h2>
+    <details class="periodo-det" id="periodoDet" open><summary>Periodo y fechas</summary>
     <div class="periodo">
       <div class="periodo-rango">
         <div class="field"><label for="periodoDesde">Desde</label><input type="date" id="periodoDesde"></div>
@@ -301,7 +329,7 @@ button.fact.peligro:hover{background:#FDECEA}
         <button type="button" class="periodo-chip" onclick="periodoAtajo(-2, true)">Últimos 3 meses</button>
       </div>
       <div class="field periodo-mes"><label for="periodoMes">Otro mes</label><input type="month" id="periodoMes" onchange="periodoAtajoMes(this.value)"></div>
-    </div>
+    </div></details>
     <!-- Falla de conexión: se queda a la vista (el toast se iba en 6 s) y trae su propio Reintentar. -->
     <div class="dash-aviso nivel-warning aviso-conexion" id="avisoConexion" hidden>
       <span id="avisoConexionTxt"></span>
@@ -360,6 +388,7 @@ button.fact.peligro:hover{background:#FDECEA}
   <button type="button" id="botonActualizacionFacturacion" onclick="aplicarActualizacionFacturacion()">Actualizar ahora</button>
 </div>
 
+<script>if(window.matchMedia&&matchMedia("(max-width:700px)").matches){var _pd=document.getElementById("periodoDet");if(_pd)_pd.removeAttribute("open");}</script>
 <script src="./version.js"></script>
 <script src="./actualizacion.js"></script>
 <script src="./catalogo_fiscal_productos.js"></script>
