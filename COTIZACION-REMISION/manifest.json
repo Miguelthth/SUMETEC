@@ -1,0 +1,16 @@
+{
+  "name": "SUMETEC Remisiones",
+  "short_name": "Remisiones",
+  "start_url": "./remision.html",
+  "display": "standalone",
+  "background_color": "#F7FAFB",
+  "theme_color": "#023561",
+  "icons": [
+    {
+      "src": "./logos/sumetec-remisiones.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
