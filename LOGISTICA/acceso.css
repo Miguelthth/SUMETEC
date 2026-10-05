@@ -1,4 +1,5 @@
 /* Pantalla de vinculación común de las cinco apps SUMETEC. */
+:root { --sumetec-acento-acceso: #d99c2b; }
 .sumetec-acceso {
   --acento: #d99c2b;
   --acceso-tope: max(40px, calc(env(safe-area-inset-top) + 8px));
@@ -139,6 +140,6 @@ body.sin-sesion > header, body.sin-sesion > #masMenu { visibility: hidden; }
 .sumetec-acceso-espera-icono{font-size:58px;line-height:1;animation:sumetec-acceso-girar 1.3s linear infinite}
 #sumetecAccesoBloqueado .sumetec-acceso-espera-icono{animation:none}
 .sumetec-acceso-espera strong{font-size:21px}.sumetec-acceso-espera p{margin:0;color:#c8d8e2}
-.sumetec-acceso-espera button{margin-top:14px;min-height:48px;padding:10px 30px;border:0;border-radius:10px;background:#76b82a;color:#071d2d;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.sumetec-acceso-espera button{margin-top:14px;min-height:48px;padding:10px 30px;border:0;border-radius:10px;background:var(--sumetec-acento-acceso);color:#071d2d;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
 @keyframes sumetec-acceso-girar{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.sumetec-acceso-espera-icono{animation:none}}
