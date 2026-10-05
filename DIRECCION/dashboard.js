@@ -159,6 +159,7 @@ async function activarDashboardDireccion() {
     // hay que reemplazar #app -- perdería lo que esté a medio capturar ahí.
     if (typeof vistaActivaDireccion === 'function' && vistaActivaDireccion() !== 'resumen') return;
     document.querySelector('#app').innerHTML = renderDashboardDireccion(s);
+    if(typeof mostrarPanelComercialDireccion==='function')mostrarPanelComercialDireccion(pin);
   } catch (e) {
     if (typeof vistaActivaDireccion === 'function' && vistaActivaDireccion() !== 'resumen') return;
     // Sin red (o el servidor no contestó): en vez de solo un mensaje de

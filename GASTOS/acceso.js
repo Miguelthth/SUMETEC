@@ -1,5 +1,5 @@
-// MISMO archivo en las 5 PWAs (2026-09-29): Cotizador, Gastos, Dirección, Compras y Facturación.
-// Si cambias algo aquí, cópialo a las otras 4 -- tests/acceso_alineado.test.js (Gastos) lo exige.
+// MISMO archivo en las 6 PWAs (2026-09-29): Cotizador, Gastos, Dirección, Compras Facturación y Logística.
+// Si cambias algo aquí, cópialo a las otras 5 -- tests/acceso_alineado.test.js (Gastos) lo exige.
 // Ayudas de presentación y recuerdo de una validación real del servidor.
 // La huella no concede permisos en el servidor: solo conserva el acceso sin red
 // a un token que este dispositivo ya confirmó mientras estaba conectado.
@@ -38,7 +38,7 @@ function sumetecEntrando(boton, activo) {
 // B5: cada app cifra su propio token. El PIN vive sólo durante esta sesión;
 // la clave se deriva igual que en Dirección/Compras (PBKDF2 + AES-GCM).
 function _sumetecClaveToken(app) {
-  if (!['cotizador','gastos','fact'].includes(app)) throw Error('Aplicación desconocida');
+  if (!['cotizador','gastos','fact','logistica'].includes(app)) throw Error('Aplicación desconocida');
   return `sumetec_${app}_token_cifrado`;
 }
 async function _sumetecClavePin(pin, salt) {

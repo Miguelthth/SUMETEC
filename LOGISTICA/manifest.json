@@ -1,0 +1,16 @@
+{
+  "name": "SUMETEC Logística",
+  "short_name": "Logística",
+  "start_url": "./logistica.html",
+  "display": "standalone",
+  "background_color": "#0D3B66",
+  "theme_color": "#0D3B66",
+  "icons": [
+    {
+      "src": "logos/sumetec-logistica-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

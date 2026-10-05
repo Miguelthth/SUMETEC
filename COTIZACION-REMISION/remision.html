@@ -654,6 +654,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
      Debe cargar ANTES del <script> principal. Cacheado por sw.js para uso offline. -->
 <script src="./calculos.js"></script>
 <script src="./sync_audit.js"></script>
+<script src="./comercial_cliente.js"></script>
 <script src="./version.js"></script>
 <link rel="stylesheet" href="./actualizacion.css">
 </head>
@@ -2733,6 +2734,7 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
     datosCliente, correoEnviar, correoAsunto, correoCuerpo,
     pdf:b64, hashPdf:hashPdf||'', device:_deviceLabel_()};
   _guardarEnColaPDF(entry); // nunca se pierde para Drive
+  if(globalThis.ComercialCliente&&remActiva?.data?.comercial){ComercialCliente.documento('REMISION',entry.id,folio,remActiva.data.comercial);ComercialCliente.enviar().catch(()=>{});}
   if(_pdfSinCola.has(entry.operationId)){
     _estado('⚠️ Memoria llena: el PDF no quedó en la cola; se manda ahora y, si falla, se vuelve a generar solo',9000);
     // Marca en la propia remisión: si el envío falla o no hay señal, el arranque/reconexión regenera el PDF (reconciliarPendientes).
@@ -3400,6 +3402,7 @@ function _clienteFacturable(c){
 }
 function selCliente(idx){
   const c=CLIENTES[idx];if(!c)return;
+  if(globalThis.ComercialCliente)consultarComercialCliente(c.nombre);
   ['nombre','dir','cp','tel','rfc','email','contacto'].forEach(f=>{const el=document.getElementById('c_'+f);if(el)el.value=c[f]||''});
   const pmEl=document.getElementById('c_persona_moral');if(pmEl)pmEl.value=c.personaMoral?'1':'';
   const rzEl=document.getElementById('c_razon');if(rzEl)rzEl.value=c.razonSocial||'';
@@ -3532,7 +3535,7 @@ function toggleVerUtilidadRem(){
 // fmt(), n2l() y words() viven ahora en calculos.js (cargado en <head>). Globales, mismo uso.
 
 function snap(){
-  return{folio:document.getElementById('folioBadge').innerText.trim(),
+  return{comercial:globalThis.ComercialCliente?.referencia(document.getElementById('c_nombre').value)||null,folio:document.getElementById('folioBadge').innerText.trim(),
     c_nombre:document.getElementById('c_nombre').value,
     c_dir:document.getElementById('c_dir').value,c_cp:document.getElementById('c_cp').value,
     c_tel:document.getElementById('c_tel').value,
@@ -3550,6 +3553,7 @@ function snap(){
 }
 function restore(data){
   if(!data)return;
+  if(globalThis.ComercialCliente)ComercialCliente.restaurar(data.comercial);
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v??''};
   const fb=document.getElementById('folioBadge');if(fb){fb.innerText=data.folio||'REM-0001';syncFolio(fb.innerText);}
   ['c_nombre','c_dir','c_cp','c_tel','c_rfc','c_email','c_contacto','c_persona_moral','d_asesor','obs'].forEach(f=>s(f,data[f]));
@@ -9447,6 +9451,7 @@ async function _procesarColaCotR(){
         }};
       const res=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)}).then(x=>x.json());
       if(res&&res.ok&&(res.url||res.pdfOk!==false)){
+        if(globalThis.ComercialCliente&&entry.data?.comercial){ComercialCliente.documento('COTIZACION',entry.id,folio,entry.data.comercial);ComercialCliente.enviar().catch(()=>{});}
         // Cotización registrada Y PDF guardado (hay URL, o no se mandó PDF) → desencolar.
         _cotDesencolar(entry.id);
         if(typeof _cotOnSync==='function') _cotOnSync(entry.id, res.folio, res.url);
@@ -9655,6 +9660,7 @@ function filtClientesCot(q){
   list.innerHTML=hits.map(c=>`<div class="sp-item" onmousedown="selClienteCot('${escAttr(c.nombre||'')}','${escAttr(c.rfc||'')}','${escAttr(c.dir||'')}','${escAttr(c.cp||'')}','${escAttr(c.tel||'')}','${escAttr(c.contacto||'')}','${escAttr(c.email||'')}')"><div class="sp-name">${esc(c.nombre)}</div><div class="sp-sub">${esc(c.tel||'')} ${esc(c.rfc||'')}</div></div>`).join('');
 }
 function selClienteCot(n,r,d,cp,t,co,e){
+  if(globalThis.ComercialCliente)consultarComercialCliente(n);
   const sv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
   sv('cot_c_nombre',n);sv('cot_c_rfc',r);sv('cot_c_dir',d);sv('cot_c_cp',cp);
   sv('cot_c_tel',t);sv('cot_c_contacto',co);sv('cot_c_email',e);
@@ -9823,7 +9829,7 @@ document.addEventListener('click',()=>{
 
 // ── Snapshot / draft cotizaciones (equivalente a snap()/restore() de remisiones) ─────
 function snapCot(){
-  return{
+  return{comercial:globalThis.ComercialCliente?.referencia(document.getElementById('cot_c_nombre')?.value)||null,
     folio:    document.getElementById('cot_folioBadge')?.innerText.trim()||'',
     c_nombre: document.getElementById('cot_c_nombre')?.value||'',
     c_rfc:    document.getElementById('cot_c_rfc')?.value||'',
@@ -9845,6 +9851,7 @@ function snapCot(){
 }
 function restoreCotDraft(d){
   if(!d)return;
+  if(globalThis.ComercialCliente)ComercialCliente.restaurar(d.comercial);
   const sv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v??'';};
   const fb=document.getElementById('cot_folioBadge');
   if(fb&&d.folio){fb.innerText=d.folio;syncFolioCot(d.folio);}
@@ -10627,6 +10634,10 @@ function _cotEstadoBadge(entry){
   async function _cotAbrirDesdeHistorialConfirmado(id,folio){
     const r=await _resolverDatosCotizacion(id,folio);
     if(!r){toast('Sin conexión y sin copia local de esta cotización','err',5000);return;}
+    if(globalThis.COMERCIAL_HABILITADO&&globalThis.ComercialCliente&&!r.data.comercial){
+      try{await ComercialCliente.sync();r.data.comercial=ComercialCliente.referenciaDocumento(r.folioReal);}
+      catch(e){toast('No se pudo recuperar el vínculo comercial. Reintenta con conexión antes de convertir.','err',6000);return;}
+    }
     closeOv('ovHistCot');
     restoreCotDraft({...r.data,folio:r.folioReal});
     // Entradas 100% remotas usan id sintético 'REMOTO:<folio>' -- para el modo
@@ -10657,6 +10668,7 @@ function _cotEstadoBadge(entry){
     closeOv('ovHistCot');
     _ejecutarVolverRem(); // sale de modo Cotización y arma un folio de remisión nuevo y limpio
     const dataRem={
+      comercial:r.data.comercial||null,
       c_nombre:r.data.c_nombre||'', c_dir:r.data.c_dir||'', c_cp:r.data.c_cp||'', c_tel:r.data.c_tel||'',
       d_asesor:r.data.d_asesor||'',
       d_pago:_mapearDPagoARemision(r.data.d_pago||''),

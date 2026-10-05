@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#023561">
+  <title>SUMETEC Logística</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="logos/sumetec-logistica-512.png" type="image/png">
+  <link rel="apple-touch-icon" href="logos/sumetec-logistica-512.png">
+  <script src="tema-inicial.js"></script>
+  <link rel="stylesheet" href="sumetec-tema.css">
+  <link rel="stylesheet" href="actualizacion.css">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <header class="sm-barra barra"><img class="marca-icono" src="logos/sumetec-logistica-512.png" alt=""><span class="marca"><small>SUMETEC</small><strong>Logística</strong></span><button id="pendientes" class="sm-chip sm-chip-boton estado" type="button">Abriendo datos…</button><button id="mas-opciones" type="button" class="btn-barra" aria-label="Más opciones" aria-expanded="false" aria-controls="menu-opciones">⋮</button></header>
+  <div id="menu-opciones" class="menu-opciones" hidden><small>ESTE TELÉFONO</small><button type="button" id="menu-sincronizar"><i aria-hidden="true" class="bi bi-cloud-arrow-up"></i> Enviar y recibir</button><button type="button" id="menu-ajustes"><i aria-hidden="true" class="bi bi-shield-lock"></i> Acceso y ajustes</button><button type="button" id="menu-tema"><i aria-hidden="true" class="bi bi-moon-stars"></i> Modo claro / oscuro</button><button type="button" id="menu-respaldo"><i aria-hidden="true" class="bi bi-download"></i> Guardar respaldo</button><button type="button" id="menu-semana"><i aria-hidden="true" class="bi bi-calendar-week"></i> Plan de la semana</button><button type="button" id="menu-privacidad"><i aria-hidden="true" class="bi bi-person-lock"></i> Aviso de privacidad</button><button type="button" id="menu-bloquear"><i aria-hidden="true" class="bi bi-lock"></i> Bloquear teléfono</button></div>
+  <div class="aviso-local" id="estado-conexion">Capturas guardadas en este teléfono · Conecta el servidor para compartirlas.</div>
+  <div class="contenedor">
+    <div class="modos" role="group" aria-label="Modo de Logística"><button type="button" data-modo="RUTAS" aria-pressed="true">Rutas</button><button type="button" data-modo="PROSPECTOS" aria-pressed="false">Prospectos</button></div>
+    <p id="modo-descripcion" class="modo-descripcion"></p><nav class="secciones" aria-label="Pantallas"></nav>
+    <main id="app" aria-busy="true"><p>Abriendo tus datos…</p></main>
+    <footer><span><span id="version-visible">Logística</span> · America/Tijuana</span><button type="button" id="exportar">Guardar respaldo</button></footer>
+  </div>
+  <p id="mensaje" class="mensaje" role="status" aria-live="polite" hidden></p>
+
+  <dialog id="captura"><form id="form-captura">
+    <div class="dialogo-titulo"><h2 id="titulo-captura">Nuevo negocio</h2><button class="cerrar" type="button" data-cerrar="captura" aria-label="Cerrar captura">×</button></div>
+    <div id="campos-negocio">
+      <label for="negocio-nombre">Nombre del negocio<input id="negocio-nombre" name="nombre" maxlength="160" autocomplete="organization" required></label>
+      <label for="negocio-clase">Tipo de negocio<select id="negocio-clase" name="clase"><option value="PROSPECTO">Prospecto</option><option value="CLIENTE">Cliente</option><option value="PROVEEDOR">Proveedor</option></select></label>
+      <details><summary>Contacto y zona (opcional)</summary><label for="negocio-contacto">Contacto<input id="negocio-contacto" name="contacto" maxlength="160" autocomplete="name"></label><label for="negocio-telefono">Teléfono<input id="negocio-telefono" name="telefono" maxlength="40" type="tel" autocomplete="tel"></label><label for="negocio-zona">Zona<input id="negocio-zona" name="zona" maxlength="160"></label><label for="negocio-giro">Giro<input id="negocio-giro" name="giro" maxlength="160"></label></details>
+    </div>
+    <label for="visita-canal">Canal del contacto<select id="visita-canal"><option value="PRESENCIAL">Visita presencial</option><option value="TELEFONO">Teléfono</option><option value="WHATSAPP">WhatsApp</option><option value="CORREO">Correo</option></select></label>
+    <label for="visita-resultado">Resultado de la visita<select id="visita-resultado" required><option value="">Elige lo que ocurrió</option></select></label>
+    <label><input type="checkbox" id="visita-decisor"> Hablé con quien decide compras</label>
+    <label for="visita-nota">Notas de la visita<textarea id="visita-nota" maxlength="2000" rows="3" placeholder="Qué pidió, qué comentaron o qué falta averiguar"></textarea></label>
+    <details><summary>Próximo paso y fecha del hecho</summary><label for="visita-accion">Próxima acción<input id="visita-accion" maxlength="300" placeholder="Por ejemplo, llevar muestra M8"></label><label for="visita-seguimiento">Fecha de seguimiento<input id="visita-seguimiento" type="date"></label><label for="visita-fecha">Cuándo ocurrió<input id="visita-fecha" type="datetime-local" required></label><p class="ayuda">Horario de Tijuana. Puedes registrar una visita de otro día.</p></details>
+    <p id="captura-error" class="error" role="alert"></p><div class="acciones"><button type="button" class="secundario" data-cerrar="captura">Cancelar</button><button id="guardar-captura" type="submit">Guardar negocio y visita</button></div>
+  </form></dialog>
+
+  <dialog id="precio"><form id="form-precio">
+    <div class="dialogo-titulo"><h2>Registrar precio ofrecido</h2><button class="cerrar" type="button" data-cerrar="precio" aria-label="Cerrar precio">×</button></div>
+    <label for="precio-producto">Producto y especificación<input id="precio-producto" maxlength="200" required placeholder="Producto exacto, medida y material"></label>
+    <label for="precio-codigo">Código del catálogo (opcional)<input id="precio-codigo" readonly></label>
+    <label for="precio-unidad">Unidad o presentación<input id="precio-unidad" maxlength="80" required placeholder="Pieza, caja de 100, kilogramo…"></label>
+    <div class="dos-columnas"><label for="precio-importe">Precio<input id="precio-importe" inputmode="decimal" required pattern="[0-9]+([.][0-9]{1,2})?" placeholder="0.00"></label><label for="precio-moneda">Moneda<select id="precio-moneda"><option>MXN</option><option>USD</option></select></label></div>
+    <div class="dos-columnas"><label for="precio-iva">Tasa de IVA<select id="precio-iva"><option value="">Elegir</option><option value="0">0%</option><option value="8">8%</option><option value="16">16%</option></select></label><label for="precio-incluido">Cómo se ofreció<select id="precio-incluido"><option value="">Elegir</option><option value="si">IVA incluido</option><option value="no">Más IVA</option></select></label></div>
+    <label for="precio-condiciones">Condiciones acordadas<textarea id="precio-condiciones" rows="2" maxlength="1000" placeholder="Cantidad mínima, pago o entrega, si se acordaron"></textarea></label>
+    <label for="precio-vigencia">Vigencia acordada (opcional)<input id="precio-vigencia" type="date"></label><p class="ayuda">Déjala vacía si no acordaron una fecha. El precio no modifica el catálogo ni una venta.</p>
+    <p id="precio-error" class="error" role="alert"></p><div class="acciones"><button type="button" class="secundario" data-cerrar="precio">Cancelar</button><button type="submit">Guardar precio</button></div>
+  </form></dialog>
+  <dialog id="cola"><div class="dialogo-titulo"><h2>Capturas pendientes</h2><button class="cerrar" type="button" data-cerrar="cola" aria-label="Cerrar pendientes">×</button></div><p>Una captura se confirma cuando el servidor acusa su recepción. Los conflictos requieren revisión.</p><button id="sincronizar" type="button">Enviar y recibir</button><div id="lista-cola"></div></dialog>
+  <dialog id="detalle"><form id="form-detalle"><div class="dialogo-titulo"><h2 id="detalle-titulo"></h2><button type="button" class="cerrar" data-cerrar="detalle" aria-label="Cerrar">×</button></div><div id="detalle-campos"></div><p id="detalle-error" class="error" role="alert"></p><div class="acciones"><button type="button" class="secundario" data-cerrar="detalle">Cancelar</button><button type="submit">Guardar</button></div></form></dialog>
+  <dialog id="vincular" class="sumetec-acceso" style="--acento:#40cdbd"><form class="sumetec-acceso-panel" id="form-vincular">
+    <div class="sumetec-acceso-cabecera"><div class="sumetec-acceso-marca">Logística · SUMETEC<small>Rutas y prospectos</small></div><details id="ayuda-logistica" class="sumetec-acceso-ayuda sumetec-acceso-ayuda--solo-enlace"><summary aria-label="Información para vincular">i</summary><div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración tu código de vinculación de 8 caracteres. Vale 10 minutos.</p><p>Administración configura el vendedor autorizado de este teléfono. Escribe tu nombre y el código; después crea tu PIN. Al volver a abrir usarás ese PIN.</p><button type="button" onclick="sumetecAbrirAyuda('ayuda-logistica',true)" class="sumetec-acceso-ayuda-entendido">Entendido</button></div></details></div>
+    <div class="sumetec-acceso-intro"><div class="sumetec-acceso-candado" aria-hidden="true">🔒</div><h2>Vincular teléfono</h2><p class="sumetec-acceso-descripcion">Conecta este equipo de forma segura.</p></div>
+    <div class="sumetec-acceso-campos">
+      <div class="sumetec-acceso-campo sumetec-acceso-campo--principal"><label for="nombre-vincular">Tu nombre</label><input id="nombre-vincular" autocomplete="name" placeholder="Tu nombre" required></div><div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="codigo">Código de vinculación</label><input id="codigo" maxlength="8" minlength="8" placeholder="8 caracteres" autocomplete="off" autocapitalize="characters" required></div>
+    </div>
+
+    <p id="vincular-error" class="sumetec-acceso-error" role="alert"></p><button id="enlazar" class="sumetec-acceso-boton" type="submit">Vincular</button><button type="button" class="sumetec-acceso-enlace" aria-controls="ayuda-logistica" aria-expanded="false" onclick="sumetecAbrirAyuda('ayuda-logistica')">¿Necesitas ayuda?</button>
+    <div class="acceso-secundarios"><button type="button" id="configurar-acceso">Configurar este teléfono</button><button type="button" id="entrada-pin" hidden>Ya tengo un PIN</button><button type="button" id="demo-local" hidden>Ver demostración local</button><button type="button" data-cerrar="vincular" id="volver-acceso" hidden>Volver</button></div>
+  </form></dialog>
+  <link rel="stylesheet" href="acceso.css">
+  <script src="acceso.js"></script>
+  <script src="almacen.js"></script>
+  <script src="api.js"></script>
+  <script src="rutas.js"></script>
+  <script src="comercial.js"></script>
+  <script src="preparacion.js"></script>
+  <script src="metricas.js"></script>
+  <script src="app.js"></script>
+  <script src="expedientes.js"></script>
+  <script src="entrevistas.js"></script>
+  <script src="salidas.js"></script>
+  <script src="resultados.js"></script>
+<div id="sumetecActualizacion"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje" aria-hidden="true">⚙</span><strong id="sumetecActualizacionTitulo">Actualización disponible</strong><p id="sumetecActualizacionMensaje"></p><button type="button" id="sumetecActualizarBoton">Actualizar</button></div></div>
+<script src="version.js"></script><script>document.getElementById("version-visible").textContent="Versión "+VERSION_CODIGO;</script><script src="actualizacion.js"></script>
+</body>
+</html>

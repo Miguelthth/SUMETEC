@@ -1,13 +1,11 @@
 // CACHE/CACHE_ASSETS los bumpea build_deploy.py en cada corrida (hash del
 // contenido real) -- no se editan a mano, y no cambian si no hay cambios de
-// verdad. Dos cachés, no una (punto 7 del checklist pwa-actualizacion-sin-
-// cache, 2026-09-11): el shell de código (html/js/css) cambia seguido; las
-// fuentes del tema (~220 KB) casi nunca cambian -- solo si el ERP cambia de
-// marca. Si compartieran una sola caché, arreglar una coma en caja.js
-// forzaría a redescargar las fuentes completas en el siguiente uso.
-const CACHE = 'sumetec-direccion-6ca143b14b';
-const CACHE_ASSETS = 'sumetec-direccion-assets-089af8bd65';
-const PREFIJO = 'sumetec-direccion-';
+// verdad. Dos cachés (mismo criterio que Dirección, punto 7 del checklist
+// pwa-actualizacion-sin-cache): el shell de código cambia seguido; las
+// fuentes del tema (~220 KB) casi nunca cambian.
+const CACHE = 'sumetec-logistica-0b705441a3';
+const CACHE_ASSETS = 'sumetec-logistica-assets-089af8bd65';
+const PREFIJO = 'sumetec-logistica-';
 
 // Versión ACEPTADA (2026-09-29, pedido de Miguel: «que no se actualice sola hasta que le dé
 // clic»). Antes, si la versión nueva se descargaba y después se cerraba la app, el navegador la
@@ -50,9 +48,7 @@ async function despuesDeInstalar() {
   const previas = (await caches.keys()).filter(k => esCacheDeVersion(k) && k !== CACHE);
   if (!previas.length) await guardarAceptada(CACHE);
 }
-// Inventario queda explícito además del manifiesto para documentar que la
-// pantalla de conteo es indispensable también sin señal.
-const SHELL = ['./version.js', './inventario.js'];
+const SHELL = ['./version.js'];
 const MANIFIESTO_PRECACHE = './precache-manifest.json';
 const ARCHIVOS_ASSETS = [
   './fonts/ibm-plex-sans-variable.woff2', './fonts/ibm-plex-mono-400.woff2',
@@ -76,8 +72,7 @@ self.addEventListener('install', e => {
   // normal, el SW "se instalaba bien" pero guardaba el contenido de
   // siempre. { cache: 'reload' } bypassea esa caché HTTP explícitamente.
   // Las fuentes van aparte: cache.add() normal (SÍ respeta la caché HTTP a
-  // propósito) y solo si de verdad faltan -- son pesadas y casi nunca
-  // cambian, no hay que insistir en bajarlas de nuevo en cada instalación.
+  // propósito) y solo si de verdad faltan.
   e.waitUntil(Promise.all([
     precachearShell(),
     caches.open(CACHE_ASSETS).then(c => Promise.all(
@@ -118,6 +113,8 @@ self.addEventListener('message', e => {
 
 self.addEventListener('fetch', e => {
   const url = e.request.url;
+  // Maps, teselas, respuestas y cualquier origen externo: sólo red.
+  if (self.location?.origin && new URL(url).origin !== self.location.origin) return;
 
   // Apps Script: solo red, nunca caché -- son movimientos de dinero.
   if (url.includes('script.google.com')) return;
@@ -137,7 +134,7 @@ self.addEventListener('fetch', e => {
           }
           return r;
         }))
-        .catch(() => caches.match('./direccion.html'))
+        .catch(() => caches.match('./logistica.html'))
     );
     return;
   }
@@ -175,3 +172,5 @@ self.addEventListener('fetch', e => {
       })
   );
 });
+
+
