@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-app="gastos">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SUMETEC – Gastos</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="logos/sumetec-gastos.png" type="image/png">
@@ -257,6 +257,10 @@ html body .menu-mas button:hover,html body .menu-fact button:hover,html body .ga
 html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
 html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
 </style>
+<!-- Estándar visual v3 (2026-10): color de la app, sin scroll lateral, animación. Va al final. -->
+<link rel="stylesheet" href="sumetec-v3.css">
+<!-- Atrás del teléfono cierra lo último que se abrió (2026-10) -->
+<script src="sumetec-atras.js" defer></script>
 </head>
 <body>
 
@@ -896,27 +900,27 @@ function renderGastos() {
       </div>
 
       <div id="gasCamposA">
-        <label style="font-size:12px;color:var(--sm-muted)">Monto sin IVA</label>
+        <label for="gas_montoA" style="font-size:13px;font-weight:600;display:block">Monto sin IVA</label>
         <input type="number" step="0.01" min="0" id="gas_montoA" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
-        <label style="font-size:12px;color:var(--sm-muted);margin-top:10px;display:block">IVA</label>
+        <label for="gas_ivaA" style="font-size:13px;font-weight:600;display:block;margin-top:10px">IVA</label>
         <select id="gas_ivaA" class="gasto-select-oculto" aria-hidden="true" tabindex="-1" onchange="_actualizarPreviewGasto_()">
           <option value="" selected>— elige —</option><option value="0.16">16%</option><option value="0.08">8%</option><option value="0">0% (sin IVA)</option>
         </select>
         ${_htmlChipsIva_('gas_ivaA')}
       </div>
       <div id="gasCamposB" style="display:none">
-        <label style="font-size:12px;color:var(--sm-muted)">Total (ya con IVA incluido)</label>
+        <label for="gas_totalBC" style="font-size:13px;font-weight:600;display:block">Total (ya con IVA incluido)</label>
         <input type="number" step="0.01" min="0" id="gas_totalBC" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
-        <label style="font-size:12px;color:var(--sm-muted);margin-top:10px;display:block">Tasa de IVA</label>
+        <label for="gas_ivaB" style="font-size:13px;font-weight:600;display:block;margin-top:10px">Tasa de IVA</label>
         <select id="gas_ivaB" class="gasto-select-oculto" aria-hidden="true" tabindex="-1" onchange="_actualizarPreviewGasto_()">
           <option value="" selected>— elige —</option><option value="0.16">16%</option><option value="0.08">8%</option><option value="0">0% (sin IVA)</option>
         </select>
         ${_htmlChipsIva_('gas_ivaB')}
       </div>
       <div id="gasCamposC" style="display:none">
-        <label style="font-size:12px;color:var(--sm-muted)">Total (el que dice el ticket)</label>
+        <label for="gas_totalC" style="font-size:13px;font-weight:600;display:block">Total (el que dice el ticket)</label>
         <input type="number" step="0.01" min="0" id="gas_totalC" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
-        <label style="font-size:12px;color:var(--sm-muted);margin-top:6px;display:block">IVA en pesos (el que dice el ticket/CFDI — gasolina, IEPS)</label>
+        <label for="gas_ivaC" style="font-size:13px;font-weight:600;display:block;margin-top:6px">IVA en pesos (el que dice el ticket/CFDI — gasolina, IEPS)</label>
         <input type="number" step="0.01" min="0" id="gas_ivaC" inputmode="decimal" oninput="_actualizarPreviewGasto_()">
       </div>
       </fieldset>
@@ -925,7 +929,7 @@ function renderGastos() {
         <legend>3. Datos opcionales</legend>
       <button type="button" class="gasto-mas-toggle" aria-expanded="false" aria-controls="gasMasCampos" onclick="_toggleMasCamposGasto_(this)"><span class="gasto-mas-titulo">UUID del CFDI</span><span id="gasMasResumen" class="gasto-mas-resumen"></span><span class="gasto-mas-flecha" aria-hidden="true">▾</span></button>
       <div id="gasMasCampos" class="gasto-evidencia-extra">
-      <label style="font-size:12px;color:var(--sm-muted);margin-top:10px;display:block">🧾 UUID del CFDI (opcional, si ya tienes la factura)</label>
+      <label for="gas_uuid_cfdi" style="font-size:13px;font-weight:600;display:block;margin-top:10px">🧾 UUID del CFDI (opcional, si ya tienes la factura)</label>
       <input type="text" id="gas_uuid_cfdi" placeholder="folio fiscal del XML" oninput="_resumenMasCamposGasto_()">
       </div>
       </fieldset>
@@ -1402,6 +1406,7 @@ async function _codigoCorrecto_(c) {
 // Mismo diálogo que Dirección (no prompt() nativo). validar(texto) -> true|false|texto.
 function pedirCodigoSeguridad(texto, validar) {
   return new Promise(resolve => {
+    if (typeof sumetecTecladoPin === 'function') sumetecTecladoPin(document.getElementById('codigo-modal'), { modo: 'codigo', nombre: 'Gastos', inputId: 'codigo-modal-input', errorId: 'codigo-modal-error', textoId: 'codigo-modal-texto' });
     const dlg = document.getElementById('codigo-modal'), input = document.getElementById('codigo-modal-input');
     const error = document.getElementById('codigo-modal-error'), form = dlg.querySelector('form');
     document.getElementById('codigo-modal-texto').textContent = texto || 'Escribe el código de seguridad.';

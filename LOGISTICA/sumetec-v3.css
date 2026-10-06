@@ -1,0 +1,151 @@
+/* sumetec-v3.css · Estándar visual v3 (2026-10). MISMO archivo en las 6 apps.
+   Va al FINAL del <head>, después de sm-final. Solo presentación: no cambia IDs, funciones ni cálculos.
+   <html data-app="…"> elige el color de cada app.
+   Cotizador recibe solo lo de las secciones 1-3 (color, barra, sin scroll lateral);
+   lo demás va bajo html:not([data-app=cotizador]). */
+
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url(fonts/ibm-plex-sans-variable.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-400.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-500.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/ibm-plex-mono-600.woff2) format('woff2')}
+
+/* ── 1. Color de cada app (uno distinto por app) ── */
+:root{--app:#76b82a;--app-tinta:#102335;--sm3-curva:cubic-bezier(.16,1,.3,1)}
+html[data-app=cotizador]{--app:#2aaeeb}
+html[data-app=facturacion]{--app:#d99c2b}
+html[data-app=gastos]{--app:#f06452}
+html[data-app=direccion]{--app:#8750df;--app-tinta:#fff}
+html[data-app=compras]{--app:#54c99a}
+html[data-app=logistica]{--app:#e5609f}
+:root{
+  --app-suave:color-mix(in srgb,var(--app) 16%,transparent);
+  --app-borde:color-mix(in srgb,var(--app) 60%,transparent);
+  --app-claro:color-mix(in srgb,var(--app) 72%,#fff);
+  --app-texto:color-mix(in srgb,var(--app) 62%,#0b1c2b);
+}
+:root[data-tema=oscuro]{--app-texto:color-mix(in srgb,var(--app) 80%,#fff)}
+
+/* ── 2. Sin scroll lateral: la pantalla nunca es más ancha que el teléfono ── */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{overflow-x:clip}
+@supports not (overflow:clip){html{overflow-x:hidden}}
+body{overflow-wrap:break-word}
+img,svg,video,canvas,iframe{max-width:100%}
+input,select,textarea{min-width:0;max-width:100%}
+pre,code,.mono,.rem-folio{overflow-wrap:anywhere}
+#app,main,.hoja,.contenedor,.wrap,.page,.col,.card-body,.panel,form,fieldset,section,article{min-width:0}
+
+/* ── 3. Barra superior: color de la app, retícula y línea de luz que recorre la orilla ── */
+html[data-app] body > header,html[data-app] body header.sm-barra,html[data-app] body .tb{
+  background:
+    linear-gradient(90deg,transparent,var(--app) 50%,transparent) 0 100%/40% 2px no-repeat,
+    radial-gradient(120% 170% at 100% 0,color-mix(in srgb,var(--app) 24%,transparent),transparent 58%),
+    repeating-linear-gradient(90deg,rgb(255 255 255/.035) 0 1px,transparent 1px 28px),
+    linear-gradient(170deg,#03305a,#04223c)!important;
+  box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--app) 38%,transparent),0 6px 18px rgb(2 25 45/.22);
+  animation:sm3-barrido 7s linear infinite;
+}
+@keyframes sm3-barrido{from{background-position:-160% 100%,0 0,0 0,0 0}to{background-position:260% 100%,0 0,0 0,0 0}}
+html[data-app] body .sm-kicker,html[data-app] body header h1 .kicker,html[data-app] body .barra-kicker,html[data-app] body .sm-barra .marca small{color:var(--app-claro)!important;text-shadow:0 0 14px color-mix(in srgb,var(--app) 50%,transparent)}
+
+/* ═══ De aquí en adelante: solo las 5 apps (Cotizador queda como está) ═══ */
+
+/* ── 4. Fondo técnico: retícula de puntos y resplandor del color de la app ── */
+html:not([data-app=cotizador]) body{
+  background-image:radial-gradient(900px circle at 100% -10%,color-mix(in srgb,var(--app) 11%,transparent),transparent 55%),radial-gradient(circle at 1px 1px,rgb(13 59 102/.075) 1px,transparent 1.6px);
+  background-size:auto,22px 22px;background-attachment:fixed;
+}
+html[data-tema=oscuro]:not([data-app=cotizador]) body{background-image:radial-gradient(900px circle at 100% -10%,color-mix(in srgb,var(--app) 13%,transparent),transparent 55%),radial-gradient(circle at 1px 1px,rgb(255 255 255/.05) 1px,transparent 1.6px)}
+html:not([data-app=cotizador]){-webkit-tap-highlight-color:transparent;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--app) 45%,transparent) transparent}
+html:not([data-app=cotizador]) ::selection{background:color-mix(in srgb,var(--app) 30%,transparent)}
+
+/* ── 5. Estado en línea: el punto late ── */
+html:not([data-app=cotizador]) :is(.sm-status-dot,.status-dot,.sm-chip-punto){animation:sm3-latido 2.4s ease-out infinite}
+@keyframes sm3-latido{0%{box-shadow:0 0 0 0 rgb(255 255 255/.55)}70%,100%{box-shadow:0 0 0 7px rgb(255 255 255/0)}}
+
+/* ── 6. Cambio de pantalla: aparece en cascada (solo opacidad en contenedores, para no mover barras fijas) ── */
+@keyframes sm3-aparecer{from{opacity:0}}
+@keyframes sm3-subir{from{opacity:0;transform:translateY(8px)}}
+html:not([data-app=cotizador]) :is(#app,.wrap) > *{animation:sm3-aparecer .36s ease-out backwards}
+html:not([data-app=cotizador]) :is(#app,.wrap) > :nth-child(2){animation-delay:.05s}
+html:not([data-app=cotizador]) :is(#app,.wrap) > :nth-child(3){animation-delay:.1s}
+html:not([data-app=cotizador]) :is(#app,.wrap) > :nth-child(n+4){animation-delay:.15s}
+html:not([data-app=cotizador]) :is(.historial-item,.gasto-reciente-fila,.pendiente-item,.negocio,.evento,.cola-fila,.rem,.metrica,.prioridades li,.compra-lista li){animation:sm3-subir .42s var(--sm3-curva) backwards}
+html:not([data-app=cotizador]) :is(.historial-item,.gasto-reciente-fila,.pendiente-item,.negocio,.evento,.cola-fila,.rem,.metrica,.prioridades li,.compra-lista li):nth-child(2){animation-delay:.04s}
+html:not([data-app=cotizador]) :is(.historial-item,.gasto-reciente-fila,.pendiente-item,.negocio,.evento,.cola-fila,.rem,.metrica,.prioridades li,.compra-lista li):nth-child(3){animation-delay:.08s}
+html:not([data-app=cotizador]) :is(.historial-item,.gasto-reciente-fila,.pendiente-item,.negocio,.evento,.cola-fila,.rem,.metrica,.prioridades li,.compra-lista li):nth-child(4){animation-delay:.12s}
+html:not([data-app=cotizador]) :is(.historial-item,.gasto-reciente-fila,.pendiente-item,.negocio,.evento,.cola-fila,.rem,.metrica,.prioridades li,.compra-lista li):nth-child(n+5){animation-delay:.16s}
+
+/* ── 7. Tarjetas: se iluminan con el color de la app mientras se captura dentro ── */
+html:not([data-app=cotizador]) :is(.card,.panel,.negocio,.col){transition:border-color .2s ease,box-shadow .25s ease,transform .25s var(--sm3-curva)}
+html:not([data-app=cotizador]) :is(.card,.panel):focus-within{border-color:var(--app-borde);box-shadow:var(--sm-shadow-sereno,0 8px 24px rgb(9 32 53/.08)),0 0 0 3px var(--app-suave)}
+html:not([data-app=cotizador]) .card-header::before{content:"";display:inline-block;width:7px;height:7px;margin-right:9px;border-radius:2px;background:var(--app);box-shadow:0 0 10px var(--app);vertical-align:1px}
+@media (hover:hover){html:not([data-app=cotizador]) :is(.negocio,.historial-item,.rem):hover{transform:translateY(-1px);border-color:var(--app-borde)}}
+
+/* ── 8. Campos: anillo del color de la app al escribir ── */
+html:not([data-app=cotizador]) :is(.form-control,.form-select,.field input,.field select,.field textarea):focus,
+html[data-app=logistica] :is(.contenedor,dialog:not(.sumetec-acceso):not(.sumetec-pin-dialogo)) :is(input,select,textarea):focus{outline:none;border-color:var(--app)!important;box-shadow:0 0 0 3px var(--app-suave)}
+html:not([data-app=cotizador]) :is(.form-control,.form-select,.field input,.field select){transition:border-color .15s ease,box-shadow .2s ease}
+
+/* ── 9. Botones principales: brillo que cruza al tocar; todos se hunden un poco al presionar ── */
+html:not([data-app=cotizador]) :is(.btn-success,.btn-primary,button.fact,.compras-foto-btn),
+html[data-app=logistica] :is(.acciones button[type=submit],#sincronizar){background-image:linear-gradient(115deg,transparent 42%,rgb(255 255 255/.28) 50%,transparent 58%);background-size:300% 100%;background-repeat:no-repeat;background-position:100% 0;transition:background-position .8s var(--sm3-curva),transform .12s ease,box-shadow .2s ease,opacity .15s}
+html:not([data-app=cotizador]) :is(.btn-success,.btn-primary,button.fact,.compras-foto-btn):is(:hover,:focus-visible),
+html[data-app=logistica] :is(.acciones button[type=submit],#sincronizar):is(:hover,:focus-visible){background-position:0 0}
+html:not([data-app=cotizador]) :is(.btn,button.fact,.periodo-btn,.lista-filtro button,.compras-chip,.compras-seg,.compras-tab,.gasto-iva-chip,.caja-chip,.modos button,.secciones button,.billete-boton):active{transform:scale(.97)}
+
+/* ── 10. Selección activa (pestañas, chips, segmentos): contorno y luz del color de la app ── */
+html:not([data-app=cotizador]) :is(.compras-tab,.compras-seg,.compras-chip,.gasto-modo,.gasto-iva-chip,.lista-filtro button,.modos button,.caja-chip,.secciones button,.periodo-chip){transition:background-color .2s ease,box-shadow .25s ease,color .2s ease,border-color .2s ease,transform .12s ease}
+html:not([data-app=cotizador]) :is(.compras-tab.activa,.compras-seg[aria-pressed=true],.gasto-modo:has(input:checked),.lista-filtro button[aria-pressed=true],.modos button[aria-pressed=true]){box-shadow:inset 0 0 0 1.5px var(--app),0 4px 14px var(--app-suave)!important}
+html:not([data-app=cotizador]) :is(.compras-chip,.gasto-iva-chip,.caja-chip)[aria-pressed=true]{border-color:var(--app)!important;background:color-mix(in srgb,var(--app) 13%,var(--sm-surface,#fff))!important;box-shadow:inset 0 0 0 1px var(--app),0 4px 14px var(--app-suave)!important}
+html[data-app=logistica] .secciones button[aria-current=page]{box-shadow:inset 0 -2px 0 var(--app),0 4px 14px var(--app-suave)}
+
+/* ── 11. Navegación inferior (Dirección) ── */
+html[data-app=direccion] .sm-nav{background:color-mix(in srgb,var(--sm-surface) 86%,transparent);-webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%)}
+html[data-app=direccion] .btn-nav .bi{transition:transform .35s var(--sm3-curva),color .2s ease}
+html[data-app=direccion] .btn-nav::before{transition:background .2s ease,box-shadow .3s ease,width .35s var(--sm3-curva),margin .35s var(--sm3-curva)}
+html[data-app=direccion] .btn-nav.activo::before{width:36px;margin-left:-18px;background:var(--app);box-shadow:0 0 12px var(--app)}
+html[data-app=direccion] .btn-nav.activo .bi{color:var(--app-texto);transform:translateY(-2px)}
+html[data-app=direccion] .dir-heroe::after{width:72px;background:linear-gradient(90deg,var(--app),transparent);animation:sm3-crecer .9s var(--sm3-curva) backwards}
+@keyframes sm3-crecer{from{width:0}}
+
+/* ── 12. Cifras grandes en letra técnica (monoespaciada, tabular) ── */
+html:not([data-app=cotizador]) :is(.gasto-hoy-total,.gasto-resumen-total,.dir-heroe strong,.compras-barra-total strong,.barra-facturar-total strong,.dash-cifras b,.metrica .num,.mov-monto,.caja-monto,.rem-total,.importe,.compra-total){font-family:"IBM Plex Mono",ui-monospace,monospace;letter-spacing:-.02em}
+
+/* ── 13. Menús, diálogos y carga: entran con movimiento ── */
+@keyframes sm3-menu{from{opacity:0;transform:translateY(-6px) scale(.96)}}
+@keyframes sm3-dialogo{from{opacity:0;transform:translateY(14px) scale(.97)}}
+html:not([data-app=cotizador]) :is(.mas-menu,.gasto-menu,.menu-fact,.menu-opciones):not([hidden]){animation:sm3-menu .22s var(--sm3-curva);transform-origin:top right}
+html:not([data-app=cotizador]) dialog[open]:not(.sumetec-acceso):not(.sumetec-pin-teclado){animation:sm3-dialogo .28s var(--sm3-curva)}
+html:not([data-app=cotizador]) dialog[open]::backdrop{animation:sm3-aparecer .28s ease-out}
+html:not([data-app=cotizador]) [aria-busy=true] > p:only-child{background:linear-gradient(90deg,var(--sm-muted,#616f7f) 30%,var(--app) 50%,var(--sm-muted,#616f7f) 70%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sm3-brillo 1.4s linear infinite}
+@keyframes sm3-brillo{to{background-position:-250% 0}}
+
+/* ── 14. Logística: sus acentos pasan al color propio ── */
+html[data-app=logistica] .vacio{border-top-color:var(--app)}
+html[data-app=logistica] .paso{border-left-color:var(--app)}
+html[data-app=logistica] :is(.eyebrow,.etiqueta){color:var(--app-texto)}
+
+/* ── 16. Formularios (2026-10, revisión de formularios): toque cómodo y archivos ocultos que no ensanchan ── */
+html:not([data-app=cotizador]) body :is(#btnMasMenu,#btnMenuGastos,#mas-opciones,.sm-menu-boton,header .menu-btn,.sm-barra .btn-barra){min-width:44px!important;min-height:44px!important}
+html:not([data-app=cotizador]) body :is(#estado,#pendientes,#badgePendientes,.sm-status-chip,.status-chip,.tb-status){position:relative}
+html:not([data-app=cotizador]) body :is(#estado,#pendientes,#badgePendientes,.sm-status-chip,.status-chip,.tb-status)::after{content:"";position:absolute;left:-2px;right:-2px;top:50%;height:44px;transform:translateY(-50%)}
+html:not([data-app=cotizador]) :is(details > summary,#btn-mas-campos-caja,.campos-toggle){min-height:44px}
+html:not([data-app=cotizador]) input.sm-archivo-oculto{width:1px!important;height:1px!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden;clip-path:inset(50%)}
+html:not([data-app=cotizador]) :is(input,select,textarea)[aria-invalid=true]{border-color:#e0605a!important;box-shadow:0 0 0 3px rgb(224 96 90/.18)}
+
+/* ── 17. Barras de abajo (2026-10): un poco más altas para no tocar la barra de gestos del iPhone ── */
+:root{--sm-pie:max(14px,calc(env(safe-area-inset-bottom,0px) - 6px))}
+html[data-app=direccion] .sm-nav{padding-bottom:var(--sm-pie)!important}
+html[data-app=direccion] body{padding-bottom:calc(102px + var(--sm-pie))}
+html[data-app=direccion] #toast{bottom:calc(84px + var(--sm-pie))}
+html[data-app=compras] .compras-barra-guardar{padding-bottom:var(--sm-pie)}
+html[data-app=compras] body{padding-bottom:calc(100px + var(--sm-pie))}
+html[data-app=gastos] .gasto-barra-guardar{padding-bottom:var(--sm-pie)}
+html[data-app=facturacion] .barra-facturar{padding-bottom:var(--sm-pie)!important}
+
+/* ── 15. Sin movimiento si el teléfono lo pide ── */
+@media (prefers-reduced-motion:reduce){
+  html[data-app] body > header,html[data-app] body header.sm-barra,html[data-app] body .tb{animation:none}
+  html[data-app] *,html[data-app] *::before,html[data-app] *::after,html[data-app] dialog::backdrop{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.01ms!important}
+}

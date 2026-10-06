@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-app="facturacion">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -322,6 +322,10 @@ html body .menu-mas button:hover,html body .menu-fact button:hover,html body .ga
 html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
 html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
 </style>
+<!-- Estándar visual v3 (2026-10): color de la app, sin scroll lateral, animación. Va al final. -->
+<link rel="stylesheet" href="sumetec-v3.css">
+<!-- Atrás del teléfono cierra lo último que se abrió (2026-10) -->
+<script src="sumetec-atras.js" defer></script>
 </head>
 <body>
 <header>
@@ -1167,8 +1171,8 @@ function verFacturaGlobal(){
     <div class="muted" style="margin-bottom:8px">Junta las ${_pendientesGlobal.length} remisión(es) pendientes de este mes en UNA factura a nombre de "PUBLICO EN GENERAL" (RFC XAXX010101000) -- para lo que nadie pidió facturado individual. Al confirmarla, esas remisiones dejan de aparecer como pendientes.</div>
     ${!_pendientesGlobal.length?'<div class="vacio">No hay remisiones pendientes este mes.</div>':`
     <div class="grid2">
-      <div class="field"><label>C.P. (domicilio del receptor)</label><input id="gx_cp" placeholder="22000" oninput="render2Global()"></div>
-      <div class="field"><label>Forma de pago</label><select id="gx_forma" onchange="render2Global()"><option value="">—</option>${opc(FORMAS,'01')}</select></div>
+      <div class="field"><label for="gx_cp">C.P. (domicilio del receptor)</label><input id="gx_cp" inputmode="numeric" maxlength="5" autocomplete="postal-code" placeholder="22000" oninput="render2Global()"></div>
+      <div class="field"><label for="gx_forma">Forma de pago</label><select id="gx_forma" onchange="render2Global()"><option value="">—</option>${opc(FORMAS,'01')}</select></div>
     </div>
     <div id="resultadoGlobal"></div>`}`);
   if(_pendientesGlobal.length) render2Global();
@@ -1461,20 +1465,20 @@ function renderDetalle(){
     <div class="field"><label>Constancia de Situación Fiscal (foto o PDF)</label>
       <label for="fx_constancia" class="sm-btn-ocr"><span aria-hidden="true">📷</span> Leer constancia con IA</label><input type="file" id="fx_constancia" class="sm-archivo-oculto" accept="image/*,.heic,.heif,application/pdf" onchange="leerConstancia(this)">
       <div id="fx_constancia_estado" style="font-size:12px;margin-top:2px;color:var(--muted)">La IA llena RFC, razón social, C.P. y régimen — tú los revisas.</div></div>
-    <div class="field"><label>RFC</label><input id="fx_rfc" value="${escAttr(c.rfc||'')}" placeholder="ABC010101AB1" oninput="upd('rfc',this.value)"></div>
-    <div class="field"><label>Razón social (exacta como su Constancia)</label><input id="fx_rs" value="${escAttr(c.razonSocial||'')}" oninput="upd('razonSocial',this.value)">
+    <div class="field"><label for="fx_rfc">RFC</label><input id="fx_rfc" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="13" value="${escAttr(c.rfc||'')}" placeholder="ABC010101AB1" oninput="upd('rfc',this.value)"></div>
+    <div class="field"><label for="fx_rs">Razón social (exacta como su Constancia)</label><input id="fx_rs" value="${escAttr(c.razonSocial||'')}" oninput="upd('razonSocial',this.value)">
       ${c.razonSocialEsFallback?'<div style="color:var(--ambar);font-size:12px;margin-top:2px">⚠️ Sin Razón social capturada — se precargó el nombre comercial. Confírmala o corrígela con la Constancia de Situación Fiscal antes de facturar.</div>':''}
     </div>
     <button type="button" class="campos-toggle" onclick="toggleCamposExtra(this)">▾ Más campos fiscales</button>
     <div class="campos-extra" id="camposExtra">
-    <div class="field"><label>Código postal</label><input id="fx_cp" value="${escAttr(c.cp||'')}" placeholder="22000" oninput="upd('cp',this.value)"></div>
+    <div class="field"><label for="fx_cp">Código postal</label><input id="fx_cp" inputmode="numeric" maxlength="5" autocomplete="postal-code" value="${escAttr(c.cp||'')}" placeholder="22000" oninput="upd('cp',this.value)"></div>
     <div class="grid2">
-      <div class="field"><label>Régimen fiscal</label><select onchange="upd('regimenFiscal',this.value)"><option value="">—</option>${opc(REGIMENES,c.regimenFiscal)}</select></div>
-      <div class="field"><label>Uso de CFDI</label><select onchange="upd('usoCFDI',this.value)"><option value="">—</option>${opc(USOS,c.usoCFDI)}</select></div>
+      <div class="field"><label>Régimen fiscal</label><select aria-label="Régimen fiscal" onchange="upd('regimenFiscal',this.value)"><option value="">—</option>${opc(REGIMENES,c.regimenFiscal)}</select></div>
+      <div class="field"><label>Uso de CFDI</label><select aria-label="Uso de CFDI" onchange="upd('usoCFDI',this.value)"><option value="">—</option>${opc(USOS,c.usoCFDI)}</select></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>Forma de pago</label><select id="fx_forma" onchange="render2()"><option value="">—</option>${opc(FORMAS,'03')}</select></div>
-      <div class="field"><label>Método de pago</label><select id="fx_metodo" onchange="render2()"><option value="PUE" selected>PUE — Pago en una exhibición</option><option value="PPD">PPD — Pago en parcialidades</option></select></div>
+      <div class="field"><label for="fx_forma">Forma de pago</label><select id="fx_forma" onchange="render2()"><option value="">—</option>${opc(FORMAS,'03')}</select></div>
+      <div class="field"><label for="fx_metodo">Método de pago</label><select id="fx_metodo" onchange="render2()"><option value="PUE" selected>PUE — Pago en una exhibición</option><option value="PPD">PPD — Pago en parcialidades</option></select></div>
     </div>
     </div>
     <div id="resultado"></div>`);

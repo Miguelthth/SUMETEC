@@ -28,10 +28,10 @@
   🛟 Antes de cambios grandes, haz primero una copia de seguridad de este archivo.
 ═══════════════════════════════════════════════════════════════════════════
 -->
-<html lang="es">
+<html lang="es" data-app="cotizador">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SUMETEC – Remisiones</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="logos/sumetec-remisiones.png" type="image/png">
@@ -225,17 +225,17 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color
 @page{size:letter portrait;margin:12mm 14mm 10mm 14mm}
 .mobile-nav,.mobile-action{display:none}
 @media(max-width:780px),(max-height:500px){
-  body{padding-bottom:calc(132px + env(safe-area-inset-bottom,0px))}
+  body{padding-bottom:calc(126px + var(--sm-pie,12px))}
   .tb>.btn,.tb>.tb-div,.tb>.tb-more{display:none!important}
   .tb-brand{margin-right:auto}
   #badgePendientes{margin-left:auto;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
-  .mobile-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:850;background:#fff;border-top:1px solid var(--border);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -5px 18px rgba(11,45,74,.14)}
+  .mobile-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:850;background:#fff;border-top:1px solid var(--border);padding:6px max(6px,env(safe-area-inset-right,0px)) var(--sm-pie,12px) max(6px,env(safe-area-inset-left,0px));box-shadow:0 -5px 18px rgba(11,45,74,.14)}
   .mobile-nav button{min-width:0;min-height:50px;border:0;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font:inherit;border-radius:9px}
   .mobile-nav button span{font-size:19px;line-height:1.2}
   .mobile-nav button small{font-size:12px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .mobile-nav button[aria-current=page]{background:var(--green-light);color:var(--green)}
   .mobile-nav button:focus-visible,.mobile-action button:focus-visible{outline:3px solid #76B82A;outline-offset:1px}
-  .mobile-action{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(128px,1.25fr);gap:8px;align-items:center;position:fixed;left:8px;right:8px;bottom:calc(68px + env(safe-area-inset-bottom,0px));z-index:840;background:var(--navy);color:#fff;border-radius:12px;padding:8px 10px;box-shadow:0 8px 24px rgba(11,45,74,.28)}
+  .mobile-action{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(128px,1.25fr);gap:8px;align-items:center;position:fixed;left:8px;right:8px;bottom:calc(62px + var(--sm-pie,12px));z-index:840;background:var(--navy);color:#fff;border-radius:12px;padding:8px 10px;box-shadow:0 8px 24px rgba(11,45,74,.28)}
   .mobile-action-total{min-width:0;display:flex;flex-direction:column}
   .mobile-action-total span{font-size:12px;text-transform:uppercase;letter-spacing:.5px;opacity:.72}
   .mobile-action-total strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -410,7 +410,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color
      de verdad (mismo trato que los demás modales .ov de esta app) -- así no
      depende de ningún cálculo de posición que pueda volver a fallar. */
   .menu-mas{
-    top:0!important;bottom:calc(68px + env(safe-area-inset-bottom,0px))!important;left:0!important;right:0!important;
+    top:0!important;bottom:calc(62px + var(--sm-pie,12px))!important;left:0!important;right:0!important;
     transform:none;width:auto!important;min-width:unset;max-height:none;height:auto;
     overflow-y:auto;border-radius:0;padding:14px 12px;background:var(--bg);
     box-shadow:none;z-index:300
@@ -457,12 +457,12 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color
      uno en su propia línea) para que la tarjeta no crezca de alto. */
   .items-table tbody td.td-cl{order:1;grid-column:1;padding-left:0;text-align:left;align-self:center}
   .items-table tbody td.td-cl::before{display:none}
-  .td-cl .ti.cl{font-size:13px;font-family:ui-monospace,monospace;text-align:left}
+  .td-cl .ti.cl{font-size:16px;font-family:ui-monospace,monospace;text-align:left}
   .items-table tbody td.td-desc{order:2;grid-column:1/-1;text-align:left}
   .items-table tbody td.td-desc::before{display:none}
   .items-table tbody td.td-c{order:3;grid-column:1;text-align:left;align-self:start}
   .items-table tbody td.td-r{order:4;grid-column:2;text-align:left;align-self:start;padding-right:40px}
-  .items-table tbody td.td-r .ti{border:1px solid var(--border);border-radius:8px;height:34px;min-height:34px!important;text-align:right;padding:0 8px}
+  .items-table tbody td.td-r .ti{border:1px solid var(--border);border-radius:8px;height:44px;min-height:44px!important;text-align:right;padding:0 10px}
   .items-table .td-iva{order:5;grid-column:1/-1} /* visible solo en cotización -- en remisión sigue display:none (línea 143) */
   .items-table tbody td.td-imp{order:1;grid-column:2;text-align:right;align-self:center;font-size:17px;font-weight:800;color:var(--green)}
   .items-table tbody td.td-imp::before{display:none}
@@ -538,7 +538,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color
      contenido pero DEBAJO del menu de pestañas (z-index menor), que sigue
      visible y funcional para cambiar de sección sin tener que cerrar nada. */
   .ov.module-screen{
-    position:fixed;inset:0 0 calc(68px + env(safe-area-inset-bottom,0px)) 0;
+    position:fixed;inset:0 0 calc(62px + var(--sm-pie,12px)) 0;
     background:var(--bg);backdrop-filter:none;padding:0;
     align-items:stretch;justify-content:stretch;z-index:300;
   }
@@ -641,7 +641,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color
 /* Ajustes finales: después de los estilos heredados para que ganen en móvil. */
 @media(max-width:780px),(max-height:500px){
   .btn,.ti,.ci-val input,.fv input,.fv select,.fg input,.fg select,.fg textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{min-height:44px}
-  .qty-stepper{display:grid;grid-template-columns:34px minmax(56px,1fr) 34px;gap:8px;align-items:center}.qty-stepper button{width:34px;height:34px}.qty-stepper input{width:100%!important;min-height:38px!important;text-align:center!important}
+  .qty-stepper{display:grid;grid-template-columns:44px minmax(48px,1fr) 44px;gap:6px;align-items:center}.qty-stepper button{width:44px;height:44px;border-radius:10px}.qty-stepper input{width:100%!important;min-height:44px!important;text-align:center!important}
   .del-btn{width:44px;height:44px}.cobro-btn,.anular-btn,#btnVerUtil,#btnAgregarFirma{min-height:44px}.ch .sbtn{min-height:44px}
 }
 </style>
@@ -707,7 +707,20 @@ html body .menu-mas button,html body .menu-fact button,html body .gasto-menu but
 html body .menu-mas button:hover,html body .menu-fact button:hover,html body .gasto-menu button:hover,html body .mas-menu button:hover,html body .menu-opciones button:hover{background:var(--sm-surface-2,#eef2f6)!important}
 html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
 html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
+
+/* Revisión de formularios (2026-10): letra de 16 px en el teléfono (el iPhone ya no acerca la pantalla) y toques de 44 px. */
+@media(max-width:780px),(max-height:500px){
+  .obs-ta,#metodoAbono,#notasAbono,#prMetodo,#popSisInput,#histFiltroOrigen,#cobrosFiltroOrigen{font-size:16px!important}
+  #btnToggleClientDetail{min-height:44px!important}
+  .items-table tbody td.td-del .del-btn::after{content:"";position:absolute;inset:-4px}
+  button[onclick="incrementarFolio()"]{position:relative}
+  button[onclick="incrementarFolio()"]::after{content:"";position:absolute;inset:-12px}
+}
 </style>
+<!-- Estándar visual v3 (2026-10): color de la app, sin scroll lateral, animación. Va al final. -->
+<link rel="stylesheet" href="sumetec-v3.css">
+<!-- Atrás del teléfono cierra lo último que se abrió (2026-10) -->
+<script src="sumetec-atras.js" defer></script>
 </head>
 <body>
 <div class="tb no-print">
@@ -899,15 +912,15 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
       <div class="fr"><span class="fl">Dirección</span><div class="fv"><input id="c_dir" type="text" placeholder="—" oninput="autosave()"></div></div>
       <div class="fr"><span class="fl">C.P.</span><div class="fv"><input id="c_cp" type="text" placeholder="—" oninput="autosave()"></div></div>
       <div class="cs">
-        <div class="ci"><div class="ci-icon">📞</div><div><div class="ci-lbl">Teléfono</div><div class="ci-val"><input id="c_tel" type="text" placeholder="—" oninput="autosave()"></div></div></div>
+        <div class="ci"><div class="ci-icon">📞</div><div><div class="ci-lbl">Teléfono</div><div class="ci-val"><input id="c_tel" type="tel" autocomplete="tel" placeholder="—" oninput="autosave()"></div></div></div>
       </div>
       </div>
     </div>
     <div class="card">
       <div class="ch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Detalles de la Remisión</div>
-      <div class="fr"><span class="fl">Asesor</span><div class="fv"><select id="d_asesor" onchange="_mostrarTelAsesor('d_asesor','d_asesor_tel');autosave()"><!-- opciones desde CONFIG: OPCIONES_ASESOR --></select></div></div>
+      <div class="fr"><span class="fl">Asesor</span><div class="fv"><select id="d_asesor" aria-label="Asesor" onchange="_mostrarTelAsesor('d_asesor','d_asesor_tel');autosave()"><!-- opciones desde CONFIG: OPCIONES_ASESOR --></select></div></div>
       <div class="fr" id="d_asesor_tel_wrap" style="display:none"><span class="fl">Tel. asesor</span><div class="fv" id="d_asesor_tel"></div></div>
-      <div class="fr"><span class="fl">Condiciones de pago</span><div class="fv"><select id="d_pago" onchange="autosave()"><!-- opciones desde CONFIG: OPCIONES_PAGO_REMISION --></select></div></div>
+      <div class="fr"><span class="fl">Condiciones de pago</span><div class="fv"><select id="d_pago" aria-label="Condición de pago" onchange="autosave()"><!-- opciones desde CONFIG: OPCIONES_PAGO_REMISION --></select></div></div>
       <div id="emisorBox" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);margin-bottom:8px">Datos del Emisor</div>
         <div class="fr" id="frRFC"><span class="fl">RFC</span><div class="fv" id="dcRFC" style="color:var(--muted)"></div></div>
@@ -941,7 +954,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
       <div class="bt">📦 Resumen</div>
       <div class="rr"><span class="rl">N° de Artículos</span><span class="rv" id="rArts">0</span></div>
       <div class="rr"><span class="rl">Total de Piezas</span><span class="rv" id="rPzs">0</span></div>
-      <div class="rr" style="border:none;margin-top:6px"><span class="rl">Descuento global</span><div style="display:flex;align-items:center;gap:5px" class="no-print"><input class="di" type="number" inputmode="decimal" id="descPct" value="0" min="0" max="100" oninput="calcTotals()"><span style="font-size:12px;color:var(--muted)">%</span></div></div>
+      <div class="rr" style="border:none;margin-top:6px"><span class="rl">Descuento global</span><div style="display:flex;align-items:center;gap:5px" class="no-print"><input class="di" type="number" inputmode="decimal" id="descPct" aria-label="Descuento %" value="0" min="0" max="100" oninput="calcTotals()"><span style="font-size:12px;color:var(--muted)">%</span></div></div>
     </div>
     <div class="lb">
       <div class="bt">💰 Totales</div>
@@ -1073,7 +1086,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
            parseFloat directo sobre este campo. -->
       <div id="montoAbonoFmt" style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:10px;min-height:16px"></div>
       <label class="no-print" style="font-size:11px;color:var(--muted);font-weight:600;display:block;margin-bottom:2px">💳 Método de pago <span style="font-weight:400">(cómo pagó — distinto de las condiciones de arriba)</span></label>
-      <select id="metodoAbono" class="no-print" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;margin-bottom:8px;background:#fff"><!-- opciones desde CONFIG: OPCIONES_METODO_PAGO --></select>
+      <select id="metodoAbono" aria-label="Método de pago del abono" class="no-print" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;margin-bottom:8px;background:#fff"><!-- opciones desde CONFIG: OPCIONES_METODO_PAGO --></select>
       <input id="notasAbono" class="no-print" type="text" placeholder="Notas del pago (opcional)" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;margin-bottom:10px">
       <button class="btn btn-p" id="btnRegistrar" style="width:100%;justify-content:center;padding:16px;font-size:16px;font-weight:800;border-radius:12px;letter-spacing:.3px" onclick="registrarTodo()">✅ REGISTRAR</button>
     </div>
@@ -1082,7 +1095,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 </div>
 </div>
 
-<div class="ov module-screen" id="ovHist"><div class="modal"><div class="modal-hd"><div class="modal-title">📋 Historial de Remisiones</div><button class="mx" onclick="closeOv('ovHist')">✕</button></div><input class="mi" type="text" id="histBusqInput" placeholder="Buscar por folio o cliente…" oninput="filtRems(this.value)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">Origen:</label><select id="histFiltroOrigen" onchange="_renderHistCombinado(document.getElementById('histBusqInput').value)" style="flex:1;min-width:90px;border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-size:12px;font-family:inherit;background:#fff"><option value="">Todos</option><option value="REMISION">📱 Remisión</option><option value="ERP">💻 ERP</option><option value="COTIZACION">📋 Cotización</option></select><select id="histFiltroMes" title="Filtrar por mes" onchange="_renderHistCombinado(document.getElementById('histBusqInput').value)" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 6px;font-size:12px;font-family:inherit;background:#fff"><option value="">📅 Todos</option><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select><select id="histFiltroAnio" title="Filtrar por año" onchange="_renderHistCombinado(document.getElementById('histBusqInput').value)" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 6px;font-size:12px;font-family:inherit;background:#fff"><option value="">🗓️ Todos</option></select></div><div id="histFiltroCliente" style="display:none;background:var(--green-light);border-radius:8px;padding:7px 12px;margin-bottom:8px;align-items:center;justify-content:space-between;gap:8px"><div style="font-size:12.5px;font-weight:700;color:var(--green)" id="histFiltroNombre"></div><div style="font-size:12px;font-weight:700;color:var(--green)" id="histFiltroTotal"></div><button onclick="limpiarFiltroCliente()" style="background:none;border:none;color:var(--green);cursor:pointer;font-size:15px;font-weight:700;line-height:1">✕</button></div><div class="ml" id="remList"></div></div></div>
+<div class="ov module-screen" id="ovHist"><div class="modal"><div class="modal-hd"><div class="modal-title">📋 Historial de Remisiones</div><button class="mx" onclick="closeOv('ovHist')">✕</button></div><input class="mi" type="text" id="histBusqInput" placeholder="Buscar por folio o cliente…" oninput="filtRems(this.value)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">Origen:</label><select id="histFiltroOrigen" aria-label="Filtrar historial por origen" onchange="_renderHistCombinado(document.getElementById('histBusqInput').value)" style="flex:1;min-width:90px;border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-size:12px;font-family:inherit;background:#fff"><option value="">Todos</option><option value="REMISION">📱 Remisión</option><option value="ERP">💻 ERP</option><option value="COTIZACION">📋 Cotización</option></select><select id="histFiltroMes" title="Filtrar por mes" onchange="_renderHistCombinado(document.getElementById('histBusqInput').value)" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 6px;font-size:12px;font-family:inherit;background:#fff"><option value="">📅 Todos</option><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select><select id="histFiltroAnio" title="Filtrar por año" onchange="_renderHistCombinado(document.getElementById('histBusqInput').value)" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 6px;font-size:12px;font-family:inherit;background:#fff"><option value="">🗓️ Todos</option></select></div><div id="histFiltroCliente" style="display:none;background:var(--green-light);border-radius:8px;padding:7px 12px;margin-bottom:8px;align-items:center;justify-content:space-between;gap:8px"><div style="font-size:12.5px;font-weight:700;color:var(--green)" id="histFiltroNombre"></div><div style="font-size:12px;font-weight:700;color:var(--green)" id="histFiltroTotal"></div><button onclick="limpiarFiltroCliente()" style="background:none;border:none;color:var(--green);cursor:pointer;font-size:15px;font-weight:700;line-height:1">✕</button></div><div class="ml" id="remList"></div></div></div>
 <!-- Historial de Cotizaciones -->
 <div class="ov module-screen" id="ovHistCot"><div class="modal"><div class="modal-hd"><div class="modal-title">📄 Historial de Cotizaciones</div><button class="mx" onclick="closeOv('ovHistCot')">✕</button></div><input class="mi" type="text" id="histCotBusq" placeholder="Buscar por folio o cliente…" oninput="_filtrarHistCot(this.value)"><div class="ml" id="cotHistList" style="margin-top:8px"></div></div></div>
 
@@ -1136,7 +1149,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
     </div>
     <div style="margin-bottom:10px">
       <label style="font-size:11px;color:var(--muted);font-weight:600">Método de pago</label>
-      <select id="prMetodo" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:11px;font-size:14px;font-family:inherit;margin-top:3px;background:#fff"><!-- opciones desde CONFIG: OPCIONES_METODO_PAGO --></select>
+      <select id="prMetodo" aria-label="Método de pago" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:11px;font-size:14px;font-family:inherit;margin-top:3px;background:#fff"><!-- opciones desde CONFIG: OPCIONES_METODO_PAGO --></select>
     </div>
     <div style="margin-bottom:12px">
       <label style="font-size:11px;color:var(--muted);font-weight:600">Notas del pago (opcional)</label>
@@ -1180,7 +1193,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   </div>
   <div style="padding:8px 16px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <label style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">Origen:</label>
-    <select id="cobrosFiltroOrigen" onchange="verCobros()" style="flex:1;min-width:90px;border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-size:12px;font-family:inherit;background:#fff">
+    <select id="cobrosFiltroOrigen" aria-label="Filtrar cobros por origen" onchange="verCobros()" style="flex:1;min-width:90px;border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-size:12px;font-family:inherit;background:#fff">
       <option value="">Todos</option>
       <option value="REMISION">📱 Remisión</option>
       <option value="ERP">💻 ERP</option>
@@ -1220,7 +1233,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
     <div style="font-weight:700;font-size:13px;margin-bottom:4px">🧮 Calculadora: ¿qué precio le pongo?</div>
     <div class="info-box" style="margin-bottom:10px">Toma el costo proveedor de arriba, le mete el IVA de compra, y calcula el precio de venta según cuánto quieras ganarle.</div>
-    <div class="fg"><label>IVA de compra (%)</label><input id="calc_iva" type="number" min="0" max="100" step="0.5" value="16" inputmode="decimal" oninput="_actualizarCalcPrecio()"></div>
+    <div class="fg"><label>IVA de compra (%)</label><input id="calc_iva" aria-label="IVA %" type="number" min="0" max="100" step="0.5" value="16" inputmode="decimal" oninput="_actualizarCalcPrecio()"></div>
     <div class="fg">
       <label>Cuánto quiero ganarle — <span id="calcMargenVal">40%</span></label>
       <input id="calc_margen" type="range" min="0" max="70" value="40" step="1" style="width:100%;accent-color:var(--green)" oninput="_actualizarCalcPrecio()">
@@ -1237,7 +1250,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <div class="fg"><label>Nombre de la empresa</label><input id="e_nombre" type="text" placeholder="SUMETEC"></div>
   <div class="fg"><label>RFC</label><input id="e_rfc" type="text" placeholder="SUM-XXXXXX-XX0"></div>
   <div class="fg"><label>Dirección</label><input id="e_dir" type="text" placeholder="Calle, Ciudad, C.P."></div>
-  <div class="empresa-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div class="fg"><label>Teléfono 1</label><input id="e_tel" type="text" placeholder="33 2000 1234"></div><div class="fg"><label>Teléfono 2</label><input id="e_tel2" type="text" placeholder="33 2000 5678"></div></div>
+  <div class="empresa-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div class="fg"><label>Teléfono 1</label><input id="e_tel" type="tel" autocomplete="tel" placeholder="33 2000 1234"></div><div class="fg"><label>Teléfono 2</label><input id="e_tel2" type="tel" autocomplete="tel" placeholder="33 2000 5678"></div></div>
   <div class="empresa-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div class="fg"><label>Email</label><input id="e_email" type="text" placeholder="ventas@empresa.com"></div><div></div></div>
   <div class="fg"><label>Sitio web</label><input id="e_web" type="text" placeholder="www.empresa.com"></div>
   <div class="fg"><label>Slogan / Mensaje en pie de página</label><input id="e_slogan" type="text" placeholder="Suministramos soluciones, construimos confianza."></div>
@@ -1341,7 +1354,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 
   <div class="fg"><label>Dirección</label><input id="nc_dir" type="text" placeholder="Calle, Ciudad"></div>
   <div class="fg"><label>C.P.</label><input id="nc_cp" type="text" placeholder="45000"></div>
-  <div class="fg"><label>Teléfono</label><input id="nc_tel" type="text" placeholder="33 0000 0000"></div>
+  <div class="fg"><label>Teléfono</label><input id="nc_tel" type="tel" autocomplete="tel" placeholder="33 0000 0000"></div>
   <div class="fg"><label>RFC</label><input id="nc_rfc" type="text" placeholder="ABC010101AAA"></div>
   <div class="fg"><label>Correo</label><input id="nc_email" type="email" placeholder="compras@empresa.com"></div>
   <div class="fg"><label>Contacto</label><input id="nc_contacto" type="text" placeholder="Nombre de la persona de contacto"></div>
@@ -1390,7 +1403,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <div class="modal-hd"><div class="modal-title" id="popSisTitulo">⚠️ Aviso</div></div>
   <div id="popSisMsg" style="font-size:13.5px;color:var(--text);white-space:pre-wrap;margin-bottom:14px;line-height:1.5"></div>
   <div id="popSisInputWrap" style="display:none;margin-bottom:14px">
-    <input id="popSisInput" type="text" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;box-sizing:border-box">
+    <input id="popSisInput" aria-label="Respuesta" type="text" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;box-sizing:border-box">
   </div>
   <div style="display:flex;gap:9px" id="popSisBotones"></div>
 </div></div>
@@ -5316,25 +5329,16 @@ function _salirModoEdicion(){
 // evita borrados accidentales, como pediste.
 // Diálogo construido al vuelo (sin tocar el HTML). Resuelve con el texto o null si cancela.
 function _pedirPinUI(titulo,subtitulo){
+  // Estándar v3 (2026-10): mismo teclado de pantalla completa que el PIN (sumetecTecladoPin, acceso.js).
+  // Misma promesa que antes: el texto escrito o null si cancela.
   return new Promise(resolve=>{
-    const ov=document.createElement('div');
-    ov.style.cssText='position:fixed;inset:0;z-index:99990;background:rgba(11,45,74,.6);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px';
-    ov.innerHTML='<div style="background:#fff;border-radius:16px;padding:22px;width:100%;max-width:340px;box-shadow:0 24px 64px rgba(0,0,0,.3)">'+
-      '<div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px;text-align:center">'+esc(titulo)+'</div>'+
-      '<div style="font-size:12.5px;color:var(--muted);margin-bottom:16px;text-align:center;line-height:1.5">'+esc(subtitulo||'')+'</div>'+
-      '<input id="_pinInp" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="6" placeholder="••••" style="width:100%;text-align:center;font-size:24px;letter-spacing:8px;padding:12px;border:2px solid var(--border);border-radius:10px;outline:none;font-family:inherit;margin-bottom:16px">'+
-      '<div style="display:flex;gap:10px">'+
-        '<button id="_pinCancel" class="btn btn-o" style="flex:1;justify-content:center;min-height:46px">Cancelar</button>'+
-        '<button id="_pinOk" class="btn btn-p" style="flex:1;justify-content:center;min-height:46px">Aceptar</button>'+
-      '</div></div>';
-    document.body.appendChild(ov);
-    const inp=ov.querySelector('#_pinInp');
-    const cerrar=val=>{ try{ov.remove();}catch(_){ } resolve(val); };
-    ov.querySelector('#_pinCancel').onclick=()=>cerrar(null);
-    ov.querySelector('#_pinOk').onclick=()=>cerrar(inp.value.trim());
-    inp.addEventListener('keydown',e=>{ if(e.key==='Enter')cerrar(inp.value.trim()); if(e.key==='Escape')cerrar(null); });
-    ov.addEventListener('mousedown',e=>{ if(e.target===ov)cerrar(null); });
-    setTimeout(()=>inp.focus(),60);
+    const dlg=document.createElement('dialog');
+    sumetecTecladoPin(dlg,{modo:'codigo',nombre:'Cotizador',texto:subtitulo||'',inputId:'_pinInp',max:6});
+    dlg.addEventListener('close',()=>{
+      const inp=dlg.querySelector('input'), v=dlg.returnValue==='ok'?inp.value.trim():null;
+      inp.value=''; dlg.remove(); resolve(v);
+    },{once:true});
+    document.body.appendChild(dlg); dlg.showModal(); dlg.querySelector('.sumetec-tecla').focus();
   });
 }
 async function _huellaCodigo(c){
@@ -9311,7 +9315,7 @@ async function popupPrompt(mensaje,valorDefault,titulo){
       <div class="fr"><span class="fl">Dirección</span><div class="fv"><input id="cot_c_dir" type="text" placeholder="-" oninput="autosaveCot()"></div></div>
       <div class="fr"><span class="fl">C.P.</span><div class="fv"><input id="cot_c_cp" type="text" placeholder="-" oninput="autosaveCot()"></div></div>
       <div class="cs">
-        <div class="ci"><div class="ci-icon">📞</div><div><div class="ci-lbl">Teléfono</div><div class="ci-val"><input id="cot_c_tel" type="text" placeholder="-" oninput="autosaveCot()"></div></div></div>
+        <div class="ci"><div class="ci-icon">📞</div><div><div class="ci-lbl">Teléfono</div><div class="ci-val"><input id="cot_c_tel" type="tel" autocomplete="tel" placeholder="-" oninput="autosaveCot()"></div></div></div>
         <div class="ci"><div class="ci-icon">👤</div><div><div class="ci-lbl">Contacto</div><div class="ci-val"><input id="cot_c_contacto" type="text" placeholder="-" oninput="autosaveCot()"></div></div></div>
         <div class="ci"><div class="ci-icon">✉️</div><div><div class="ci-lbl">Correo</div><div class="ci-val"><input id="cot_c_email" type="text" placeholder="-" style="width:130px" oninput="autosaveCot()"></div></div></div>
       </div>
@@ -9321,9 +9325,9 @@ async function popupPrompt(mensaje,valorDefault,titulo){
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
         Detalles de la Cotización
       </div>
-      <div class="fr"><span class="fl">Asesor</span><div class="fv"><select id="cot_d_asesor" onchange="_mostrarTelAsesor('cot_d_asesor','cot_d_asesor_tel');autosaveCot()"><!-- opciones desde CONFIG: OPCIONES_ASESOR --></select></div></div>
+      <div class="fr"><span class="fl">Asesor</span><div class="fv"><select id="cot_d_asesor" aria-label="Asesor" onchange="_mostrarTelAsesor('cot_d_asesor','cot_d_asesor_tel');autosaveCot()"><!-- opciones desde CONFIG: OPCIONES_ASESOR --></select></div></div>
       <div class="fr" id="cot_d_asesor_tel_wrap" style="display:none"><span class="fl">Tel. asesor</span><div class="fv" id="cot_d_asesor_tel"></div></div>
-      <div class="fr"><span class="fl">Condiciones de pago</span><div class="fv"><select id="cot_d_pago" onchange="autosaveCot()"><!-- opciones desde CONFIG: OPCIONES_PAGO_COTIZACION --></select></div></div>
+      <div class="fr"><span class="fl">Condiciones de pago</span><div class="fv"><select id="cot_d_pago" aria-label="Condición de pago" onchange="autosaveCot()"><!-- opciones desde CONFIG: OPCIONES_PAGO_COTIZACION --></select></div></div>
       <div class="fr"><span class="fl">Entrega estimada</span><div class="fv"><input id="cot_d_entrega" type="text" placeholder="2 a 3 días hábiles" oninput="autosaveCot()"></div></div>
       <div class="fr"><span class="fl">Lugar de entrega</span><div class="fv"><input id="cot_d_lugar" type="text" placeholder="Almacén del cliente" list="cot_lugarOpts" oninput="autosaveCot()"><datalist id="cot_lugarOpts"><!-- opciones desde CONFIG: OPCIONES_LUGAR_ENTREGA --></datalist></div></div>
       <div id="cot_emisorBox" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
@@ -9376,7 +9380,7 @@ async function popupPrompt(mensaje,valorDefault,titulo){
       <div class="rr" style="border:none;margin-top:6px">
         <span class="rl">Descuento global</span>
         <div style="display:flex;align-items:center;gap:5px" class="no-print">
-          <input class="di" type="number" inputmode="decimal" id="cot_descPct" value="0" min="0" max="100" oninput="calcTotalsCot()">
+          <input class="di" type="number" inputmode="decimal" id="cot_descPct" aria-label="Descuento %" value="0" min="0" max="100" oninput="calcTotalsCot()">
           <span style="font-size:12px;color:var(--muted)">%</span>
         </div>
       </div>

@@ -66,71 +66,156 @@ async function sumetecAbrirTokenCifrado(app,pin) {
 function sumetecOlvidarTokenCifrado(app) { localStorage.removeItem(_sumetecClaveToken(app)); }
 
 let _sumetecPinPromesa = null;
-// Teclado numérico propio (2026-10): el PIN se toca en pantalla, sin abrir el teclado del teléfono.
-// El valor sigue viviendo en los mismos <input type="password"> y la promesa devuelve lo mismo que antes
-// (el PIN o null). Con teclado físico también se puede escribir (dígitos, Borrar y Enter).
+// ═══ Teclado de PIN estándar v3 (2026-10, propuesta 1b «pantalla completa») ═══
+// UNA sola pantalla para los 4 usos: crear (2 pasos: escribir → Continuar → confirmar), desbloquear,
+// código de seguridad (Dirección, Gastos) y código de borrado (Cotizador). Largo libre de 4 a 12, con botón.
+// sumetecTecladoPin(dlg, op) solo pinta y conecta el teclado dentro de un <dialog>; quien lo llama lo abre
+// y lee el PRIMER <input> al cerrarse con returnValue 'ok', igual que antes. inputId/errorId/textoId
+// conservan los IDs de #pin-modal y #codigo-modal. Con teclado físico: dígitos, Borrar y Enter.
+// op: { modo:'crear'|'desbloquear'|'codigo', nombre, mensaje, titulo, texto, min, max, olvidar(), inputId, errorId, textoId }
+const SUMETEC_ACENTO_PIN = {Cotizador:'#2aaeeb', Remisiones:'#2aaeeb', Gastos:'#f06452', 'Facturación':'#d99c2b', 'Dirección':'#8750df', Compras:'#54c99a', 'Logística':'#e5609f'};
+const SUMETEC_APP_TOKEN = {Cotizador:'cotizador', Remisiones:'cotizador', Gastos:'gastos', 'Facturación':'fact', 'Logística':'logistica'};
+function sumetecTecladoPin(dlg, op = {}) {
+  const modo = op.modo || 'desbloquear', crear = modo === 'crear', codigo = modo === 'codigo';
+  const nombre = op.nombre || 'SUMETEC', min = op.min || (codigo ? 1 : 4), max = op.max || 12;
+  const quieto = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (dlg._sumetecObs) dlg._sumetecObs.disconnect();
+  if (dlg._sumetecTeclas) dlg.removeEventListener('keydown', dlg._sumetecTeclas);
+  dlg.style.cssText = '';
+  dlg.style.setProperty('--acento', SUMETEC_ACENTO_PIN[nombre] || '#76b82a');
+  dlg.style.setProperty('--pin-texto', nombre === 'Dirección' ? '#fff' : '#102335');
+  dlg.classList.add('sumetec-pin-dialogo', 'sumetec-pin-teclado');
+  const id = (n, v) => v ? ' ' + n + '="' + v + '"' : '';
+  const campo = (i, etiqueta) => '<input type="password" maxlength="' + max + '" autocomplete="off" inputmode="none" tabindex="-1" class="sumetec-pin-oculto" aria-label="' + etiqueta + '"' + (i ? ' name="sumetec-pin-confirmar"' : id('id', op.inputId)) + '>';
+  const teclas = ['1','2','3','4','5','6','7','8','9','ver','0','borrar'].map(k =>
+    k === 'ver' ? '<button type="button" class="sumetec-tecla sumetec-tecla-ver" data-k="ver" aria-pressed="false">Ver</button>'
+    : k === 'borrar' ? '<button type="button" class="sumetec-tecla sumetec-tecla-borrar" data-k="borrar" aria-label="Borrar">⌫</button>'
+    : '<button type="button" class="sumetec-tecla" data-k="' + k + '">' + k + '</button>').join('');
+  dlg.innerHTML = '<form method="dialog" class="sumetec-pin-panel">'
+    + '<div class="sumetec-pin-cabecera"><span class="sumetec-pin-logo" aria-hidden="true"></span><span class="sumetec-pin-app"><strong></strong><small></small></span><button type="button" class="sumetec-pin-cerrar" aria-label="Volver">×</button></div>'
+    + '<div class="sumetec-pin-cuerpo"><div class="sumetec-pin-pasos" aria-hidden="true"><i></i><i></i></div><div class="sumetec-pin-eyebrow"></div><h2></h2><p class="sumetec-pin-texto"' + id('id', op.textoId) + '></p>'
+    + campo(0, codigo ? 'Código' : 'PIN') + campo(1, 'Confirmar PIN')
+    + '<div class="sumetec-pin-puntos" aria-hidden="true"></div><small class="sumetec-pin-error" role="alert"' + id('id', op.errorId) + '></small></div>'
+    + '<div class="sumetec-pin-teclas">' + teclas + '</div>'
+    + '<button class="sumetec-pin-guardar" value="ok" type="submit"></button><button type="button" class="sumetec-pin-enlace"></button></form>'
+    + '<div class="sumetec-pin-aviso" hidden><div class="sumetec-pin-aviso-icono" aria-hidden="true">?</div><h2>¿Olvidaste tu PIN?</h2>'
+    + '<p>No se puede recuperar. Vincula este teléfono otra vez con un PIN nuevo. Lo pendiente de enviar no se pierde.</p>'
+    + '<button type="button" class="sumetec-pin-guardar listo">Vincular de nuevo</button><button type="button" class="sumetec-pin-volver">Volver</button></div>';
+  const q = s => dlg.querySelector(s);
+  const form = q('form'), ins = form.querySelectorAll('input'), puntos = q('.sumetec-pin-puntos'), error = q('.sumetec-pin-error');
+  const cuerpo = q('.sumetec-pin-cuerpo'), guardar = form.querySelector('.sumetec-pin-guardar'), enlace = q('.sumetec-pin-enlace'), ver = q('[data-k="ver"]'), aviso = q('.sumetec-pin-aviso');
+  const enLinea = typeof navigator === 'undefined' || navigator.onLine !== false;
+  q('.sumetec-pin-app strong').textContent = nombre + ' · SUMETEC';
+  const conexion = q('.sumetec-pin-app small');
+  conexion.textContent = enLinea ? '● En línea' : '● Sin conexión';
+  if (!enLinea) conexion.style.color = '#ffce82';
+  q('.sumetec-pin-pasos').hidden = !crear;
+  if (!crear) q('.sumetec-pin-texto').textContent = op.texto || (codigo ? 'Escribe el código de seguridad.' : 'Desbloquea ' + nombre + ' en este teléfono.');
+  let paso = 0, visible = false, libre = false;
+  const animar = (el, cuadros, ms) => { if (!quieto && el && el.animate) el.animate(cuadros, { duration: ms, easing: 'ease-out' }); };
+  const textos = () => {
+    q('.sumetec-pin-eyebrow').textContent = crear ? 'Paso ' + (paso + 1) + ' de 2' : codigo ? 'Autorización' : nombre;
+    form.querySelector('h2').textContent = crear ? (paso ? 'Confirma tu PIN' : 'Crea tu PIN') : (op.titulo || (codigo ? 'Código de seguridad' : 'Ingresa tu PIN'));
+    if (crear) q('.sumetec-pin-texto').textContent = paso ? 'Escríbelo otra vez para confirmarlo.' : 'Lo usarás para abrir ' + nombre + ' en este teléfono.';
+    guardar.textContent = crear ? (paso ? 'Guardar PIN' : 'Continuar') : codigo ? 'Autorizar' : 'Desbloquear';
+    const marcas = q('.sumetec-pin-pasos').children;
+    marcas[0].className = 'activa'; marcas[1].className = paso ? 'activa' : '';
+    let t = '', nota = false;
+    if (crear) { t = paso ? '← Cambiar el PIN' : 'De ' + min + ' a ' + max + ' dígitos · no se puede recuperar'; nota = !paso; }
+    else if (codigo) t = libre ? 'Usar el teclado numérico' : 'Usar el teclado del teléfono';
+    else if (op.olvidar) t = '¿Olvidaste tu PIN?';
+    enlace.textContent = t; enlace.classList.toggle('nota', nota); enlace.disabled = nota;
+    enlace.style.visibility = t ? '' : 'hidden';
+  };
+  const pintar = () => {
+    const v = ins[paso].value, n = Math.max(4, v.length), hijos = [];
+    for (let k = 0; k < n; k++) {
+      const i = document.createElement('i');
+      if (k < v.length) { i.className = 'lleno'; if (visible) i.textContent = v[k]; }
+      hijos.push(i);
+    }
+    puntos.replaceChildren(...hijos);
+    puntos.classList.toggle('visible', visible); puntos.classList.toggle('largo', n > 8);
+    guardar.classList.toggle('listo', (libre ? v.trim().length : v.length) >= min);
+  };
+  const teclear = k => {
+    if (libre) return;
+    if (k === 'ver') {
+      visible = !visible;
+      ins.forEach(i => { i.type = visible ? 'text' : 'password'; });
+      ver.textContent = visible ? 'Ocultar' : 'Ver'; ver.setAttribute('aria-pressed', String(visible));
+      pintar(); return;
+    }
+    const inp = ins[paso]; error.textContent = '';
+    if (k === 'borrar') inp.value = inp.value.slice(0, -1);
+    else if (inp.value.length < max) inp.value += k;
+    pintar();
+  };
+  const irPaso = p => {
+    paso = p; ins[1].value = ''; if (!p) ins[0].value = '';
+    error.textContent = ''; textos(); pintar();
+    animar(cuerpo, [{ opacity: 0, transform: 'translateX(' + (p ? 28 : -28) + 'px)' }, { opacity: 1, transform: 'none' }], 220);
+  };
+  q('.sumetec-pin-teclas').addEventListener('click', e => { const b = e.target.closest('.sumetec-tecla'); if (b) teclear(b.dataset.k); });
+  q('.sumetec-pin-cerrar').onclick = () => dlg.close('cancelar');
+  enlace.onclick = () => {
+    if (crear) { if (paso) irPaso(0); return; }
+    if (codigo) {
+      // Por si el código publicado lleva letras: campo normal con el teclado del teléfono.
+      libre = !libre; form.classList.toggle('sumetec-pin-libre', libre);
+      const c = ins[0];
+      c.classList.toggle('sumetec-pin-oculto', !libre); c.classList.toggle('sumetec-pin-campo', libre);
+      c.inputMode = libre ? 'text' : 'none'; c.tabIndex = libre ? 0 : -1; c.value = ''; error.textContent = '';
+      textos(); pintar(); if (libre) c.focus();
+      return;
+    }
+    if (op.olvidar) { form.hidden = true; aviso.hidden = false; aviso.querySelector('.sumetec-pin-guardar').focus(); }
+  };
+  aviso.querySelector('.sumetec-pin-volver').onclick = () => { aviso.hidden = true; form.hidden = false; q('.sumetec-tecla').focus(); };
+  aviso.querySelector('.sumetec-pin-guardar').onclick = () => { if (op.olvidar) op.olvidar(); };
+  form.addEventListener('submit', e => {
+    const v = ins[paso].value;
+    const parar = m => { e.preventDefault(); e.stopImmediatePropagation(); error.textContent = m; };
+    if (libre) { if (!v.trim()) parar('Escribe el código'); return; }
+    if (v.length < min) { parar(codigo ? 'Escribe el código' : 'El PIN debe tener al menos ' + min + ' dígitos'); return; }
+    if (crear && !paso) { e.preventDefault(); e.stopImmediatePropagation(); irPaso(1); return; }
+    if (crear && ins[0].value !== ins[1].value) { ins[1].value = ''; parar('Los PIN no coinciden. Escríbelo otra vez.'); }
+  });
+  // Cualquier aviso en el renglón de error (propio, del llamador o de app.js) repinta y sacude los puntos.
+  dlg._sumetecObs = new MutationObserver(() => {
+    pintar();
+    if (!error.textContent) return;
+    animar(libre ? ins[0] : puntos, [{ transform: 'translateX(0)' }, { transform: 'translateX(-10px)' }, { transform: 'translateX(9px)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(0)' }], 340);
+    try { if (navigator.vibrate) navigator.vibrate(40); } catch (_) {}
+  });
+  dlg._sumetecObs.observe(error, { childList: true, characterData: true, subtree: true });
+  dlg._sumetecTeclas = e => {
+    if (libre || form.hidden) return;
+    if (/^[0-9]$/.test(e.key)) { e.preventDefault(); teclear(e.key); }
+    else if (e.key === 'Backspace') { e.preventDefault(); teclear('borrar'); }
+    else if (e.key === 'Enter') { e.preventDefault(); guardar.click(); }
+  };
+  dlg.addEventListener('keydown', dlg._sumetecTeclas);
+  ins[0].addEventListener('input', pintar);
+  textos(); pintar();
+  if (op.mensaje) error.textContent = op.mensaje;
+  return dlg;
+}
+
+// Crear o desbloquear el token cifrado de cada app. Misma promesa que antes: el PIN o null.
 function sumetecPedirPinToken(nombre, crear=false, mensaje='') {
   if (_sumetecPinPromesa) return _sumetecPinPromesa;
   _sumetecPinPromesa = new Promise(resolve=>{
-    const dlg=document.createElement('dialog');
-    dlg.className='sumetec-pin-dialogo sumetec-pin-teclado';
-    dlg.style.setProperty('--acento', ({Cotizador:'#2aaeeb', Remisiones:'#2aaeeb', Gastos:'#f06452', Facturación:'#d99c2b', Dirección:'#8750df', Compras:'#54c99a', Logística:'#d99c2b'})[nombre]||'#76b82a');
-    const fila=(n,t)=>'<label class="sumetec-pin-fila" data-n="'+n+'"><span>'+t+'</span><input type="password" maxlength="12" autocomplete="off" inputmode="none" tabindex="-1" class="sumetec-pin-oculto"><div class="sumetec-pin-puntos" aria-hidden="true"></div></label>';
-    const teclas=['1','2','3','4','5','6','7','8','9','','0','borrar'].map(k=>k===''?'<span></span>'
-      :k==='borrar'?'<button type="button" class="sumetec-tecla sumetec-tecla-borrar" data-k="borrar" aria-label="Borrar">⌫</button>'
-      :'<button type="button" class="sumetec-tecla" data-k="'+k+'">'+k+'</button>').join('');
-    dlg.innerHTML='<form method="dialog"><div class="sumetec-pin-marca" aria-hidden="true"></div>'
-      +'<h2></h2><p></p>'+fila(0,crear?'Crear PIN':'PIN')+(crear?fila(1,'Confirmar PIN'):'')
-      +'<small class="sumetec-pin-error" role="alert"></small>'
-      +'<div class="sumetec-pin-teclas">'+teclas+'</div>'
-      +'<button class="sumetec-pin-mostrar" type="button" aria-pressed="false">Mostrar PIN</button>'
-      +'<div class="sumetec-pin-acciones"><button class="sumetec-pin-volver" type="button">Volver</button><button class="sumetec-pin-guardar" value="ok" type="submit"></button></div></form>';
-    dlg.querySelector('h2').textContent=crear?'Protege este teléfono':'Ingresa tu PIN';
-    dlg.querySelector('p').textContent=crear?'Crea el PIN para '+nombre+'. Lo usarás al abrir la app.':'Desbloquea '+nombre+' en este teléfono.';
-    dlg.querySelector('.sumetec-pin-guardar').textContent=crear?'Guardar PIN':'Desbloquear';
-    const form=dlg.querySelector('form'), ins=dlg.querySelectorAll('input'), filas=dlg.querySelectorAll('.sumetec-pin-fila'), error=dlg.querySelector('.sumetec-pin-error');
-    let activo=0, visible=false;
-    const pintar=()=>{
-      filas.forEach((f,i)=>{
-        const v=ins[i].value, n=Math.max(4,v.length); let h='';
-        for(let k=0;k<n;k++) h+='<i class="'+(k<v.length?'lleno':'')+'">'+(visible&&k<v.length?v[k]:'')+'</i>';
-        f.querySelector('.sumetec-pin-puntos').innerHTML=h;
-        f.classList.toggle('activa',i===activo&&filas.length>1);
-      });
-    };
-    const teclear=k=>{
-      const inp=ins[activo]; error.textContent='';
-      if(k==='borrar') inp.value=inp.value.slice(0,-1);
-      else if(inp.value.length<12) inp.value+=k;
-      pintar();
-    };
-    error.textContent=mensaje;
-    dlg.querySelectorAll('.sumetec-tecla').forEach(b=>{ b.onclick=()=>teclear(b.dataset.k); });
-    filas.forEach((f,i)=>{ f.onclick=e=>{ e.preventDefault(); activo=i; pintar(); }; });
-    dlg.addEventListener('keydown',e=>{
-      if(/^[0-9]$/.test(e.key)){e.preventDefault();teclear(e.key);}
-      else if(e.key==='Backspace'){e.preventDefault();teclear('borrar');}
-      else if(e.key==='Enter'){e.preventDefault();dlg.querySelector('.sumetec-pin-guardar').click();}
-    });
-    dlg.querySelector('.sumetec-pin-volver').onclick=()=>dlg.close('cancelar');
-    dlg.querySelector('.sumetec-pin-mostrar').onclick=e=>{
-      visible=!visible;
-      ins.forEach(input=>{input.type=visible?'text':'password';});
-      e.currentTarget.textContent=visible?'Ocultar PIN':'Mostrar PIN';
-      e.currentTarget.setAttribute('aria-pressed',String(visible));
-      pintar();
-    };
-    form.addEventListener('submit',e=>{
-      if(ins[0].value.length<4){e.preventDefault();error.textContent='El PIN debe tener al menos 4 dígitos';activo=0;pintar();return;}
-      if(crear && !ins[1].value){e.preventDefault();error.textContent='Vuelve a escribir el PIN para confirmarlo';activo=1;pintar();return;}
-      if(crear && ins[0].value!==ins[1].value){e.preventDefault();error.textContent='Los PIN no coinciden';ins[1].value='';activo=1;pintar();}
-    });
+    const dlg=document.createElement('dialog'), app=SUMETEC_APP_TOKEN[nombre];
+    // «¿Olvidaste tu PIN?»: borra SOLO el token cifrado (las colas pendientes se conservan) y recarga en Vincular.
+    const olvidar=!crear&&app?()=>{ sumetecOlvidarTokenCifrado(app); dlg.close('cancelar'); location.reload(); }:null;
+    sumetecTecladoPin(dlg,{modo:crear?'crear':'desbloquear',nombre,mensaje,olvidar});
     dlg.addEventListener('close',()=>{
+      const ins=dlg.querySelectorAll('input');
       const pin=dlg.returnValue==='ok'?ins[0].value:null;
       ins.forEach(input=>{input.value='';});
       dlg.remove(); _sumetecPinPromesa=null; resolve(pin);
     },{once:true});
-    pintar();
     document.body.appendChild(dlg); dlg.showModal(); dlg.querySelector('.sumetec-tecla').focus();
   });
   return _sumetecPinPromesa;
@@ -144,7 +229,7 @@ async function sumetecRestaurarTokenApp(app,nombre,claveLegada) {
       const pin=await sumetecPedirPinToken(nombre,false,mensaje);
       if (pin===null) return '';
       try { return await sumetecAbrirTokenCifrado(app,pin); }
-      catch (e) { mensaje=e.message||'PIN incorrecto'; }
+      catch (e) { const quedan=2-intento; mensaje=(e.message||'PIN incorrecto')+(quedan>0?' · te quedan '+quedan+' intento'+(quedan===1?'':'s'):''); }
     }
     return '';
   }

@@ -74,6 +74,8 @@ function pedirPinDireccion() {
 
   return new Promise((resolve, reject) => {
     const dialogo = document.querySelector('#pin-modal');
+    // Estándar v3: mismo teclado de pantalla completa que las otras apps (acceso.js); conserva los IDs.
+    if (typeof sumetecTecladoPin === 'function') sumetecTecladoPin(dialogo, { modo: 'desbloquear', nombre: 'Compras', inputId: 'pin-modal-input', errorId: 'pin-modal-error', olvidar: () => reiniciarVinculo(true) });
     dialogo.classList.add('sumetec-pin-dialogo');
     const input = document.querySelector('#pin-modal-input');
     const error = document.querySelector('#pin-modal-error');
@@ -120,8 +122,9 @@ function clasificarErrorAcceso(err) {
 
 // A4 (2026-09-23): "olvidé mi PIN" -- el PIN no se puede recuperar; se vincula de nuevo.
 // Borra SOLO el vínculo (token cifrado); las colas pendientes de enviar se conservan.
-function reiniciarVinculo() {
-  if (!confirm('Se borrará el vínculo de este teléfono para vincularlo otra vez con un PIN nuevo. Lo pendiente de enviar NO se pierde. ¿Continuar?')) return;
+function reiniciarVinculo(sinPreguntar) {
+  // sinPreguntar: ya lo confirmó en la pantalla «¿Olvidaste tu PIN?» del teclado.
+  if (!sinPreguntar && !confirm('Se borrará el vínculo de este teléfono para vincularlo otra vez con un PIN nuevo. Lo pendiente de enviar NO se pierde. ¿Continuar?')) return;
   bloquearDireccion();
   if (typeof _accesoInicialValidado !== 'undefined') _accesoInicialValidado = false;
   const m = document.querySelector('#pin-modal');

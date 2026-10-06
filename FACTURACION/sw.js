@@ -11,8 +11,8 @@
 // iframe sandbox, no un documento de nivel superior que un Service Worker
 // pueda controlar (mismo motivo por el que el ícono de instalación tampoco
 // funciona ahí -- ver FACTURACION-threat-model.md).
-const CACHE = 'sumetec-fact-d3bfaaf9e8';
-const CACHE_ASSETS = 'sumetec-fact-assets-b0f2874420';
+const CACHE = 'sumetec-fact-c6c290f926';
+const CACHE_ASSETS = 'sumetec-fact-assets-dc762dec23';
 const PREFIJO = 'sumetec-fact-';
 
 // Versión ACEPTADA (2026-09-29, pedido de Miguel: «que no se actualice sola hasta que le dé
@@ -57,7 +57,9 @@ async function despuesDeInstalar() {
   if (!previas.length) await guardarAceptada(CACHE);
 }
 const MANIFIESTO_PRECACHE = './precache-manifest.json';
-const ARCHIVOS_ASSETS = ['./logos/sumetec-facturacion.png'];
+const ARCHIVOS_ASSETS = ['./logos/sumetec-facturacion.png',
+  './fonts/ibm-plex-sans-variable.woff2', './fonts/ibm-plex-mono-400.woff2',
+  './fonts/ibm-plex-mono-500.woff2', './fonts/ibm-plex-mono-600.woff2'];
 
 async function precachearShell() {
   const cache = await caches.open(CACHE);

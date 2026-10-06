@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-app="logistica">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#023561">
   <title>SUMETEC Logística</title>
   <link rel="manifest" href="manifest.json">
@@ -35,6 +35,10 @@ html body .menu-mas button:hover,html body .menu-fact button:hover,html body .ga
 html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
 html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
 </style>
+<!-- Estándar visual v3 (2026-10): color de la app, sin scroll lateral, animación. Va al final. -->
+<link rel="stylesheet" href="sumetec-v3.css">
+<!-- Atrás del teléfono cierra lo último que se abrió (2026-10) -->
+<script src="sumetec-atras.js" defer></script>
 </head>
 <body>
   <header class="sm-barra barra"><img class="marca-icono" src="logos/sumetec-logistica-512.png" alt=""><span class="marca"><small>SUMETEC</small><strong>Logística</strong></span><button id="pendientes" class="sm-chip sm-chip-boton estado" type="button">Abriendo datos…</button><button id="mas-opciones" type="button" class="btn-barra" aria-label="Más opciones" aria-expanded="false" aria-controls="menu-opciones">⋮</button></header>
@@ -76,7 +80,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   </form></dialog>
   <dialog id="cola"><div class="dialogo-titulo"><h2>Capturas pendientes</h2><button class="cerrar" type="button" data-cerrar="cola" aria-label="Cerrar pendientes">×</button></div><p>Una captura se confirma cuando el servidor acusa su recepción. Los conflictos requieren revisión.</p><button id="sincronizar" type="button">Enviar y recibir</button><div id="lista-cola"></div></dialog>
   <dialog id="detalle"><form id="form-detalle"><div class="dialogo-titulo"><h2 id="detalle-titulo"></h2><button type="button" class="cerrar" data-cerrar="detalle" aria-label="Cerrar">×</button></div><div id="detalle-campos"></div><p id="detalle-error" class="error" role="alert"></p><div class="acciones"><button type="button" class="secundario" data-cerrar="detalle">Cancelar</button><button type="submit">Guardar</button></div></form></dialog>
-  <dialog id="vincular" class="sumetec-acceso" style="--acento:#d99c2b"><form class="sumetec-acceso-panel" id="form-vincular">
+  <dialog id="vincular" class="sumetec-acceso" style="--acento:#e5609f"><form class="sumetec-acceso-panel" id="form-vincular">
     <div class="sumetec-acceso-cabecera"><div class="sumetec-acceso-marca">Logística · SUMETEC<small>Rutas y prospectos</small></div><details id="ayuda-logistica" class="sumetec-acceso-ayuda sumetec-acceso-ayuda--solo-enlace"><summary aria-label="Información para vincular">i</summary><div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración tu código de vinculación de 8 caracteres. Vale 10 minutos.</p><p>Escribe tu nombre y el código; después crea tu PIN. Al volver a abrir usarás ese PIN.</p><button type="button" onclick="sumetecAbrirAyuda('ayuda-logistica',true)" class="sumetec-acceso-ayuda-entendido">Entendido</button></div></details></div>
     <div class="sumetec-acceso-intro"><div class="sumetec-acceso-candado" aria-hidden="true">🔒</div><h2>Vincular teléfono</h2><p class="sumetec-acceso-descripcion">Conecta este equipo de forma segura.</p></div>
     <div class="sumetec-acceso-campos">

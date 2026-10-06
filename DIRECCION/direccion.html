@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-app="direccion">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#023561">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="logos/sumetec-direccion.png" type="image/png">
@@ -42,6 +42,10 @@ html body .menu-mas button:hover,html body .menu-fact button:hover,html body .ga
 html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
 html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
 </style>
+<!-- Estándar visual v3 (2026-10): color de la app, sin scroll lateral, animación. Va al final. -->
+<link rel="stylesheet" href="sumetec-v3.css">
+<!-- Atrás del teléfono cierra lo último que se abrió (2026-10) -->
+<script src="sumetec-atras.js" defer></script>
 </head>
 <body>
   <header class="sm-barra">
