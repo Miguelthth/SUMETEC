@@ -16,6 +16,32 @@
   <link rel="stylesheet" href="estilos.css?v=20260924a">
   <link rel="stylesheet" href="acceso.css">
   <title>SUMETEC Dirección</title>
+<style id="sm-final">
+/* Pantallas encima (Cobros, Más, modales): el scroll se queda dentro y no mueve la pantalla de atrás */
+.ov,.ov .modal,.modal,dialog,.menu-mas,.sp,.pp-global{overscroll-behavior:contain}
+html.sm-bloqueo,html.sm-bloqueo body{overflow:hidden!important}
+/* Cantidades y montos: se escriben, sin flechitas */
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+/* Campo llenado por la IA (OCR): lima de marca, se quita al editarlo */
+.ia-tocado{background:color-mix(in srgb,#76b82a 15%,var(--sm-surface,#fff))!important;border-color:#76b82a!important}
+.gasto-iva-chips.ia-tocado{background:color-mix(in srgb,#76b82a 15%,transparent)!important}
+
+/* ═══ Estándar visual v2 · barra superior (Inicio) y menú de ajustes, iguales en las 6 apps ═══ */
+html body .tb,html body > header,html body header.sm-barra{background:linear-gradient(170deg,#03305a,#04223c)!important;color:#fff;min-height:56px;box-shadow:0 6px 18px rgb(2 25 45 / .22)}
+html body .sm-kicker,html body header h1 .kicker,html body .barra-kicker,html body .sm-barra .marca small{font-size:10.5px!important;font-weight:600!important;letter-spacing:.14em!important;text-transform:uppercase;color:#9fd25a!important;opacity:1!important}
+html body header h1,html body .sm-barra-titulo,html body .sm-barra .marca strong{font-size:16px!important;font-weight:700!important;color:#fff!important}
+html body .sm-header-chip.sm-status-chip,html body header .status-chip,html body .sm-barra .sm-chip,html body .tb-status{min-height:30px;padding:0 11px!important;border-radius:999px!important;background:rgb(255 255 255 / .1)!important;border:1px solid rgb(255 255 255 / .16)!important;color:#fff!important;font-size:11.5px!important;font-weight:600!important;white-space:nowrap}
+html body .sm-menu-boton,html body header .menu-btn,html body .sm-barra .btn-barra{min-width:40px!important;min-height:40px!important;border-radius:12px!important;border:1px solid rgb(255 255 255 / .18)!important;background:rgb(255 255 255 / .06)!important;color:#fff!important}
+html body .menu-mas,html body .menu-fact,html body .gasto-menu,html body .mas-menu,html body .menu-opciones{border-radius:16px!important;padding:6px!important;background:var(--sm-surface,#fff)!important;color:var(--sm-ink,#17242b);border:1px solid var(--sm-line,#dbe3ec)!important;box-shadow:0 18px 40px rgb(9 32 53 / .22)!important;overscroll-behavior:contain;max-height:calc(100dvh - 90px);overflow-y:auto}
+html body .menu-mas{background:#eef2f6!important;gap:6px!important}
+html body .menu-mas-grp,html body .mas-menu-grupo{border-radius:12px;overflow:hidden;background:var(--sm-surface,#fff)}
+html body .menu-mas-h,html body .menu-fact-titulo,html body .gasto-menu-titulo,html body .mas-menu-titulo,html body .menu-opciones > small{display:block;padding:10px 12px 4px!important;font-size:11px!important;font-weight:700!important;letter-spacing:.08em!important;text-transform:uppercase;color:var(--sm-muted,#616f7f)!important;background:none!important}
+html body .menu-mas button,html body .menu-fact button,html body .gasto-menu button,html body .mas-menu button,html body .menu-opciones button{display:flex!important;align-items:center;gap:10px;width:100%;min-height:48px!important;padding:0 12px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:inherit!important;font:inherit;font-size:14px!important;font-weight:500!important;text-align:left;cursor:pointer}
+html body .menu-mas button:hover,html body .menu-fact button:hover,html body .gasto-menu button:hover,html body .mas-menu button:hover,html body .menu-opciones button:hover{background:var(--sm-surface-2,#eef2f6)!important}
+html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
+html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
+</style>
 </head>
 <body>
   <header class="sm-barra">
@@ -116,5 +142,25 @@
   <script src="app.js"></script>
   <div id="sumetecActualizacion" role="status" aria-live="assertive"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje" aria-hidden="true">⚙</span><strong id="sumetecActualizacionTitulo">Actualización disponible</strong><p id="sumetecActualizacionMensaje"></p><button id="sumetecActualizarBoton" type="button" hidden>Actualizar</button></div></div>
   <script src="actualizacion.js"></script>
+<script id="sm-final">
+(function(){
+  // Bloquea el scroll de la pantalla de atrás mientras haya algo abierto encima.
+  var SEL='.ov.open, .menu-mas.open, dialog[open]', y=0, on=false, pend=false;
+  function sync(){
+    pend=false;
+    var abierto=!!document.querySelector(SEL), b=document.body.style;
+    if(abierto&&!on){on=true;y=window.scrollY||0;document.documentElement.classList.add('sm-bloqueo');b.position='fixed';b.top=(-y)+'px';b.left='0';b.right='0';b.width='100%';}
+    else if(!abierto&&on){on=false;document.documentElement.classList.remove('sm-bloqueo');b.position=b.top=b.left=b.right=b.width='';window.scrollTo(0,y);}
+  }
+  function pedir(){if(!pend){pend=true;requestAnimationFrame(sync);}}
+  function iniciar(){new MutationObserver(pedir).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','open']});sync();}
+  if(document.body)iniciar();else document.addEventListener('DOMContentLoaded',iniciar);
+  // Cantidades y montos: al tocar el campo se selecciona todo para escribir encima.
+  document.addEventListener('focusin',function(e){
+    var t=e.target;if(!t||t.tagName!=='INPUT')return;
+    if(t.type==='number'||/decimal|numeric/.test(t.inputMode||'')){setTimeout(function(){try{t.select();}catch(_){}} ,0);}
+  });
+})();
+</script>
 </body>
 </html>

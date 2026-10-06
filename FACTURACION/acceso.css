@@ -142,3 +142,54 @@ body.sin-sesion > header, body.sin-sesion > #masMenu { visibility: hidden; }
 .sumetec-acceso-espera button{margin-top:14px;min-height:48px;padding:10px 30px;border:0;border-radius:10px;background:#76b82a;color:#071d2d;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
 @keyframes sumetec-acceso-girar{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.sumetec-acceso-espera-icono{animation:none}}
+
+/* ═══ Estándar visual v2 (2026-10) · 01 Vincular y 02 Bloqueo ═══
+   Misma estructura en las 6 apps; cada una conserva su color en --acento. Solo presentación: no cambia IDs ni funciones. */
+.sumetec-acceso,.sumetec-acceso-espera{background:linear-gradient(170deg,#03305a 0%,#04223c 55%,#031a2e 100%)}
+dialog.sumetec-acceso::backdrop{background:#031a2e}
+.sumetec-acceso::before{top:auto;bottom:-6%;left:auto;right:-22%;transform:none;width:min(90vw,440px);height:min(90vw,440px);opacity:.06;filter:grayscale(1) brightness(3)}
+.sumetec-acceso-cabecera{align-items:center;border-bottom:0;padding:0;gap:10px}
+.sumetec-acceso-marca{display:flex;flex-direction:column;gap:2px;padding-left:46px;position:relative;font-size:16px;font-weight:700;line-height:1.15}
+.sumetec-acceso-marca::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:10px;background:#fff url("logos/sumetec-marca.png") center/24px no-repeat}
+.sumetec-acceso-marca small{margin:0;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--acento)}
+.sumetec-acceso-ayuda summary{width:40px;height:40px;border:1px solid rgb(255 255 255 / .2);border-radius:12px;background:rgb(255 255 255 / .06);color:#fff;font-size:17px}
+.sumetec-acceso-intro{justify-content:flex-end;align-items:flex-start;padding-bottom:22px}
+.sumetec-acceso-candado{width:56px;height:56px;margin:0 0 14px;border:1px solid color-mix(in srgb,var(--acento) 55%,transparent);border-radius:16px;background:color-mix(in srgb,var(--acento) 16%,transparent);font-size:26px}
+.sumetec-acceso h2{text-align:left;font-size:26px;font-weight:700}
+.sumetec-acceso-descripcion{text-align:left;font-size:14px;line-height:1.45;color:#b6c8d6}
+.sumetec-acceso label{color:#d9e5ee;font-size:12px}
+.sumetec-acceso input{min-height:50px;border:1px solid rgb(255 255 255 / .2);border-radius:12px;background:rgb(255 255 255 / .07)}
+.sumetec-acceso input:focus{border-color:var(--acento);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--acento) 30%,transparent)}
+.sumetec-acceso input[type=password],.sumetec-acceso input[inputmode=numeric]{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:20px;letter-spacing:.35em;text-align:center}
+.sumetec-acceso .sumetec-acceso-boton{min-height:54px;border-radius:14px;font-size:16px;font-weight:700}
+.sumetec-acceso-enlace{color:#b6c8d6;text-decoration:none;font-size:13px}
+.sumetec-acceso-error{color:#ffb0a8}
+.sumetec-pin-dialogo{border:1px solid rgb(255 255 255 / .14);border-radius:22px;background:linear-gradient(170deg,#03305a,#04223c)}
+.sumetec-pin-dialogo::backdrop{background:#031a2ee6}
+.sumetec-pin-dialogo h2{font-size:22px}
+.sumetec-pin-dialogo input{min-height:52px;border:1px solid rgb(255 255 255 / .2);border-radius:12px;background:rgb(255 255 255 / .07);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:22px;letter-spacing:.35em;text-align:center}
+.sumetec-pin-dialogo input:focus{border-color:var(--acento,#76b82a);outline:none}
+.sumetec-pin-acciones button{min-height:50px;border-radius:12px}
+.sumetec-pin-mostrar{color:#b6c8d6}
+.sumetec-acceso-espera strong{font-size:22px}
+.sumetec-acceso-espera button{min-height:54px;border-radius:14px}
+
+/* ═══ Teclado numérico del PIN (02 Bloqueo) ═══ */
+.sumetec-pin-dialogo input.sumetec-pin-oculto{position:absolute;min-height:0;margin:0;padding:0;border:0;width:1px;height:1px;opacity:0;pointer-events:none}
+.sumetec-pin-teclado{overflow-x:hidden}
+.sumetec-pin-teclado form{box-sizing:border-box;min-width:0;justify-items:center;text-align:center;gap:12px;padding:22px 22px 18px}
+.sumetec-pin-teclado h2,.sumetec-pin-teclado p{text-align:center}
+.sumetec-pin-marca{width:64px;height:64px;border-radius:18px;background:#fff url("logos/sumetec-marca.png") center/42px no-repeat;box-shadow:0 8px 24px #0005}
+.sumetec-pin-teclado .sumetec-pin-fila{box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;padding:8px;border-radius:12px;cursor:pointer;position:relative}
+.sumetec-pin-fila span{font-size:12px;color:#b6c8d6;font-weight:600}
+.sumetec-pin-fila.activa{background:rgb(255 255 255 / .07);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acento) 50%,transparent)}
+.sumetec-pin-puntos{display:flex;gap:14px;min-height:22px;align-items:center}
+.sumetec-pin-puntos i{width:18px;height:18px;border-radius:50%;border:2px solid rgb(255 255 255 / .45);display:grid;place-items:center;font:600 12px "IBM Plex Mono",ui-monospace,monospace;font-style:normal;color:#062238;transition:background .12s}
+.sumetec-pin-puntos i.lleno{background:var(--acento);border-color:var(--acento)}
+.sumetec-pin-teclas{display:grid;grid-template-columns:repeat(3,72px);gap:12px 20px;justify-content:center;margin-top:2px}
+.sumetec-tecla{width:72px;height:72px;border-radius:50%;border:0;background:rgb(255 255 255 / .08);color:#fff;font:500 28px "IBM Plex Sans",system-ui,sans-serif;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.sumetec-tecla:active{background:color-mix(in srgb,var(--acento) 45%,transparent)}
+.sumetec-tecla-borrar{background:transparent;font-size:24px}
+.sumetec-pin-teclado .sumetec-pin-mostrar{justify-self:center}
+.sumetec-pin-teclado .sumetec-pin-acciones{width:100%;box-sizing:border-box}
+@media (max-height:680px){.sumetec-pin-marca{display:none}.sumetec-tecla{width:62px;height:62px;font-size:24px}.sumetec-pin-teclas{grid-template-columns:repeat(3,62px);gap:8px 18px}}

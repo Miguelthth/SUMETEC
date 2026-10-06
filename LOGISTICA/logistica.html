@@ -12,6 +12,29 @@
   <link rel="stylesheet" href="sumetec-tema.css">
   <link rel="stylesheet" href="actualizacion.css">
   <link rel="stylesheet" href="estilos.css">
+<style id="sm-final">
+/* Pantallas encima (Cobros, Más, modales): el scroll se queda dentro y no mueve la pantalla de atrás */
+.ov,.ov .modal,.modal,dialog,.menu-mas,.sp,.pp-global{overscroll-behavior:contain}
+html.sm-bloqueo,html.sm-bloqueo body{overflow:hidden!important}
+/* Cantidades y montos: se escriben, sin flechitas */
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+
+/* ═══ Estándar visual v2 · barra superior (Inicio) y menú de ajustes, iguales en las 6 apps ═══ */
+html body .tb,html body > header,html body header.sm-barra{background:linear-gradient(170deg,#03305a,#04223c)!important;color:#fff;min-height:56px;box-shadow:0 6px 18px rgb(2 25 45 / .22)}
+html body .sm-kicker,html body header h1 .kicker,html body .barra-kicker,html body .sm-barra .marca small{font-size:10.5px!important;font-weight:600!important;letter-spacing:.14em!important;text-transform:uppercase;color:#9fd25a!important;opacity:1!important}
+html body header h1,html body .sm-barra-titulo,html body .sm-barra .marca strong{font-size:16px!important;font-weight:700!important;color:#fff!important}
+html body .sm-header-chip.sm-status-chip,html body header .status-chip,html body .sm-barra .sm-chip,html body .tb-status{min-height:30px;padding:0 11px!important;border-radius:999px!important;background:rgb(255 255 255 / .1)!important;border:1px solid rgb(255 255 255 / .16)!important;color:#fff!important;font-size:11.5px!important;font-weight:600!important;white-space:nowrap}
+html body .sm-menu-boton,html body header .menu-btn,html body .sm-barra .btn-barra{min-width:40px!important;min-height:40px!important;border-radius:12px!important;border:1px solid rgb(255 255 255 / .18)!important;background:rgb(255 255 255 / .06)!important;color:#fff!important}
+html body .menu-mas,html body .menu-fact,html body .gasto-menu,html body .mas-menu,html body .menu-opciones{border-radius:16px!important;padding:6px!important;background:var(--sm-surface,#fff)!important;color:var(--sm-ink,#17242b);border:1px solid var(--sm-line,#dbe3ec)!important;box-shadow:0 18px 40px rgb(9 32 53 / .22)!important;overscroll-behavior:contain;max-height:calc(100dvh - 90px);overflow-y:auto}
+html body .menu-mas{background:#eef2f6!important;gap:6px!important}
+html body .menu-mas-grp,html body .mas-menu-grupo{border-radius:12px;overflow:hidden;background:var(--sm-surface,#fff)}
+html body .menu-mas-h,html body .menu-fact-titulo,html body .gasto-menu-titulo,html body .mas-menu-titulo,html body .menu-opciones > small{display:block;padding:10px 12px 4px!important;font-size:11px!important;font-weight:700!important;letter-spacing:.08em!important;text-transform:uppercase;color:var(--sm-muted,#616f7f)!important;background:none!important}
+html body .menu-mas button,html body .menu-fact button,html body .gasto-menu button,html body .mas-menu button,html body .menu-opciones button{display:flex!important;align-items:center;gap:10px;width:100%;min-height:48px!important;padding:0 12px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:inherit!important;font:inherit;font-size:14px!important;font-weight:500!important;text-align:left;cursor:pointer}
+html body .menu-mas button:hover,html body .menu-fact button:hover,html body .gasto-menu button:hover,html body .mas-menu button:hover,html body .menu-opciones button:hover{background:var(--sm-surface-2,#eef2f6)!important}
+html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
+html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
+</style>
 </head>
 <body>
   <header class="sm-barra barra"><img class="marca-icono" src="logos/sumetec-logistica-512.png" alt=""><span class="marca"><small>SUMETEC</small><strong>Logística</strong></span><button id="pendientes" class="sm-chip sm-chip-boton estado" type="button">Abriendo datos…</button><button id="mas-opciones" type="button" class="btn-barra" aria-label="Más opciones" aria-expanded="false" aria-controls="menu-opciones">⋮</button></header>
@@ -54,7 +77,7 @@
   <dialog id="cola"><div class="dialogo-titulo"><h2>Capturas pendientes</h2><button class="cerrar" type="button" data-cerrar="cola" aria-label="Cerrar pendientes">×</button></div><p>Una captura se confirma cuando el servidor acusa su recepción. Los conflictos requieren revisión.</p><button id="sincronizar" type="button">Enviar y recibir</button><div id="lista-cola"></div></dialog>
   <dialog id="detalle"><form id="form-detalle"><div class="dialogo-titulo"><h2 id="detalle-titulo"></h2><button type="button" class="cerrar" data-cerrar="detalle" aria-label="Cerrar">×</button></div><div id="detalle-campos"></div><p id="detalle-error" class="error" role="alert"></p><div class="acciones"><button type="button" class="secundario" data-cerrar="detalle">Cancelar</button><button type="submit">Guardar</button></div></form></dialog>
   <dialog id="vincular" class="sumetec-acceso" style="--acento:#d99c2b"><form class="sumetec-acceso-panel" id="form-vincular">
-    <div class="sumetec-acceso-cabecera"><div class="sumetec-acceso-marca">Logística · SUMETEC<small>Rutas y prospectos</small></div><details id="ayuda-logistica" class="sumetec-acceso-ayuda sumetec-acceso-ayuda--solo-enlace"><summary aria-label="Información para vincular">i</summary><div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración tu código de vinculación de 8 caracteres. Vale 10 minutos.</p><p>Administración configura el vendedor autorizado de este teléfono. Escribe tu nombre y el código; después crea tu PIN. Al volver a abrir usarás ese PIN.</p><button type="button" onclick="sumetecAbrirAyuda('ayuda-logistica',true)" class="sumetec-acceso-ayuda-entendido">Entendido</button></div></details></div>
+    <div class="sumetec-acceso-cabecera"><div class="sumetec-acceso-marca">Logística · SUMETEC<small>Rutas y prospectos</small></div><details id="ayuda-logistica" class="sumetec-acceso-ayuda sumetec-acceso-ayuda--solo-enlace"><summary aria-label="Información para vincular">i</summary><div class="sumetec-acceso-ayuda-contenido"><p>Pide a administración tu código de vinculación de 8 caracteres. Vale 10 minutos.</p><p>Escribe tu nombre y el código; después crea tu PIN. Al volver a abrir usarás ese PIN.</p><button type="button" onclick="sumetecAbrirAyuda('ayuda-logistica',true)" class="sumetec-acceso-ayuda-entendido">Entendido</button></div></details></div>
     <div class="sumetec-acceso-intro"><div class="sumetec-acceso-candado" aria-hidden="true">🔒</div><h2>Vincular teléfono</h2><p class="sumetec-acceso-descripcion">Conecta este equipo de forma segura.</p></div>
     <div class="sumetec-acceso-campos">
       <div class="sumetec-acceso-campo sumetec-acceso-campo--principal"><label for="nombre-vincular">Tu nombre</label><input id="nombre-vincular" autocomplete="name" placeholder="Tu nombre" required></div><div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="codigo">Código de vinculación</label><input id="codigo" maxlength="8" minlength="8" placeholder="8 caracteres" autocomplete="off" autocapitalize="characters" required></div>
@@ -78,5 +101,25 @@
   <script src="resultados.js"></script>
 <div id="sumetecActualizacion"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje" aria-hidden="true">⚙</span><strong id="sumetecActualizacionTitulo">Actualización disponible</strong><p id="sumetecActualizacionMensaje"></p><button type="button" id="sumetecActualizarBoton">Actualizar</button></div></div>
 <script src="version.js"></script><script>document.getElementById("version-visible").textContent="Versión "+VERSION_CODIGO;</script><script src="actualizacion.js"></script>
+<script id="sm-final">
+(function(){
+  // Bloquea el scroll de la pantalla de atrás mientras haya algo abierto encima.
+  var SEL='.ov.open, .menu-mas.open, dialog[open]', y=0, on=false, pend=false;
+  function sync(){
+    pend=false;
+    var abierto=!!document.querySelector(SEL), b=document.body.style;
+    if(abierto&&!on){on=true;y=window.scrollY||0;document.documentElement.classList.add('sm-bloqueo');b.position='fixed';b.top=(-y)+'px';b.left='0';b.right='0';b.width='100%';}
+    else if(!abierto&&on){on=false;document.documentElement.classList.remove('sm-bloqueo');b.position=b.top=b.left=b.right=b.width='';window.scrollTo(0,y);}
+  }
+  function pedir(){if(!pend){pend=true;requestAnimationFrame(sync);}}
+  function iniciar(){new MutationObserver(pedir).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','open']});sync();}
+  if(document.body)iniciar();else document.addEventListener('DOMContentLoaded',iniciar);
+  // Cantidades y montos: al tocar el campo se selecciona todo para escribir encima.
+  document.addEventListener('focusin',function(e){
+    var t=e.target;if(!t||t.tagName!=='INPUT')return;
+    if(t.type==='number'||/decimal|numeric/.test(t.inputMode||'')){setTimeout(function(){try{t.select();}catch(_){}} ,0);}
+  });
+})();
+</script>
 </body>
 </html>

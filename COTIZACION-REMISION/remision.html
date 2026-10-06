@@ -41,20 +41,20 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Remisiones">
 <link rel="apple-touch-icon" href="logos/sumetec-remisiones.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --navy:#0B2D4A;--navy-soft:#2E5C7E;--green:#1C6E4A;--green2:#2A8A5E;--green-light:#E8F5EF;
-  --bg:#F4F7F6;--text:#1D1D1F;--muted:#6E6E73;--border:#E5E5E7;--white:#fff;
+  --navy:#023561;--navy-soft:#0d4f86;--green:#057448;--green2:#06814f;--green-light:#e3f2ea;
+  --bg:#eef2f6;--text:#17242b;--muted:#616f7f;--border:#dbe3ec;--white:#fff;
   --logo-h:80px;
   --sh:0 1px 3px rgba(11,45,74,.05);--sh2:0 8px 24px rgba(11,45,74,.08);
   --r:14px;--r2:8px;
 }
-body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
 .tb{background:linear-gradient(180deg,var(--navy-soft) 0%,var(--navy) 100%);padding:10px 28px;display:flex;align-items:center;gap:9px;position:sticky;top:0;z-index:200;box-shadow:0 2px 10px rgba(11,45,74,.14)}
 .tb-brand{font-size:14px;font-weight:700;color:#fff;margin-right:auto;display:flex;align-items:center;gap:8px}
-.tb-brand .ac{color:#4CAF82}
+.tb-brand .ac{color:#76b82a}
 .tb-div{width:1px;height:22px;background:rgba(255,255,255,.15)}
 .tb-more{position:relative;display:inline-flex}
 .menu-mas{display:none;position:fixed;background:var(--bg);border-radius:14px;padding:10px;box-shadow:0 12px 32px rgba(0,0,0,.28);min-width:264px;z-index:500;flex-direction:column;gap:10px}
@@ -162,8 +162,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .iva-popup{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#fff;border:2px solid #E5E5E7;border-radius:8px;box-shadow:0 6px 32px rgba(11,45,74,.18);z-index:400;overflow:hidden;min-width:72px}
 .iva-popup.open{display:block}
 .iva-opt{padding:9px 18px;font-size:12px;font-weight:600;cursor:pointer;color:#1D1D1F;text-align:center;white-space:nowrap}
-.iva-opt:hover{background:#E8F5EF;color:#1C6E4A}
-.iva-opt.sel{background:#1C6E4A;color:#fff}
+.iva-opt:hover{background:#E8F5EF;color:#057448}
+.iva-opt.sel{background:#057448;color:#fff}
 .items-table .th-iva,.items-table .td-iva{display:none}
 .add-row{width:100%;padding:9px;border:none;border-top:2px dashed var(--border);background:transparent;color:var(--muted);font-family:inherit;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .14s}
 .add-row:hover{background:var(--green-light);color:var(--green);border-color:var(--green)}
@@ -183,7 +183,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .tll{color:var(--muted)}.tlv{font-weight:600}
 .tf{margin-top:8px;background:var(--navy-soft);border-radius:6px;padding:7px 14px;display:flex;justify-content:space-between;align-items:center}
 .tf-l{color:rgba(255,255,255,.85);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
-.tf-v{color:#4CAF82;font-size:16px;font-weight:800}
+.tf-v{color:#76b82a;font-size:16px;font-weight:800}
 .tw{margin-top:5px;font-size:8.5px;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.3px;line-height:1.5;word-break:break-word}
 .doc-ft{padding:14px 36px 18px;background:transparent;border-top:2px solid var(--border);display:flex;align-items:center}
 .ft-box{background:var(--bg);border-radius:10px;padding:10px 18px;display:inline-flex;align-items:center;gap:12px;width:fit-content}
@@ -242,7 +242,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   .mobile-action-pdf,.mobile-action-primary{min-height:44px;border:0;border-radius:9px;font:inherit;font-weight:800}
   .mobile-action-pdf{background:rgba(255,255,255,.14);color:#fff;font-size:18px}
   .mobile-action-pdf:disabled{opacity:.35}
-  .mobile-action-primary{background:#1C6E4A;color:#fff;padding:8px;font-size:12px}
+  .mobile-action-primary{background:#057448;color:#fff;padding:8px;font-size:12px}
   .qty-stepper{display:grid;grid-template-columns:44px minmax(64px,1fr) 44px;gap:8px;align-items:center}
   .qty-stepper button{width:44px;height:44px;border:1px solid var(--border);border-radius:10px;background:var(--green-light);color:var(--green);font-size:22px;font-weight:800}
   .qty-stepper input{width:100%!important;min-height:44px!important;text-align:center!important}
@@ -579,16 +579,16 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 /* ── Pestañas de modo + chip de estado (sustituyen los botones grandes de Cotización/Volver) ── */
 .tb-tabs{display:flex;align-items:flex-end;gap:18px;height:100%;margin-right:6px}
 .tb-tab{background:none;border:none;border-bottom:2px solid transparent;padding:0 2px 9px;font-family:inherit;font-size:13px;font-weight:500;color:rgba(255,255,255,.55);cursor:pointer;white-space:nowrap}
-.tb-tab.on{font-weight:700;color:#fff;border-bottom-color:#4CAF82}
+.tb-tab.on{font-weight:700;color:#fff;border-bottom-color:#76b82a}
 .tb-status{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:none;border-radius:20px;padding:5px 11px;font-family:inherit;font-size:11px;font-weight:600;color:rgba(255,255,255,.8);cursor:pointer;white-space:nowrap}
-.tb-status .dot{width:7px;height:7px;border-radius:50%;background:#4CAF82;display:block;flex-shrink:0}
+.tb-status .dot{width:7px;height:7px;border-radius:50%;background:#76b82a;display:block;flex-shrink:0}
 .tb-status.warn{background:#E67E22;color:#fff}.tb-status.warn .dot{background:#fff}
 .tb-status.err{background:#C0392B;color:#fff;box-shadow:0 0 0 3px rgba(192,57,43,.28)}.tb-status.err .dot{background:#fff}
 .tb-status.sync{background:rgba(36,113,163,.45);color:#fff}.tb-status.sync .dot{background:#cfe4f5}
 /* 2026-09-16 (pedido de Miguel): verde cuando está al día -- antes "En línea"
    no tenía color propio y el fondo fijo de #badgePendientes (ver abajo) lo
    pintaba naranja siempre, sin importar el estado real. */
-.tb-status.ok{background:#1C6E4A;color:#fff}.tb-status.ok .dot{background:#fff}
+.tb-status.ok{background:#057448;color:#fff}.tb-status.ok .dot{background:#fff}
 #netBar{display:none;position:sticky;top:54px;z-index:190;background:#C0392B;color:#fff;font-size:12px;font-weight:600;text-align:center;padding:6px 16px;letter-spacing:.3px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 #netBar.show{display:block}
 #netBar.warn{background:#E67E22}
@@ -596,7 +596,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 /* MC-33 (2026-09-16): estado "todo al día" -- antes la barra se ocultaba del
    todo aquí; Miguel pidió que el indicador de arriba siempre diga algo,
    verde cuando está al día. */
-#netBar.ok{background:#1C6E4A;font-size:11.5px}
+#netBar.ok{background:#057448;font-size:11.5px}
 /* ── Watermark ─────────────────────────────────────────────── */
 .doc{position:relative;overflow:hidden}
 .watermark-pagado{position:absolute;top:48%;left:50%;transform:translate(-50%,-50%) rotate(-28deg);font-size:96px;font-weight:900;color:rgba(28,110,74,0.09);text-transform:uppercase;pointer-events:none;z-index:5;letter-spacing:16px;white-space:nowrap;user-select:none}
@@ -612,7 +612,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
    naranja fijo sin importar el estado real (bug real, no solo "En línea"). */
 #badgePendientes{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
 .estado-badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap;flex-shrink:0}
-.badge-pagado{background:#E8F5EF;color:#1C6E4A}
+.badge-pagado{background:#E8F5EF;color:#057448}
 .badge-abono{background:#FFF8E1;color:#92400E}
 .badge-pendiente{background:#FDECEA;color:#C0392B}
 .badge-cancelada{background:#F3F4F6;color:#6B7280}
@@ -657,6 +657,57 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 <script src="./comercial_cliente.js"></script>
 <script src="./version.js"></script>
 <link rel="stylesheet" href="./actualizacion.css">
+<style id="sm-final">
+/* Pantallas encima (Cobros, Más, modales): el scroll se queda dentro y no mueve la pantalla de atrás */
+.ov,.ov .modal,.modal,dialog,.menu-mas,.sp,.pp-global{overscroll-behavior:contain}
+html.sm-bloqueo,html.sm-bloqueo body{overflow:hidden!important}
+/* Cantidades y montos: se escriben, sin flechitas */
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url(fonts/ibm-plex-sans-variable.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-500.woff2) format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/ibm-plex-mono-600.woff2) format('woff2')}
+@font-face{font-display:block;font-family:bootstrap-icons;src:url(fonts/bootstrap-icons.woff2) format('woff2')}
+.bi::before{display:inline-block;font-family:bootstrap-icons!important;font-style:normal;font-weight:400!important;line-height:1;vertical-align:-.125em;-webkit-font-smoothing:antialiased}
+.bi-plus-lg::before{content:"\f64d"}.bi-clock-history::before{content:"\f292"}.bi-file-earmark-text::before{content:"\f38b"}.bi-cash-stack::before{content:"\f246"}
+.tf-v,.tlv,.doc-folio,#mobileActionTotal{font-variant-numeric:tabular-nums}
+.sm-iva-chips{display:flex;gap:4px;padding:3px;border-radius:10px;background:var(--bg);margin:4px 0 6px}
+.sm-iva-chips.falta{background:#fbf0dc}
+.sm-iva-chips button{flex:1;min-height:40px;border:0;border-radius:8px;background:transparent;font:600 14px 'IBM Plex Mono',ui-monospace,monospace;color:var(--muted);cursor:pointer}
+.sm-iva-chips button[aria-pressed=true]{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(9,32,53,.15)}
+@media print{.sm-iva-chips,.sm-emisor-flecha{display:none!important}}
+@media(max-width:780px),(max-height:500px){
+  .tb-tab{min-height:44px}
+  .doc-folio::after{content:"✎";font-size:.6em;margin-left:6px;opacity:.55;font-weight:600}
+  #adeudoBox{background:#fbf0dc!important;border:1px solid #e6cfa0!important;color:#5c3b00}
+  #precargaWrap button{background:#e3f2ea!important;color:#057448!important;border:1px solid #bfe0cc!important;min-height:44px}
+  .qty-stepper{display:block!important}
+  .qty-stepper input{width:100%!important;min-height:44px!important;border:1.5px solid var(--green)!important;border-radius:10px!important;background:#fff!important;text-align:center!important;font:600 17px 'IBM Plex Mono',ui-monospace,monospace!important}
+  .mobile-action{grid-template-columns:minmax(0,1fr) 52px minmax(128px,1.25fr)!important}
+  .mobile-action-total strong{font:600 18px 'IBM Plex Mono',ui-monospace,monospace!important}
+  .mobile-action-pdf{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:0;font-size:16px!important;line-height:1.1}
+  .mobile-action-pdf small{font-size:10px;font-weight:700;letter-spacing:.04em}
+  .mobile-nav button span .bi{font-size:20px}
+  .sm-emisor-titulo{cursor:pointer;display:flex!important;align-items:center;gap:6px;min-height:36px;margin-bottom:0!important}
+  .sm-emisor-flecha{margin-left:auto;font-size:13px;letter-spacing:0;color:var(--muted)}
+  .sm-emisor:not(.sm-abierto) .fr{display:none!important}
+}
+
+/* ═══ Estándar visual v2 · barra superior (Inicio) y menú de ajustes, iguales en las 6 apps ═══ */
+html body .tb,html body > header,html body header.sm-barra{background:linear-gradient(170deg,#03305a,#04223c)!important;color:#fff;min-height:56px;box-shadow:0 6px 18px rgb(2 25 45 / .22)}
+html body .sm-kicker,html body header h1 .kicker,html body .barra-kicker,html body .sm-barra .marca small{font-size:10.5px!important;font-weight:600!important;letter-spacing:.14em!important;text-transform:uppercase;color:#9fd25a!important;opacity:1!important}
+html body header h1,html body .sm-barra-titulo,html body .sm-barra .marca strong{font-size:16px!important;font-weight:700!important;color:#fff!important}
+html body .sm-header-chip.sm-status-chip,html body header .status-chip,html body .sm-barra .sm-chip,html body .tb-status{min-height:30px;padding:0 11px!important;border-radius:999px!important;background:rgb(255 255 255 / .1)!important;border:1px solid rgb(255 255 255 / .16)!important;color:#fff!important;font-size:11.5px!important;font-weight:600!important;white-space:nowrap}
+html body .sm-menu-boton,html body header .menu-btn,html body .sm-barra .btn-barra{min-width:40px!important;min-height:40px!important;border-radius:12px!important;border:1px solid rgb(255 255 255 / .18)!important;background:rgb(255 255 255 / .06)!important;color:#fff!important}
+html body .menu-mas,html body .menu-fact,html body .gasto-menu,html body .mas-menu,html body .menu-opciones{border-radius:16px!important;padding:6px!important;background:var(--sm-surface,#fff)!important;color:var(--sm-ink,#17242b);border:1px solid var(--sm-line,#dbe3ec)!important;box-shadow:0 18px 40px rgb(9 32 53 / .22)!important;overscroll-behavior:contain;max-height:calc(100dvh - 90px);overflow-y:auto}
+html body .menu-mas{background:#eef2f6!important;gap:6px!important}
+html body .menu-mas-grp,html body .mas-menu-grupo{border-radius:12px;overflow:hidden;background:var(--sm-surface,#fff)}
+html body .menu-mas-h,html body .menu-fact-titulo,html body .gasto-menu-titulo,html body .mas-menu-titulo,html body .menu-opciones > small{display:block;padding:10px 12px 4px!important;font-size:11px!important;font-weight:700!important;letter-spacing:.08em!important;text-transform:uppercase;color:var(--sm-muted,#616f7f)!important;background:none!important}
+html body .menu-mas button,html body .menu-fact button,html body .gasto-menu button,html body .mas-menu button,html body .menu-opciones button{display:flex!important;align-items:center;gap:10px;width:100%;min-height:48px!important;padding:0 12px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:inherit!important;font:inherit;font-size:14px!important;font-weight:500!important;text-align:left;cursor:pointer}
+html body .menu-mas button:hover,html body .menu-fact button:hover,html body .gasto-menu button:hover,html body .mas-menu button:hover,html body .menu-opciones button:hover{background:var(--sm-surface-2,#eef2f6)!important}
+html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
+html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
+</style>
 </head>
 <body>
 <div class="tb no-print">
@@ -720,14 +771,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 </div>
 <div id="mobileAction" class="mobile-action no-print" aria-live="polite">
   <div class="mobile-action-total"><span>Total</span><strong id="mobileActionTotal">$0.00 MXN</strong></div>
-  <button id="mobileActionPdf" class="mobile-action-pdf" type="button" aria-label="Descargar PDF" title="Descargar PDF" onclick="mobileDescargarPdf()" disabled>📄</button>
+  <button id="mobileActionPdf" class="mobile-action-pdf" type="button" aria-label="Descargar PDF" title="Descargar PDF" onclick="mobileDescargarPdf()" disabled><span aria-hidden="true">📄</span><small>PDF</small></button>
   <button id="mobileActionPrimary" class="mobile-action-primary" type="button" onclick="mobileAccionPrincipal()">Registrar remisión</button>
 </div>
 <nav id="mobileNav" class="mobile-nav no-print" aria-label="Navegación principal">
-  <button id="mNavNueva" type="button" onclick="mobileNueva()"><span style="font-size:22px;font-weight:800">＋</span><small>Nueva</small></button>
-  <button id="mNavHistorial" type="button" onclick="mobileHistorial()"><span>📋</span><small>Historial</small></button>
-  <button id="mNavCotizar" type="button" onclick="mobileIrRemisiones()"><span>📄</span><small>Remisiones</small></button>
-  <button id="mNavCobros" type="button" onclick="verCobros()"><span>💰</span><small>Cobros</small></button>
+  <button id="mNavNueva" type="button" onclick="mobileNueva()"><span><i class="bi bi-plus-lg"></i></span><small>Nueva</small></button>
+  <button id="mNavHistorial" type="button" onclick="mobileHistorial()"><span><i class="bi bi-clock-history"></i></span><small>Historial</small></button>
+  <button id="mNavCotizar" type="button" onclick="mobileIrRemisiones()"><span><i class="bi bi-file-earmark-text"></i></span><small>Remisión</small></button>
+  <button id="mNavCobros" type="button" onclick="verCobros()"><span><i class="bi bi-cash-stack"></i></span><small>Cobros</small></button>
   <button id="mNavMas" type="button" onclick="_toggleMenuMas()"><span>☰</span><small>Más</small></button>
 </nav>
 <!-- Popup global de productos — fixed, escapa el recorte de la tabla -->
@@ -776,8 +827,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 <div class="print-rpt" id="printRpt">
   <img id="prLogo" style="height:44px;width:auto" alt="Logo">
   <div style="text-align:right">
-    <div style="font-size:11px;font-weight:700;color:#0B2D4A;text-transform:uppercase;letter-spacing:.5px">Remisión</div>
-    <div style="font-size:15px;font-weight:800;color:#1C6E4A" id="prFolio">—</div>
+    <div style="font-size:11px;font-weight:700;color:#023561;text-transform:uppercase;letter-spacing:.5px">Remisión</div>
+    <div style="font-size:15px;font-weight:800;color:#057448" id="prFolio">—</div>
     <div style="font-size:10px;color:#6E6E73" id="prCliente">—</div>
   </div>
 </div>
@@ -837,7 +888,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         </div>
         <div id="cList"></div>
         <div style="padding:8px 10px;border-top:1px solid #E5E5E7">
-          <button onclick="abrirNuevoCliente()" style="width:100%;padding:7px;background:#E8F5EF;color:#1C6E4A;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">＋ Agregar nuevo cliente</button>
+          <button onclick="abrirNuevoCliente()" style="width:100%;padding:7px;background:#E8F5EF;color:#057448;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">＋ Agregar nuevo cliente</button>
         </div>
       </div>
       <div class="fr"><span class="fl">Nombre / Razón Social</span><div class="fv"><input id="c_nombre" type="text" placeholder="—" oninput="autosave();_verificarAdeudo(this.value);_actualizarBtnPrecarga(this.value);_autoFillCliente(this.value)"></div></div>
@@ -1002,7 +1053,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
       </button>
       <div style="text-align:right;line-height:1.2">
         <div style="font-size:10px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.8px">Saldo pendiente</div>
-        <div id="saldoDisplay" style="font-size:22px;font-weight:800;color:#4CAF82">$0.00</div>
+        <div id="saldoDisplay" style="font-size:22px;font-weight:800;color:#76b82a">$0.00</div>
       </div>
     </div>
   </div>
@@ -2958,14 +3009,14 @@ function renderTable(){
     const isEmpty=(!it.qty||+it.qty===0)&&!it.clave&&!it.desc;
     if(isEmpty) tr.classList.add('tr-empty');
     tr.innerHTML=`<td class="td-n" data-label="#">${idx+1}</td>
-<td class="td-c" data-label="Cantidad"><div class="qty-stepper no-print"><button type="button" aria-label="Disminuir cantidad" onclick="ajustarCantidadMovil(${it._id},-1)">−</button><input class="ti c" type="number" inputmode="numeric" min="0" value="${esc(it.qty)}" placeholder="0" data-id="${it._id}" data-f="qty" oninput="upd(this)" onclick="this.select()"><button type="button" aria-label="Aumentar cantidad" onclick="ajustarCantidadMovil(${it._id},1)">＋</button></div></td>
+<td class="td-c" data-label="Cantidad"><div class="qty-stepper no-print"><input class="ti c" type="number" inputmode="numeric" min="0" value="${esc(it.qty)}" placeholder="0" data-id="${it._id}" data-f="qty" oninput="upd(this)" onclick="this.select()"></div></td>
 <td class="td-cl" data-label="Código" style="position:relative"><input class="ti cl" type="text" value="${esc(it.clave)}" placeholder="CÓDIGO" data-id="${it._id}" data-f="clave" oninput="upd(this);showPP(this)" onblur="hidePP(this)" onclick="this.select();showPP(this)"></td>
 <td class="td-desc" data-label="Descripción"><input class="ti" type="text" value="${esc(it.desc)}" placeholder="Descripción" data-id="${it._id}" data-f="desc" oninput="upd(this)"></td>
 <td class="td-r" data-label="Precio Unit." style="position:relative">
   <input class="ti r" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(it.precio)}" placeholder="0.00" data-id="${it._id}" data-f="precio" oninput="upd(this)" onclick="this.select()" style="width:100%;box-sizing:border-box">
   <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px">
     <div style="display:flex;align-items:center;gap:4px">
-      ${(costoEfectivo(it)>0&&margenLinea(it,+document.getElementById('descPct')?.value||0).margenPct!=null)?`<div id="margen${it._id}" onclick="_infoMargen(${it._id})" style="cursor:pointer;font-size:9px;font-weight:800;line-height:1;white-space:nowrap;color:${margenLinea(it,+document.getElementById('descPct')?.value||0).margenPct<30?'#c0392b':'#1C6E4A'}" title="Margen — toca para detalle">▣${margenLinea(it,+document.getElementById('descPct')?.value||0).margenPct.toFixed(0)}%</div>`:''}
+      ${(costoEfectivo(it)>0&&margenLinea(it,+document.getElementById('descPct')?.value||0).margenPct!=null)?`<div id="margen${it._id}" onclick="_infoMargen(${it._id})" style="cursor:pointer;font-size:9px;font-weight:800;line-height:1;white-space:nowrap;color:${margenLinea(it,+document.getElementById('descPct')?.value||0).margenPct<30?'#c0392b':'#057448'}" title="Margen — toca para detalle">▣${margenLinea(it,+document.getElementById('descPct')?.value||0).margenPct.toFixed(0)}%</div>`:''}
       ${(+it.costo>0)?`<button type="button" onclick="sugerirPrecio(${it._id})" title="Sugerir precio (costo × factor)" style="border:none;background:none;cursor:pointer;font-size:12px;line-height:1;padding:2px">💡</button>`:''}
     </div>
     ${it._precioAnt!=null?`<div onclick="usarPrecioAnterior(${it._id})" style="cursor:pointer;color:#1a56a0;font-size:9px;font-weight:700;white-space:nowrap;line-height:1;text-align:right" title="Precio anterior de este cliente">↩ $${(+it._precioAnt).toFixed(2)}</div>`:''}
@@ -2995,7 +3046,7 @@ function upd(input){
     if(mb&&+it.costo>0&&+it.precio>0){
       const m=((+it.precio-+it.costo)/+it.precio*100);
       mb.textContent='▣ '+m.toFixed(0)+'%';
-      mb.style.color=m<30?'#c0392b':'#1C6E4A';
+      mb.style.color=m<30?'#c0392b':'#057448';
     }
   }
 }
@@ -3008,7 +3059,7 @@ function toggleModoRegalo(e){
   _modoRegalo=!_modoRegalo;
   const b=document.getElementById('btnModoRegalo');
   if(b){
-    b.style.background=_modoRegalo?'#1C6E4A':'rgba(255,255,255,.18)';
+    b.style.background=_modoRegalo?'#057448':'rgba(255,255,255,.18)';
     b.style.color=_modoRegalo?'#fff':'';
     b.textContent=_modoRegalo?'🎁 Regalo ✓':'🎁 Regalo';
   }
@@ -3019,10 +3070,10 @@ function toggleModoRegalo(e){
 // regalo está activo (o si la línea YA es regalo, para poder quitarlo).
 function _impCellHtml(it){
   if(it.regalo)
-    return '<span onclick="toggleRegalo('+it._id+')" title="Quitar regalo (se cobrará normal)" style="color:#1C6E4A;font-weight:800;font-size:10.5px;cursor:pointer;white-space:nowrap">🎁 REGALO</span>';
+    return '<span onclick="toggleRegalo('+it._id+')" title="Quitar regalo (se cobrará normal)" style="color:#057448;font-weight:800;font-size:10.5px;cursor:pointer;white-space:nowrap">🎁 REGALO</span>';
   if(_modoRegalo)
     return fmt(imp(it))
-      +'<div class="no-print" onclick="toggleRegalo('+it._id+')" title="Marcar como regalo (no se cobra)" style="font-size:9px;color:#1C6E4A;opacity:.6;cursor:pointer;line-height:1;margin-top:2px">🎁 regalo</div>';
+      +'<div class="no-print" onclick="toggleRegalo('+it._id+')" title="Marcar como regalo (no se cobra)" style="font-size:9px;color:#057448;opacity:.6;cursor:pointer;line-height:1;margin-top:2px">🎁 regalo</div>';
   return fmt(imp(it));
 }
 // Marca/desmarca un artículo como REGALO (no se cobra, pero descuenta inventario)
@@ -3189,7 +3240,7 @@ function _htmlTendenciaCosto(clave){
     const ant=h[h.length-2];
     const pct=ant.costo>0?((ult.costo-ant.costo)/ant.costo*100):0;
     const sube=pct>0.01, baja=pct<-0.01;
-    const color=sube?'#c0392b':(baja?'#1C6E4A':'var(--muted)');
+    const color=sube?'#c0392b':(baja?'#057448':'var(--muted)');
     const flecha=sube?'▲':(baja?'▼':'—');
     linea+='<br><span style="font-size:11px;color:var(--muted)">antes $'+ant.costo.toFixed(2)+' ('+_fmtFechaISO(ant.fecha)+') '
       +'<span style="color:'+color+';font-weight:700">'+flecha+' '+Math.abs(pct).toFixed(1)+'%</span></span>';
@@ -3219,11 +3270,11 @@ function _infoMargen(rowId){
     document.body.appendChild(ov);
   }
   document.getElementById('ovMargenIco').textContent=ok?'✅':'⚠️';
-  document.getElementById('ovMargenTit').innerHTML=(ok?'<span style="color:#1C6E4A">Margen OK</span>':'<span style="color:#c0392b">Margen bajo</span>')+'<br><span style="font-size:13px;font-weight:400;color:var(--muted)">'+esc(it.clave||it.desc||'producto')+'</span>';
+  document.getElementById('ovMargenTit').innerHTML=(ok?'<span style="color:#057448">Margen OK</span>':'<span style="color:#c0392b">Margen bajo</span>')+'<br><span style="font-size:13px;font-weight:400;color:var(--muted)">'+esc(it.clave||it.desc||'producto')+'</span>';
   document.getElementById('ovMargenBody').innerHTML=
     'Ingreso sin IVA, tras descuento: <b>$'+p.toFixed(2)+'</b><br>Costo efectivo: <b>$'+c.toFixed(2)+'</b><br>Utilidad: <b>$'+util.toFixed(2)+'</b><br>'
-    +'Margen: <b style="font-size:18px;color:'+(ok?'#1C6E4A':'#c0392b')+'">'+m.toFixed(1)+'%</b><br>'
-    +(ok?'<span style="color:#1C6E4A">✓ Mayor o igual al 30%</span>':'<span style="color:#c0392b">⚠️ Menor al 30% — revisa precio o negocia con proveedor</span>')
+    +'Margen: <b style="font-size:18px;color:'+(ok?'#057448':'#c0392b')+'">'+m.toFixed(1)+'%</b><br>'
+    +(ok?'<span style="color:#057448">✓ Mayor o igual al 30%</span>':'<span style="color:#c0392b">⚠️ Menor al 30% — revisa precio o negocia con proveedor</span>')
     +'<div style="margin-top:8px;font-size:11.5px;color:var(--muted)">'+notaIva+'</div>'
     +_htmlTendenciaCosto(it.clave);
   ov.classList.add('open');
@@ -3509,7 +3560,7 @@ function calcTotals(){
   items.forEach(it=>{
     const el=document.getElementById('margen'+it._id);if(!el)return;
     const m=margenLinea(it,dp).margenPct;
-    if(m!=null){el.textContent='▣'+m.toFixed(0)+'%';el.style.color=m<30?'#c0392b':'#1C6E4A';}
+    if(m!=null){el.textContent='▣'+m.toFixed(0)+'%';el.style.color=m<30?'#c0392b':'#057448';}
   });
   // Actualizar saldo del panel de cobro en tiempo real si no hay remisión activa
   if(!remActualId){
@@ -4116,14 +4167,14 @@ function _renderNegocio(){
   const agMax=Math.max(ag.b0,ag.b1,ag.b2,ag.b3,1);
   const agRow=(lbl,val,col)=>`<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--muted)">${lbl}</span><span style="font-weight:700;color:${col}">${fmt(val)}</span></div>${barra(val/agMax*100,col)}</div>`;
   html+='<div style="font-size:11px;font-weight:700;color:var(--muted);margin:13px 0 2px">Antigüedad de la deuda</div>';
-  html+=agRow('0–15 días',ag.b0,'#1C6E4A')+agRow('16–30 días',ag.b1,'#b45309')+agRow('31–60 días',ag.b2,'#d35400')+agRow('+60 días',ag.b3,'#c0392b');
+  html+=agRow('0–15 días',ag.b0,'#057448')+agRow('16–30 días',ag.b1,'#b45309')+agRow('31–60 días',ag.b2,'#d35400')+agRow('+60 días',ag.b3,'#c0392b');
   // Top deudores con barra proporcional
   if(deudores.length){
     const dMax=deudores[0].saldo||1;
     html+='<div style="font-size:11px;font-weight:700;color:var(--muted);margin:13px 0 2px">Top deudores</div>';
     html+=deudores.slice(0,5).map((d,i)=>`<div style="padding:6px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:13px"><span style="flex:1;min-width:0">${i+1}. <strong>${esc(d.cli)}</strong>${d.maxDias>30?' <span style="color:#c0392b;font-size:11px">· '+d.maxDias+'d</span>':''}</span><span style="font-weight:700;color:#c0392b">${fmt(d.saldo)}</span><button title="Recordatorio por WhatsApp" onclick="cobrarWACliente('${escAttr(d.cli)}',${Math.round(d.saldo*100)/100},${d.maxDias},${d.n})" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer">📲</button></div>${barra(d.saldo/dMax*100,'#e08283')}</div>`).join('');
   } else {
-    html+='<div style="text-align:center;padding:14px;color:#1C6E4A;font-weight:700">✅ Nadie te debe — todo cobrado</div>';
+    html+='<div style="text-align:center;padding:14px;color:#057448;font-weight:700">✅ Nadie te debe — todo cobrado</div>';
   }
   // ── ⏱ Quién me paga rápido (menú 2026-09-02, mejora #4) ──────────────────
   // "Antigüedad de la deuda" (arriba) dice quién está atrasado HOY. Esto dice
@@ -4133,7 +4184,7 @@ function _renderNegocio(){
   if(_ritmo.length){
     html+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#b45309;margin:18px 0 8px">⏱ Cuánto tarda en pagarme <span style="color:var(--muted);font-weight:600">· remisiones ya liquidadas de este celular</span></div>';
     const _rMax=Math.max(_ritmo[0].diasProm,1);
-    const _col=d=>d>30?'#c0392b':(d>15?'#b45309':'#1C6E4A');
+    const _col=d=>d>30?'#c0392b':(d>15?'#b45309':'#057448');
     html+=_ritmo.slice(0,6).map(x=>`<div style="padding:6px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:13px"><span style="flex:1;min-width:0"><strong>${esc(x.cliente)}</strong> <span style="color:var(--muted);font-size:11px">· ${x.n} remisión${x.n===1?'':'es'} · ${fmt(x.monto)}</span></span><span style="font-weight:700;color:${_col(x.diasProm)}">${x.diasProm} d</span></div>${barra(x.diasProm/_rMax*100,_col(x.diasProm))}</div>`).join('');
     html+='<div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.45">Promedio de días entre la remisión y el pago que la liquidó. Quien todavía te debe no aparece aquí — ese está arriba, en la cartera.</div>';
   }
@@ -4150,7 +4201,7 @@ function _renderNegocio(){
   // Vendido vs cobrado del mes (barras comparativas)
   const vcMax=Math.max(vMes,cobMes,1);
   html+='<div style="font-size:11px;font-weight:700;color:var(--muted);margin:14px 0 2px">Vendido vs cobrado (este mes)</div>';
-  html+=`<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--muted)">Vendido</span><span style="font-weight:700;color:#1C6E4A">${fmt(vMes)}</span></div>${barra(vMes/vcMax*100,'#1C6E4A')}</div>`;
+  html+=`<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--muted)">Vendido</span><span style="font-weight:700;color:#057448">${fmt(vMes)}</span></div>${barra(vMes/vcMax*100,'#057448')}</div>`;
   html+=`<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--muted)">Cobrado</span><span style="font-weight:700;color:#2A8A5E">${fmt(cobMes)}</span></div>${barra(cobMes/vcMax*100,'#2A8A5E')}</div>`;
   // Exacto del servidor (ganancia/margen + comparativo vs mes anterior) — antes solo
   // se veía abriendo el editor de Apps Script y corriendo TABLERO()/REPORTE_GANANCIA.
@@ -4183,7 +4234,7 @@ function _renderNegocio(){
       const csc=s.cotizaronSinComprar;
       html+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#b45309;margin:18px 0 8px">📝 Cotizaron y no han comprado <span style="color:var(--muted);font-weight:600">· últimos 30 días</span></div>';
       if(!csc.length){
-        html+='<div style="text-align:center;padding:10px;color:#1C6E4A;font-weight:700">✅ Todos los que cotizaron ya compraron</div>';
+        html+='<div style="text-align:center;padding:10px;color:#057448;font-weight:700">✅ Todos los que cotizaron ya compraron</div>';
       }else{
         html+=csc.slice(0,8).map(q=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${esc(q.cliente)}</strong> <span style="color:var(--muted);font-size:11px">· ${esc(q.fecha)}${q.dias>0?' ('+q.dias+'d)':''}</span></span><span style="font-weight:700">${fmt(q.total)}</span><button title="Dar seguimiento por WhatsApp" onclick="seguimientoWA('${escAttr(q.cliente)}','${escAttr(q.fecha)}',${+q.total||0})" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer">📲</button></div>`).join('');
       }
@@ -4210,7 +4261,7 @@ function _renderNegocio(){
       const pcv=s.productosCotizadosSinVenta;
       html+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#b45309;margin:18px 0 8px">🔍 Cotizados, nunca vendidos <span style="color:var(--muted);font-weight:600">· últimos 30 días</span></div>';
       if(!pcv.length){
-        html+='<div style="text-align:center;padding:10px;color:#1C6E4A;font-weight:700">✅ Todo lo cotizado recientemente ya se ha vendido alguna vez</div>';
+        html+='<div style="text-align:center;padding:10px;color:#057448;font-weight:700">✅ Todo lo cotizado recientemente ya se ha vendido alguna vez</div>';
       } else {
         html+=pcv.slice(0,8).map(p=>`<div style="display:flex;justify-content:space-between;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${esc(p.clave)}</strong> ${esc(p.desc)}</span><span style="color:var(--muted)">${p.veces}× cotizado</span></div>`).join('');
       }
@@ -4474,14 +4525,14 @@ function abrirCostosSubieron(){
   if(!HISTORIAL_PRECIOS.size){
     html='<div style="text-align:center;padding:18px;color:var(--muted);line-height:1.5">El ERP todavía no ha publicado historial de compras.<br>Refresca el catálogo con señal (⚙️ Configuración) y vuelve a intentar.</div>';
   }else if(!filas.length){
-    html='<div style="text-align:center;padding:18px;color:#1C6E4A;font-weight:700">✅ Ningún costo subió más de 3% sobre el catálogo</div>';
+    html='<div style="text-align:center;padding:18px;color:#057448;font-weight:700">✅ Ningún costo subió más de 3% sobre el catálogo</div>';
   }else{
     const perdida=filas.reduce((a,f)=>a+(f.costoNuevo-f.costoCatalogo),0);
     html+=`<div style="background:#FFF7E6;border-radius:12px;padding:12px 14px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:800;color:#b45309">${filas.length} producto${filas.length===1?'':'s'} cuesta${filas.length===1?'':'n'} más de lo que dice tu catálogo</div>
       <div style="font-size:11.5px;color:var(--muted);margin-top:3px">Sobrecosto por pieza, sumado: ${fmt(perdida)}. Cada venta a precio viejo te lo come del margen.</div></div>`;
     html+=filas.slice(0,30).map(f=>{
-      const col=f.margenAhora==null?'var(--muted)':(f.margenAhora>=40?'#1C6E4A':(f.margenAhora>=15?'#b45309':'#c0392b'));
+      const col=f.margenAhora==null?'var(--muted)':(f.margenAhora>=40?'#057448':(f.margenAhora>=15?'#b45309':'#c0392b'));
       return `<div style="padding:9px 0;border-bottom:1px solid var(--border)">
         <div style="display:flex;justify-content:space-between;gap:6px;font-size:13px">
           <span style="flex:1;min-width:0"><strong>${esc(f.clave)}</strong> <span style="color:var(--muted)">${esc(f.desc)}</span></span>
@@ -4592,7 +4643,7 @@ function verCobros(){
         (!c._local?'<span class="estado-badge" style="background:#e0e7ff;color:#3730a3">📱 otro dispositivo</span>':'')+_tagVenc;
       const idCobro=c.id||c.folio;
       const esLocal=!!c._local;
-      const accion=`<button class="cobro-btn" title="Cobrar" style="background:#e8f5ef;color:#1C6E4A;border:1px solid #a7f3d0" onclick="event.stopPropagation();abrirPagoRapido('${idCobro}','${c.folio}',${esLocal})">💰</button>`;
+      const accion=`<button class="cobro-btn" title="Cobrar" style="background:#e8f5ef;color:#057448;border:1px solid #a7f3d0" onclick="event.stopPropagation();abrirPagoRapido('${idCobro}','${c.folio}',${esLocal})">💰</button>`;
       const wa=`<button class="cobro-btn" style="background:#e6f9ee;color:#128c4a;border:1px solid #bbf0d1" title="Recordatorio por WhatsApp" onclick="event.stopPropagation();cobrarWA('${escAttr(c.folio)}')">📲</button>`;
       const traza=!String(c.folio||'').startsWith('TMP-')
         ?`<button class="cobro-btn" style="background:#f3f0ff;color:#5b21b6;border:1px solid #ddd6fe" title="Trazabilidad" onclick="event.stopPropagation();abrirTrazabilidad('${escAttr(c.folio)}')">🔎</button>`
@@ -5123,7 +5174,7 @@ function renderRems(list){
     const tieneItems=!esServidor&&r.data&&(r.data.items||[]).length>0;
     const etiqueta=(esServidor?'<span style="font-size:9px;background:#e0e7ff;color:#3730a3;border-radius:4px;padding:1px 5px;font-weight:600">☁️ servidor</span>':'')+_origenBadge(r.origen);
     const accionCobrar=r.estado!=='pagado'&&r.estado!=='cancelada'
-      ?`<button class="btn" title="Cobrar" style="padding:4px 8px;font-size:11px;background:#e8f5ef;color:#1C6E4A;border:1px solid #a7f3d0;border-radius:6px" onclick="event.stopPropagation();abrirPagoRapido('${r.id||r.folio}','${r.folio}',${!esServidor})">💰</button>`
+      ?`<button class="btn" title="Cobrar" style="padding:4px 8px;font-size:11px;background:#e8f5ef;color:#057448;border:1px solid #a7f3d0;border-radius:6px" onclick="event.stopPropagation();abrirPagoRapido('${r.id||r.folio}','${r.folio}',${!esServidor})">💰</button>`
       :'';
     // Modificar pide las dos cosas: que el ERP no sea el dueño, y que la copia
     // local esté completa (una reconstruida desde Drive no trae dirección/tel).
@@ -5429,7 +5480,7 @@ function _pintarUltimoRespaldo(){
   const d=_diasDesde(localStorage.getItem('ultimo_respaldo_ts'));
   if(d===null){ el.innerHTML='<span style="color:#b45309">⚠️ Aún no has hecho ningún respaldo.</span>'; return; }
   const txt = d===0?'hoy' : (d===1?'ayer':'hace '+d+' días');
-  const col = d>=7?'#b91c1c' : (d>=3?'#b45309':'#1C6E4A');
+  const col = d>=7?'#b91c1c' : (d>=3?'#b45309':'#057448');
   el.innerHTML='<span style="color:'+col+'">🛟 Último respaldo: '+txt+'.</span>';
 }
 // Recordatorios al arrancar la app. Visibles (toast), no bloqueantes.
@@ -6714,7 +6765,7 @@ function descargarPDF(remOverride, forzarDescarga){
   if(!_regen && isIOS && !canShare && !_pdfSoloVistaPrevia){
     iosWin = window.open('about:blank','_blank');
     if(iosWin){
-      iosWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Generando PDF...</title></head><body style="margin:0;background:#0B2D4A;color:#fff;font-family:-apple-system,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px"><div style="font-size:42px;margin-bottom:16px">📄</div><div style="font-size:18px;font-weight:600;margin-bottom:8px">Generando PDF...</div><div style="font-size:13px;opacity:.65">Espera un momento</div></body></html>');
+      iosWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Generando PDF...</title></head><body style="margin:0;background:#023561;color:#fff;font-family:-apple-system,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px"><div style="font-size:42px;margin-bottom:16px">📄</div><div style="font-size:18px;font-weight:600;margin-bottom:8px">Generando PDF...</div><div style="font-size:13px;opacity:.65">Espera un momento</div></body></html>');
       iosWin.document.close();
     }
   }
@@ -7227,17 +7278,17 @@ function _abrirVistaPreviaPDF(doc,filename,info){
   ov.style.cssText='position:fixed;inset:0;z-index:9999;background:#1a1a1a;display:flex;flex-direction:column';
   const btn='flex:1;justify-content:center;padding:12px 6px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;display:flex;align-items:center;gap:4px';
   ov.innerHTML=`
-    <div style="background:#0B2D4A;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <div style="background:#023561;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0">
       <span style="flex:1;color:#fff;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${esc(info.folio)} · ${esc(info.cliente)}</span>
       <button id="_vpCerrar" aria-label="Cerrar" style="background:rgba(255,255,255,.15);color:#fff;border:none;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;flex-shrink:0">✕</button>
     </div>
     <iframe src="${url}" title="Vista previa del PDF" style="flex:1;width:100%;border:none;background:#fff"></iframe>
-    <div style="background:#0B2D4A;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));flex-shrink:0">
+    <div style="background:#023561;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));flex-shrink:0">
       <div style="font-size:11px;color:rgba(255,255,255,.7);margin-bottom:6px;text-align:center">${email?('✉️ '+esc(email)+(yaEnviado?' · '+yaEnviado:'')):'Este cliente no tiene correo capturado'}</div>
       <div style="display:flex;gap:8px">
         <button id="_vpWa" style="${btn};background:#128c4a">💬 WhatsApp</button>
         <button id="_vpMail" style="${btn};background:#2471A3">✉️ Correo</button>
-        <button id="_vpDesc" style="${btn};background:#1C6E4A">⬇️ Descargar</button>
+        <button id="_vpDesc" style="${btn};background:#057448">⬇️ Descargar</button>
       </div>
     </div>`;
   document.body.appendChild(ov);
@@ -7303,17 +7354,17 @@ function _mostrarMensajeGuardar(){
   msg.innerHTML=`
     <div style="background:#fff;border-radius:18px;padding:24px 20px;max-width:340px;width:100%;font-family:-apple-system,system-ui,sans-serif">
       <div style="text-align:center;font-size:36px;margin-bottom:10px">📄</div>
-      <div style="text-align:center;font-size:16px;font-weight:700;color:#0B2D4A;margin-bottom:16px">Cómo guardar el PDF</div>
+      <div style="text-align:center;font-size:16px;font-weight:700;color:#023561;margin-bottom:16px">Cómo guardar el PDF</div>
 
       <div style="font-size:13px;color:#333;line-height:1.6;margin-bottom:6px">
         <div style="background:#F3F5F7;border-radius:10px;padding:12px 14px;margin-bottom:10px">
-          <div style="font-weight:700;color:#1C6E4A;margin-bottom:6px">Opción 1 — Botón "📂 Abrir PDF"</div>
+          <div style="font-weight:700;color:#057448;margin-bottom:6px">Opción 1 — Botón "📂 Abrir PDF"</div>
           <div>1. Toca <strong>📂 Abrir PDF</strong> en la barra de arriba</div>
           <div>2. La página navega al PDF — busca el ícono <strong>Compartir ↑</strong> en la barra de Safari/iOS</div>
           <div>3. Elige <strong>"Guardar en Archivos"</strong></div>
         </div>
         <div style="background:#F3F5F7;border-radius:10px;padding:12px 14px;margin-bottom:10px">
-          <div style="font-weight:700;color:#1C6E4A;margin-bottom:6px">Opción 2 — Desde la app Archivos</div>
+          <div style="font-weight:700;color:#057448;margin-bottom:6px">Opción 2 — Desde la app Archivos</div>
           <div>1. Sal de Html Preview y abre <strong>Archivos</strong></div>
           <div>2. Mantén pulsado <strong>remision.html</strong></div>
           <div>3. Toca <strong>Compartir ↑</strong> → busca <strong>Safari</strong> o <strong>Abrir con...</strong></div>
@@ -7324,7 +7375,7 @@ function _mostrarMensajeGuardar(){
         </div>
       </div>
 
-      <button onclick="this.closest('div[style*=fixed]').remove()" style="margin-top:16px;background:#0B2D4A;color:#fff;border:none;padding:12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;width:100%">Entendido</button>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="margin-top:16px;background:#023561;color:#fff;border:none;padding:12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;width:100%">Entendido</button>
     </div>`;
   document.body.appendChild(msg);
 }
@@ -7339,17 +7390,17 @@ function mostrarVisorPDF(blob, blobUrl, filename){
   ov.id = '_visor_ov';
   ov.style.cssText='position:fixed;inset:0;z-index:9999;background:#1a1a1a;display:flex;flex-direction:column';
   ov.innerHTML = isIOS ? `
-    <div style="background:#0B2D4A;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <div style="background:#023561;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0">
       <span style="flex:1;color:#fff;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${filename}</span>
       <button onclick="_imprimirVisor()" style="background:rgba(255,255,255,.12);color:#fff;padding:7px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.2);font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;cursor:pointer;font-family:inherit">📂 Abrir PDF</button>
-      <button onclick="_compartirVisor()" style="background:#1C6E4A;color:#fff;padding:7px 11px;border-radius:8px;border:none;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;cursor:pointer;font-family:inherit">↑ Compartir</button>
+      <button onclick="_compartirVisor()" style="background:#057448;color:#fff;padding:7px 11px;border-radius:8px;border:none;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;cursor:pointer;font-family:inherit">↑ Compartir</button>
       <button onclick="document.getElementById('_visor_ov').remove()" style="background:rgba(255,255,255,.12);color:#fff;border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:15px;flex-shrink:0">✕</button>
     </div>
     <embed src="${blobUrl}" type="application/pdf" style="flex:1;width:100%;border:none;background:#fff">
   ` : `
-    <div style="background:#0B2D4A;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <div style="background:#023561;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
       <span style="flex:1;color:#fff;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${filename}</span>
-      <a href="${blobUrl}" download="${filename}" style="background:#1C6E4A;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0">⬇ Guardar</a>
+      <a href="${blobUrl}" download="${filename}" style="background:#057448;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0">⬇ Guardar</a>
       <button onclick="document.getElementById('_visor_ov').remove()" style="background:rgba(255,255,255,.15);color:#fff;border:none;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;flex-shrink:0">✕</button>
     </div>
     <embed src="${blobUrl}" type="application/pdf" style="flex:1;width:100%;border:none;background:#fff">
@@ -8407,7 +8458,7 @@ function verEstado(){
     {clave:'cola_cancel',etiqueta:'Cancelaciones por aplicar'},
     {clave:'cola_resultado_cot',etiqueta:'Resultados de cotización por enviar'}
   ];
-  let html='<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Última sincronización con el servidor: <b>'+fr+'</b><br>Conexión: '+(isOnline?'<span style="color:#1C6E4A">✅ en línea</span>':'<span style="color:#b91c1c">📵 sin conexión</span>')+'</div>';
+  let html='<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Última sincronización con el servidor: <b>'+fr+'</b><br>Conexión: '+(isOnline?'<span style="color:#057448">✅ en línea</span>':'<span style="color:#b91c1c">📵 sin conexión</span>')+'</div>';
   let hayPend=false;
   colas.forEach(c=>{
     const arr=leerSeguro(c.clave,[]); if(!arr.length)return; hayPend=true;
@@ -8434,7 +8485,7 @@ function verEstado(){
     html+='<div style="margin:6px 0 10px;padding:10px;border-radius:8px;background:#fff0f0;border:1px solid #fecaca;font-size:12px"><b>⛔ '+detenidos+' pendiente(s) detenido(s)</b> tras varios intentos que el servidor rechazó. Siguen guardados en este teléfono; no se pierden. Revisa el motivo de cada uno.'
       +'<button class="btn btn-p" style="width:100%;justify-content:center;padding:10px;margin-top:8px" onclick="_reintentarDetenidos()">🔄 Reintentar los detenidos</button></div>';
   }
-  if(!hayPend) html+='<div style="text-align:center;padding:20px;color:#1C6E4A;font-weight:700">✅ Todo guardado y sincronizado</div>';
+  if(!hayPend) html+='<div style="text-align:center;padding:20px;color:#057448;font-weight:700">✅ Todo guardado y sincronizado</div>';
   let ov=document.getElementById('ovEstado');
   if(!ov){
     ov=document.createElement('div');ov.id='ovEstado';ov.className='ov';ov.style.zIndex='990';
@@ -8772,7 +8823,7 @@ function _mostrarConfirmacion(rem){
   const desglose=_desglosePopupHTML(rem);
   if(pagado){
     if(ico)ico.textContent='✅';
-    if(tit){tit.textContent='¡PAGADO!';tit.style.color='#1C6E4A';}
+    if(tit){tit.textContent='¡PAGADO!';tit.style.color='#057448';}
     if(det)det.innerHTML='Remisión '+rem.folio+' — pagada completa.'+desglose;
   } else {
     if(ico)ico.textContent='⚠️';
@@ -8877,7 +8928,7 @@ function _reajustarCanvasFirma(){
     const ctx=_ajustarResolucionCanvasFirma(canvas);
     ctx.clearRect(0,0,canvas._cssW,canvas._cssH);
     _dibujarLineaFirma(ctx,canvas);
-    ctx.strokeStyle='#0B2D4A';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.strokeStyle='#023561';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
     if(prevImg){const img=new Image();img.onload=()=>_pintarFirmaEncajada(ctx,canvas,img);img.src=prevImg;}
   });
 }
@@ -8916,7 +8967,7 @@ function abrirFirma(){
   const ctx=_ajustarResolucionCanvasFirma(canvas);
   ctx.clearRect(0,0,canvas._cssW,canvas._cssH);
   _dibujarLineaFirma(ctx,canvas);
-  ctx.strokeStyle='#0B2D4A';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.strokeStyle='#023561';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
   // Si ya hay firma, mostrarla
   if(_firmaData){const img=new Image();img.onload=()=>_pintarFirmaEncajada(ctx,canvas,img);img.src=_firmaData;}
   // Una firma guardada puede abrirse para confirmarla otra vez; la guía visual
@@ -9251,7 +9302,7 @@ async function popupPrompt(mensaje,valorDefault,titulo){
         </div>
         <div id="cot_cList"></div>
         <div style="padding:8px 10px;border-top:1px solid #E5E5E7">
-          <button onclick="abrirNuevoCliente()" style="width:100%;padding:7px;background:#E8F5EF;color:#1C6E4A;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">+ Agregar nuevo cliente</button>
+          <button onclick="abrirNuevoCliente()" style="width:100%;padding:7px;background:#E8F5EF;color:#057448;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">+ Agregar nuevo cliente</button>
         </div>
       </div>
       <div class="fr"><span class="fl">Nombre / Razón Social</span><div class="fv"><input id="cot_c_nombre" type="text" placeholder="-" oninput="autosaveCot();_autoFillClienteCot(this.value)"></div></div>
@@ -9726,7 +9777,7 @@ function renderTableCot(){
       ?`<div style="font-size:10px;color:var(--green);cursor:pointer;white-space:nowrap" onclick="_cotUsarPrecioAnt(${it._id})">↩ $${it._precioAnt}</div>`:'';
     return `<tr id="cotrow-${it._id}">
       <td class="c td-n" data-label="#" style="color:var(--muted);font-size:11px">${idx+1}</td>
-      <td class="c td-c" data-label="Cantidad"><div class="qty-stepper no-print"><button type="button" aria-label="Disminuir cantidad" onclick="ajustarCantidadCotMovil(${it._id},-1)">−</button><input class="ti" type="number" inputmode="numeric" value="${it.qty}" placeholder="0" min="0" onchange="_cotAct(${it._id},'qty',this.value)" oninput="calcTotalsCot()"><button type="button" aria-label="Aumentar cantidad" onclick="ajustarCantidadCotMovil(${it._id},1)">＋</button></div></td>
+      <td class="c td-c" data-label="Cantidad"><div class="qty-stepper no-print"><input class="ti" type="number" inputmode="numeric" value="${it.qty}" placeholder="0" min="0" onchange="_cotAct(${it._id},'qty',this.value)" oninput="calcTotalsCot()"></div></td>
       <td class="td-cl" data-label="Código" style="position:relative"><input class="ti" type="text" value="${esc(it.clave)}" placeholder="Código"
         oninput="_cotPpFiltrar(event,${it._id})" onfocus="_cotPpFiltrar(event,${it._id})"
         onblur="setTimeout(_cotPpCerrar,250)"
@@ -9734,7 +9785,7 @@ function renderTableCot(){
       <td class="td-desc" data-label="Descripción"><input class="ti" type="text" value="${esc(it.desc)}" placeholder="Descripción"
         onchange="_cotAct(${it._id},'desc',this.value)"></td>
       <td class="r td-r" data-label="Precio Unit."><div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
-        ${(costoEfectivo(it)>0&&margenLinea(it,+document.getElementById('cot_descPct')?.value||0).margenPct!=null)?`<div id="cotMargen${it._id}" onclick="_cotInfoMargen(${it._id})" style="cursor:pointer;font-size:9px;font-weight:800;line-height:1;white-space:nowrap;color:${margenLinea(it,+document.getElementById('cot_descPct')?.value||0).margenPct<30?'#c0392b':'#1C6E4A'}" title="Margen — toca para detalle">▣${margenLinea(it,+document.getElementById('cot_descPct')?.value||0).margenPct.toFixed(0)}%</div>`:''}
+        ${(costoEfectivo(it)>0&&margenLinea(it,+document.getElementById('cot_descPct')?.value||0).margenPct!=null)?`<div id="cotMargen${it._id}" onclick="_cotInfoMargen(${it._id})" style="cursor:pointer;font-size:9px;font-weight:800;line-height:1;white-space:nowrap;color:${margenLinea(it,+document.getElementById('cot_descPct')?.value||0).margenPct<30?'#c0392b':'#057448'}" title="Margen — toca para detalle">▣${margenLinea(it,+document.getElementById('cot_descPct')?.value||0).margenPct.toFixed(0)}%</div>`:''}
         <div style="display:flex;flex-direction:column;align-items:flex-end;flex:1;min-width:0">
           <input class="ti" type="number" inputmode="decimal" value="${it.precio}" placeholder="0.00" min="0" step="0.01" style="text-align:right;width:100%"
             onchange="_cotAct(${it._id},'precio',this.value)" oninput="calcTotalsCot()">
@@ -9795,7 +9846,7 @@ function calcTotalsCot(){
   _cotItems.forEach(it=>{
     const el=document.getElementById('cotMargen'+it._id);if(!el)return;
     const m=margenLinea(it,dp).margenPct;
-    if(m!=null){el.textContent='▣'+m.toFixed(0)+'%';el.style.color=m<30?'#c0392b':'#1C6E4A';}
+    if(m!=null){el.textContent='▣'+m.toFixed(0)+'%';el.style.color=m<30?'#c0392b':'#057448';}
   });
   _syncMobileChrome();
 }
@@ -9921,11 +9972,11 @@ function _cotInfoMargen(rowId){
     document.body.appendChild(ov);
   }
   document.getElementById('ovMargenIco').textContent=ok?'✅':'⚠️';
-  document.getElementById('ovMargenTit').innerHTML=(ok?'<span style="color:#1C6E4A">Margen OK</span>':'<span style="color:#c0392b">Margen bajo</span>')+'<br><span style="font-size:13px;font-weight:400;color:var(--muted)">'+esc(it.clave||it.desc||'producto')+'</span>';
+  document.getElementById('ovMargenTit').innerHTML=(ok?'<span style="color:#057448">Margen OK</span>':'<span style="color:#c0392b">Margen bajo</span>')+'<br><span style="font-size:13px;font-weight:400;color:var(--muted)">'+esc(it.clave||it.desc||'producto')+'</span>';
   document.getElementById('ovMargenBody').innerHTML=
     'Ingreso sin IVA, tras descuento: <b>$'+p.toFixed(2)+'</b><br>Costo efectivo: <b>$'+c.toFixed(2)+'</b><br>Utilidad: <b>$'+util.toFixed(2)+'</b><br>'
-    +'Margen: <b style="font-size:18px;color:'+(ok?'#1C6E4A':'#c0392b')+'">'+m.toFixed(1)+'%</b><br>'
-    +(ok?'<span style="color:#1C6E4A">✓ Mayor o igual al 30%</span>':'<span style="color:#c0392b">⚠️ Menor al 30% — revisa precio o negocia con proveedor</span>')
+    +'Margen: <b style="font-size:18px;color:'+(ok?'#057448':'#c0392b')+'">'+m.toFixed(1)+'%</b><br>'
+    +(ok?'<span style="color:#057448">✓ Mayor o igual al 30%</span>':'<span style="color:#c0392b">⚠️ Menor al 30% — revisa precio o negocia con proveedor</span>')
     +'<div style="margin-top:8px;font-size:11.5px;color:var(--muted)">'+notaIva+'</div>'
     +_htmlTendenciaCosto(it.clave);
   ov.classList.add('open');
@@ -10119,7 +10170,7 @@ function _mostrarConfirmacionCot(folio, total){
     ov.innerHTML=`<div style="position:relative;background:#fff;border-radius:16px;padding:28px 24px;max-width:400px;width:calc(100% - 32px);text-align:center">
       <button onclick="closeOv('ovConfirmCotGen')" aria-label="Cerrar" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:var(--muted)">✕</button>
       <div style="font-size:52px;margin-bottom:12px">✅</div>
-      <div style="font-size:20px;font-weight:800;color:#1C6E4A;margin-bottom:8px">Cotización generada</div>
+      <div style="font-size:20px;font-weight:800;color:#057448;margin-bottom:8px">Cotización generada</div>
       <div id="confCotDet" style="font-size:14px;color:var(--muted);margin-bottom:14px;line-height:1.6"></div>
       <div style="text-align:left;background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:14px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;font-size:13px;font-weight:600">
@@ -10422,9 +10473,9 @@ function _cotEstadoBadge(entry){
     const enCola=cola.some(c=>c.id===entry.id);
     const sincTag=enCola
       ? '<span class="estado-badge badge-sync">⏳ sin sync</span>'
-      : '<span class="estado-badge badge-pagado" style="background:#E8F5EF;color:#1C6E4A">✅ Enviada</span>';
+      : '<span class="estado-badge badge-pagado" style="background:#E8F5EF;color:#057448">✅ Enviada</span>';
     const pdfTag=entry.url
-      ? '<span class="estado-badge" style="background:#E8F5EF;color:#1C6E4A;font-size:10px">☁️ PDF</span>'
+      ? '<span class="estado-badge" style="background:#E8F5EF;color:#057448;font-size:10px">☁️ PDF</span>'
       : '<span class="estado-badge" style="background:#FFF3E0;color:#E67E22;font-size:10px">📄 local</span>';
     return sincTag+' '+pdfTag;
   }
@@ -10792,6 +10843,53 @@ document.addEventListener('DOMContentLoaded',()=>{ setTimeout(_actualizarBadgeCo
       if(!tieneEtiqueta(i)) poner(i, i.getAttribute('placeholder'));
     });
   });
+})();
+</script>
+<script id="sm-final">
+(function(){
+  // Bloquea el scroll de la pantalla de atrás mientras haya algo abierto encima.
+  var SEL='.ov.open, .menu-mas.open, dialog[open]', y=0, on=false, pend=false;
+  function sync(){
+    pend=false;
+    var abierto=!!document.querySelector(SEL), b=document.body.style;
+    if(abierto&&!on){on=true;y=window.scrollY||0;document.documentElement.classList.add('sm-bloqueo');b.position='fixed';b.top=(-y)+'px';b.left='0';b.right='0';b.width='100%';}
+    else if(!abierto&&on){on=false;document.documentElement.classList.remove('sm-bloqueo');b.position=b.top=b.left=b.right=b.width='';window.scrollTo(0,y);}
+  }
+  function pedir(){if(!pend){pend=true;requestAnimationFrame(sync);}}
+  function iniciar(){new MutationObserver(pedir).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','open']});sync();}
+  if(document.body)iniciar();else document.addEventListener('DOMContentLoaded',iniciar);
+  // Cantidades y montos: al tocar el campo se selecciona todo para escribir encima.
+  document.addEventListener('focusin',function(e){
+    var t=e.target;if(!t||t.tagName!=='INPUT')return;
+    if(t.type==='number'||/decimal|numeric/.test(t.inputMode||'')){setTimeout(function(){try{t.select();}catch(_){}} ,0);}
+  });
+})();
+(function(){
+  // IVA visible: chips 0 / 8 / 16 % junto a la línea de IVA (llaman a las mismas funciones del popup).
+  function chips(wrapId,lblId,fn){
+    var w=document.getElementById(wrapId), lbl=document.getElementById(lblId);
+    if(!w||!lbl||w.parentNode.querySelector('.sm-iva-chips'))return;
+    var c=document.createElement('div');c.className='sm-iva-chips no-print';c.setAttribute('role','group');c.setAttribute('aria-label','IVA');
+    [0,8,16].forEach(function(v){var b=document.createElement('button');b.type='button';b.textContent=v+'%';b.dataset.v=v;
+      b.onclick=function(e){if(fn==='setIvaGlobal'&&typeof _avisoBloqueado==='function'&&_avisoBloqueado())return;if(typeof window[fn]==='function')window[fn](v,e);sync();};c.appendChild(b);});
+    w.parentNode.parentNode.insertBefore(c,w.parentNode.nextSibling);
+    function sync(){var m=/(\d+)\s*%/.exec(lbl.textContent||''), sel=m?+m[1]:null;
+      c.classList.toggle('falta',sel===null);
+      Array.prototype.forEach.call(c.children,function(b){b.setAttribute('aria-pressed',String(+b.dataset.v===sel));});}
+    new MutationObserver(sync).observe(lbl,{childList:true,characterData:true,subtree:true});sync();
+  }
+  // Datos del emisor: una línea en celular, se despliega con un toque.
+  function emisor(id){
+    var box=document.getElementById(id);if(!box||box.classList.contains('sm-emisor'))return;
+    var t=box.firstElementChild;if(!t)return;
+    box.classList.add('sm-emisor');t.classList.add('sm-emisor-titulo');
+    var f=document.createElement('span');f.className='sm-emisor-flecha';f.textContent='▾';t.appendChild(f);
+    t.setAttribute('role','button');t.tabIndex=0;
+    function tog(){var a=box.classList.toggle('sm-abierto');f.textContent=a?'▴':'▾';}
+    t.addEventListener('click',tog);t.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();tog();}});
+  }
+  function iniciar(){chips('ivaWrap','ivaLbl','setIvaGlobal');chips('cot_ivaWrap','cot_ivaLbl','setIvaGlobalCot');emisor('emisorBox');emisor('cot_emisorBox');}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',iniciar);else iniciar();
 })();
 </script>
 </body>

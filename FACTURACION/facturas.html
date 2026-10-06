@@ -295,6 +295,33 @@ button,summary,.rem{touch-action:manipulation}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 <link rel="stylesheet" href="acceso.css">
+<style id="sm-final">
+/* Pantallas encima (Cobros, Más, modales): el scroll se queda dentro y no mueve la pantalla de atrás */
+.ov,.ov .modal,.modal,dialog,.menu-mas,.sp,.pp-global{overscroll-behavior:contain}
+html.sm-bloqueo,html.sm-bloqueo body{overflow:hidden!important}
+/* Cantidades y montos: se escriben, sin flechitas */
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.sm-btn-ocr{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 14px;border-radius:10px;background:var(--marino);color:#fff;font-size:14.5px;font-weight:700;cursor:pointer}
+.sm-btn-ocr:active{transform:translateY(1px)}
+.sm-archivo-oculto{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.ia-tocado{background:color-mix(in srgb,#76b82a 15%,var(--surface,#fff))!important;border-color:#76b82a!important}
+
+/* ═══ Estándar visual v2 · barra superior (Inicio) y menú de ajustes, iguales en las 6 apps ═══ */
+html body .tb,html body > header,html body header.sm-barra{background:linear-gradient(170deg,#03305a,#04223c)!important;color:#fff;min-height:56px;box-shadow:0 6px 18px rgb(2 25 45 / .22)}
+html body .sm-kicker,html body header h1 .kicker,html body .barra-kicker,html body .sm-barra .marca small{font-size:10.5px!important;font-weight:600!important;letter-spacing:.14em!important;text-transform:uppercase;color:#9fd25a!important;opacity:1!important}
+html body header h1,html body .sm-barra-titulo,html body .sm-barra .marca strong{font-size:16px!important;font-weight:700!important;color:#fff!important}
+html body .sm-header-chip.sm-status-chip,html body header .status-chip,html body .sm-barra .sm-chip,html body .tb-status{min-height:30px;padding:0 11px!important;border-radius:999px!important;background:rgb(255 255 255 / .1)!important;border:1px solid rgb(255 255 255 / .16)!important;color:#fff!important;font-size:11.5px!important;font-weight:600!important;white-space:nowrap}
+html body .sm-menu-boton,html body header .menu-btn,html body .sm-barra .btn-barra{min-width:40px!important;min-height:40px!important;border-radius:12px!important;border:1px solid rgb(255 255 255 / .18)!important;background:rgb(255 255 255 / .06)!important;color:#fff!important}
+html body .menu-mas,html body .menu-fact,html body .gasto-menu,html body .mas-menu,html body .menu-opciones{border-radius:16px!important;padding:6px!important;background:var(--sm-surface,#fff)!important;color:var(--sm-ink,#17242b);border:1px solid var(--sm-line,#dbe3ec)!important;box-shadow:0 18px 40px rgb(9 32 53 / .22)!important;overscroll-behavior:contain;max-height:calc(100dvh - 90px);overflow-y:auto}
+html body .menu-mas{background:#eef2f6!important;gap:6px!important}
+html body .menu-mas-grp,html body .mas-menu-grupo{border-radius:12px;overflow:hidden;background:var(--sm-surface,#fff)}
+html body .menu-mas-h,html body .menu-fact-titulo,html body .gasto-menu-titulo,html body .mas-menu-titulo,html body .menu-opciones > small{display:block;padding:10px 12px 4px!important;font-size:11px!important;font-weight:700!important;letter-spacing:.08em!important;text-transform:uppercase;color:var(--sm-muted,#616f7f)!important;background:none!important}
+html body .menu-mas button,html body .menu-fact button,html body .gasto-menu button,html body .mas-menu button,html body .menu-opciones button{display:flex!important;align-items:center;gap:10px;width:100%;min-height:48px!important;padding:0 12px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:inherit!important;font:inherit;font-size:14px!important;font-weight:500!important;text-align:left;cursor:pointer}
+html body .menu-mas button:hover,html body .menu-fact button:hover,html body .gasto-menu button:hover,html body .mas-menu button:hover,html body .menu-opciones button:hover{background:var(--sm-surface-2,#eef2f6)!important}
+html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
+html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
+</style>
 </head>
 <body>
 <header>
@@ -1432,7 +1459,7 @@ function renderDetalle(){
     ${r.avisoTotalCambio?`<div class="semaforo warn"><h3>⚠ La remisión cambió después de facturarse</h3><p>Facturada por $${r.avisoTotalCambio.facturado.toFixed(2)}; la remisión hoy es de $${r.avisoTotalCambio.actual.toFixed(2)}. Revisa si hay que cancelar y reemitir la factura.</p></div>`:''}
     ${r.resultado&&r.resultado.cancelada?`<div class="semaforo warn"><h3>⚠ Factura cancelada</h3><p>Motivo ${esc(r.resultado.motivoCancelacion||'registrado')}. Esta remisión puede facturarse de nuevo.</p></div>`:''}
     <div class="field"><label>Constancia de Situación Fiscal (foto o PDF)</label>
-      <input type="file" id="fx_constancia" accept="image/*,.heic,.heif,application/pdf" onchange="leerConstancia(this)">
+      <label for="fx_constancia" class="sm-btn-ocr"><span aria-hidden="true">📷</span> Leer constancia con IA</label><input type="file" id="fx_constancia" class="sm-archivo-oculto" accept="image/*,.heic,.heif,application/pdf" onchange="leerConstancia(this)">
       <div id="fx_constancia_estado" style="font-size:12px;margin-top:2px;color:var(--muted)">La IA llena RFC, razón social, C.P. y régimen — tú los revisas.</div></div>
     <div class="field"><label>RFC</label><input id="fx_rfc" value="${escAttr(c.rfc||'')}" placeholder="ABC010101AB1" oninput="upd('rfc',this.value)"></div>
     <div class="field"><label>Razón social (exacta como su Constancia)</label><input id="fx_rs" value="${escAttr(c.razonSocial||'')}" oninput="upd('razonSocial',this.value)">
@@ -1479,12 +1506,13 @@ async function leerConstancia(inp){
     if(!resp || !resp.ok || !resp.campos || (resp.confianza!=null && resp.confianza<50)){
       est.textContent='⚠️ No se pudo leer con confianza' + (resp&&resp.error?` (${resp.error})`:'') + ': captura a mano.'; return;
     }
-    const c = resp.campos, set=(id,campo,val)=>{ if(!val) return; const el=document.getElementById(id); if(el) el.value=val; upd(campo,val); };
+    const c = resp.campos, set=(id,campo,val)=>{ if(!val) return; const el=document.getElementById(id); if(el){ el.value=val; _smMarcarIA(el); } upd(campo,val); };
     set('fx_rfc','rfc',c.rfc); set('fx_rs','razonSocial',c.razonSocial); set('fx_cp','cp',c.cp);
     if(c.regimenFiscal && REGIMENES[c.regimenFiscal]){
-      const sel=document.querySelector('select[onchange*="regimenFiscal"]'); if(sel) sel.value=c.regimenFiscal; upd('regimenFiscal',c.regimenFiscal);
+      const sel=document.querySelector('select[onchange*="regimenFiscal"]'); if(sel){ sel.value=c.regimenFiscal; _smMarcarIA(sel); } upd('regimenFiscal',c.regimenFiscal);
     }
     const r = remActual(); if(r) r.cliente.razonSocialEsFallback=false;
+    _smMostrarCamposExtra();
     est.textContent='✅ IA — revisa los datos contra la constancia antes de facturar.';
   }catch(e){ est.textContent='⚠️ Error de lectura, captura a mano.'; }
 }
@@ -1721,6 +1749,29 @@ async function compartirFactura(){
   toast('Abrí WhatsApp con el resumen. Para adjuntar el XML/PDF, descárgalos con los otros botones.','warn',6000);
 }
 _iniciarFacturacionProtegida();
+</script>
+<script id="sm-final">
+(function(){
+  // Bloquea el scroll de la pantalla de atrás mientras haya algo abierto encima.
+  var SEL='.ov.open, .menu-mas.open, dialog[open]', y=0, on=false, pend=false;
+  function sync(){
+    pend=false;
+    var abierto=!!document.querySelector(SEL), b=document.body.style;
+    if(abierto&&!on){on=true;y=window.scrollY||0;document.documentElement.classList.add('sm-bloqueo');b.position='fixed';b.top=(-y)+'px';b.left='0';b.right='0';b.width='100%';}
+    else if(!abierto&&on){on=false;document.documentElement.classList.remove('sm-bloqueo');b.position=b.top=b.left=b.right=b.width='';window.scrollTo(0,y);}
+  }
+  function pedir(){if(!pend){pend=true;requestAnimationFrame(sync);}}
+  function iniciar(){new MutationObserver(pedir).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','open']});sync();}
+  if(document.body)iniciar();else document.addEventListener('DOMContentLoaded',iniciar);
+  // Cantidades y montos: al tocar el campo se selecciona todo para escribir encima.
+  document.addEventListener('focusin',function(e){
+    var t=e.target;if(!t||t.tagName!=='INPUT')return;
+    if(t.type==='number'||/decimal|numeric/.test(t.inputMode||'')){setTimeout(function(){try{t.select();}catch(_){}} ,0);}
+  });
+})();
+function _smMarcarIA(el){if(!el)return;el.classList.add('ia-tocado');var q=function(){el.classList.remove('ia-tocado');};el.addEventListener('input',q,{once:true});el.addEventListener('change',q,{once:true});}
+// El OCR llena C.P. y régimen, que viven en "Más campos fiscales": se abren para que se vean.
+function _smMostrarCamposExtra(){var el=document.getElementById('camposExtra');if(el&&!el.classList.contains('show'))toggleCamposExtra(document.querySelector('.campos-toggle'));}
 </script>
 </body>
 </html>
