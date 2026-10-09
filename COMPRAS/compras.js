@@ -25,7 +25,9 @@ function _fechaLocalDireccion_(d) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-const SITUACIONES_FACTURA_DIRECCION = ['ESPERANDO_FACTURA', 'FACTURADO', 'NO_SE_FACTURARA'];
+// FACTURA_SIN_UUID (2026-10-08): «sí tengo la factura, me falta capturar el UUID». En el ERP su IVA se acredita.
+const SITUACIONES_FACTURA_DIRECCION = ['ESPERANDO_FACTURA', 'FACTURADO', 'FACTURA_SIN_UUID', 'NO_SE_FACTURARA'];
+const ETIQUETAS_SITUACION_FACTURA = { ESPERANDO_FACTURA: 'Esperando factura', FACTURADO: 'Facturado (con UUID)', FACTURA_SIN_UUID: 'Tengo factura (falta UUID)', NO_SE_FACTURARA: 'No se facturará' };
 const EVIDENCIAS_COMPRA_DIRECCION = ['TICKET', 'CFDI', 'FOTO', 'OTRO'];
 function _uuidCfdiCompraValido_(valor) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(valor || '').trim());
@@ -766,7 +768,7 @@ function formularioComprasDireccion() {
           <select id="compra-evidencia" name="evidencia" class="form-select">${EVIDENCIAS_COMPRA_DIRECCION.map(x => `<option>${x}</option>`).join('')}</select>
         </label>
         <label class="form-label" for="compra-situacion">Situación de factura
-          <select id="compra-situacion" name="situacionFactura" class="form-select">${SITUACIONES_FACTURA_DIRECCION.map(x => `<option>${x}</option>`).join('')}</select>
+          <select id="compra-situacion" name="situacionFactura" class="form-select">${SITUACIONES_FACTURA_DIRECCION.map(x => `<option value="${x}">${ETIQUETAS_SITUACION_FACTURA[x] || x}</option>`).join('')}</select>
         </label>
         <label class="form-label" id="compra-uuid-wrap" for="compra-uuid" style="display:none">UUID CFDI (documento facturado)<input id="compra-uuid" class="form-control mono" name="uuidCfdi"></label>
       </div>
@@ -813,6 +815,10 @@ function formularioComprasDireccion() {
 <p id="resultado-compra" class="text-muted" role="status"></p>
 </div>
 <div id="panel-historial" class="compras-panel" hidden>
+<section aria-label="Pendientes de factura" class="card"><div class="card-body">
+  <div id="pendFacturaCaja"></div>
+  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="_cargarPendientesFactura_()">🧾 Ver pendientes de factura</button>
+</div></section>
 <section aria-label="Historial reciente de compras" class="card"><div class="card-body">
   <div id="historial-compras"></div>
 </div></section>
@@ -876,6 +882,7 @@ function activarComprasDireccion() {
   f.fecha.value = _fechaLocalDireccion_();
   _restaurarBorradorCompra_(f);
   _renderHistorialComprasDireccion_();
+  _pintarPendientesFactura_();
   _actualizarBotonEnviar_();
 
   // IVA en chips: calcula el IVA sobre el subtotal y lo escribe en el mismo
@@ -966,6 +973,9 @@ function activarComprasDireccion() {
     }
     try {
       const d = Object.fromEntries(new FormData(f));
+      // Confirmación extra: declarar factura sin UUID hace que su IVA se acredite en el ERP.
+      if (d.situacionFactura === 'FACTURA_SIN_UUID' && !String(d.uuidCfdi || '').trim() &&
+          !confirm('Vas a declarar que SÍ tienes la factura de esta compra, sin capturar su UUID.\n\nSu IVA se va a acreditar y quedará pendiente hasta capturar el UUID.\n\n¿Confirmas que tienes la factura?')) return;
       d.lineas = _leerLineasCompra(lineas);
       d.pagos = _leerPagosCompra(pagos);
       // La foto ya viaja comprimida (_comprimirImagenCompra_, cacheada al
@@ -1118,6 +1128,9 @@ function _aplicarOcrACompra_(resp) {
   const out = { aplicado: true, proveedor: String(c.proveedor || '').trim(), fecha: null, total };
   const fechaOk = _parsearFechaOcrCompra_(c.fecha);
   if (fechaOk && fechaOk <= _fechaLocalDireccion_()) out.fecha = fechaOk;
+  // IVA solo con factura (2026-10-08): folio fiscal de la factura, solo con formato completo.
+  const uuidOcr = String(c.uuid || '').trim().toUpperCase();
+  if (_uuidCfdiCompraValido_(uuidOcr)) out.uuid = uuidOcr;
   const iva = Number(c.iva);
   const subtotal = Number(c.subtotal);
   if (iva >= 0 && subtotal > 0) {
@@ -1228,6 +1241,8 @@ async function _leerTicketCompraConIA_() {
     });
     const resp = await res.json();
     const r = _aplicarOcrACompra_(resp);
+    // Si la IA no leyó el folio fiscal, se intenta con el QR de la factura (lector del teléfono).
+    if (r.aplicado && !r.uuid) { const qr = await _leerQrDeArchivo_(file); if (qr) r.uuid = qr.uuid; }
     if (!r.aplicado) {
       _compraTocadaPorOcr = false;
       if (estado) estado.textContent = '⚠️ No se pudo leer, captura a mano.';
@@ -1243,7 +1258,14 @@ async function _leerTicketCompraConIA_() {
     // subtotal+iva aunque el listener de arriba (f.subtotal.oninput) exista
     // para la captura manual. Es la regla del espejo de la remisión.
     if (f.total) { f.total.value = r.total.toFixed(2); _marcarTocadoPorIACompra_(f.total); }
-    if (estado) estado.textContent = '✅ IA — revísalo antes de guardar.';
+    // Con el folio fiscal leído, la compra queda FACTURADA (su IVA se acredita en el ERP).
+    if (r.uuid && f.uuidCfdi && f.situacionFactura) {
+      f.situacionFactura.value = 'FACTURADO';
+      if (f.evidencia) f.evidencia.value = 'CFDI';
+      f.situacionFactura.dispatchEvent(new Event('change'));
+      f.uuidCfdi.value = r.uuid; _marcarTocadoPorIACompra_(f.uuidCfdi);
+    }
+    if (estado) estado.textContent = r.uuid ? '✅ IA — leí el UUID de la factura. Revísalo antes de guardar.' : '✅ IA — revísalo antes de guardar.';
   } catch (e) {
     _compraTocadaPorOcr = false;
     if (estado) estado.textContent = '⚠️ Error de lectura, captura a mano.';
@@ -1291,3 +1313,164 @@ async function limpiarCacheLocal() {
   alert('Copias borradas ✓ — recargando…');
   setTimeout(() => location.reload(), 900);
 }
+
+// En Compras abrir sesión pide el PIN: el token se recuerda 2 minutos SOLO en memoria para que
+// leer una factura (lista + lectura + envío) no lo pida tres veces. Nunca se guarda en el teléfono.
+let _pendFacTokenCompras = { valor: '', hasta: 0 };
+const PEND_FAC_APP = { tipo: 'COMPRA', claveCache: 'sumetec_compras_pend_factura',
+  url: () => localStorage.getItem('sumetec_compras_url'),
+  token: async () => {
+    if (_pendFacTokenCompras.valor && Date.now() < _pendFacTokenCompras.hasta) return _pendFacTokenCompras.valor;
+    const t = await abrirSesionDireccion(await pedirPinDireccion());
+    _pendFacTokenCompras = { valor: t, hasta: Date.now() + 120000 };
+    return t;
+  },
+  comprimir: f => _comprimirImagenCompra_(f),
+  device: () => localStorage.getItem('sumetec_compras_dispositivo') || '' };
+// ── PENDIENTES DE FACTURA (2026-10-08) ───────────────────────────────────────
+// El ERP publica las compras y gastos que aún no tienen su factura completa. Aquí se listan y se
+// completan: foto de la factura -> se lee el UUID (QR del SAT si el teléfono lo permite; si no, el
+// texto impreso con IA) -> se manda al servidor; el ERP lo aplica y revisa que no esté repetido.
+// «Tengo factura» (sin UUID) pide confirmación. Todo esto necesita señal: no usa la cola sin red.
+// Este bloque es IDÉNTICO en Gastos y Compras; lo único propio de cada app es PEND_FAC_APP.
+const _PEND_FAC_UUID_RE_ = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
+
+// Función pura: lo que trae el QR impreso en un CFDI
+// (https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx?id=UUID&re=RFC_EMISOR&rr=...&tt=TOTAL&fe=...).
+// Devuelve { uuid, rfcEmisor, total } o null si no es el QR de una factura.
+function _datosQrCfdi_(texto) {
+  const s = String(texto || '');
+  const i = s.indexOf('?');
+  if (i < 0) return null;
+  const par = {};
+  s.slice(i + 1).split('&').forEach(p => {
+    const k = p.indexOf('=');
+    if (k > 0) { try { par[p.slice(0, k).trim().toLowerCase()] = decodeURIComponent(p.slice(k + 1)).trim(); } catch (_) {} }
+  });
+  const uuid = String(par.id || '').toUpperCase();
+  if (!_PEND_FAC_UUID_RE_.test(uuid)) return null;
+  const total = Number(par.tt);
+  return { uuid, rfcEmisor: String(par.re || '').toUpperCase(), total: total > 0 ? total : null };
+}
+
+// Lee el QR de una foto con el lector integrado del navegador (Chrome en Android). Sin lector
+// (iPhone) o sin QR legible devuelve null y se sigue con la lectura del texto.
+async function _leerQrDeArchivo_(file) {
+  try {
+    if (!file || typeof BarcodeDetector === 'undefined' || typeof createImageBitmap !== 'function') return null;
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    const imagen = await createImageBitmap(file);
+    const codigos = await detector.detect(imagen);
+    for (const c of codigos || []) { const d = _datosQrCfdi_(c.rawValue); if (d) return d; }
+  } catch (_) {}
+  return null;
+}
+
+function _pendFacLeer_() {
+  try { const c = JSON.parse(localStorage.getItem(PEND_FAC_APP.claveCache) || 'null'); return c && Array.isArray(c.filas) ? c : { ts: 0, filas: [] }; }
+  catch (_) { return { ts: 0, filas: [] }; }
+}
+
+// Función pura: el HTML de la lista. Solo los documentos de ESTA app que nadie ha contestado.
+function _htmlPendientesFactura_(filas, tipoApp) {
+  const e = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const mias = (filas || []).filter(f => f && f.tipo === tipoApp && !f.contestado);
+  if (!mias.length) return '';
+  const filasHtml = mias.slice(0, 40).map(f => `
+    <div class="pend-fac-fila" style="display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid rgba(128,128,128,.25)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e(f.tercero || f.id)}</div>
+        <div style="font-size:12px;opacity:.75">${e(f.fecha)} · $${(Number(f.total) || 0).toFixed(2)} · IVA $${(Number(f.iva) || 0).toFixed(2)}${f.situacion === 'FACTURA_SIN_UUID' ? ' · falta UUID' : ''}</div>
+      </div>
+      <button type="button" class="btn" style="padding:6px 10px" onclick="_pendFacFoto_('${e(f.id)}')">📷 Factura</button>
+      ${f.situacion === 'FACTURA_SIN_UUID' ? '' : `<button type="button" class="btn" style="padding:6px 10px;background:transparent;border:1px solid currentColor;color:inherit" onclick="_pendFacTengo_('${e(f.id)}')">Tengo factura</button>`}
+    </div>`).join('');
+  return `<div class="card" style="margin-bottom:10px">
+    <div style="font-weight:700">🧾 Pendientes de factura (${mias.length})</div>
+    <div style="font-size:12px;opacity:.75">Sin factura su IVA no se acredita. Toma foto de la factura para leer su UUID.</div>
+    ${filasHtml}
+    <div id="pendFacEstado" style="font-size:12px;margin-top:6px" aria-live="polite"></div>
+    <input type="file" id="pendFacArchivo" accept="image/*" capture="environment" style="display:none" onchange="_pendFacArchivoElegido_()">
+  </div>`;
+}
+
+function _pintarPendientesFactura_() {
+  const caja = document.getElementById('pendFacturaCaja');
+  if (caja) caja.innerHTML = _htmlPendientesFactura_(_pendFacLeer_().filas, PEND_FAC_APP.tipo);
+}
+
+async function _pendFacPedir_(cuerpo) {
+  const url = PEND_FAC_APP.url();
+  if (!url || !navigator.onLine) throw new Error('sin señal');
+  const token = await PEND_FAC_APP.token();
+  if (!token) throw new Error('falta vincular el teléfono');
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ ...cuerpo, token }) });
+  return res.json();
+}
+
+// Trae la lista. `conPin`: Compras pide el PIN para abrir sesión, así que ahí solo se pide con un toque.
+async function _cargarPendientesFactura_() {
+  try {
+    const r = await _pendFacPedir_({ tipo: 'pendientes_factura' });
+    if (r && r.ok === true && Array.isArray(r.filas)) {
+      localStorage.setItem(PEND_FAC_APP.claveCache, JSON.stringify({ ts: Date.now(), filas: r.filas }));
+    }
+  } catch (_) {}
+  _pintarPendientesFactura_();
+}
+
+function _pendFacDecir_(texto) { const el = document.getElementById('pendFacEstado'); if (el) el.textContent = texto; }
+
+async function _pendFacContestar_(id, datos) {
+  const r = await _pendFacPedir_({ tipo: 'factura_recibida', id: crypto.randomUUID(), docTipo: PEND_FAC_APP.tipo, docId: id,
+    device: PEND_FAC_APP.device(), ...datos });
+  if (!r || r.ok !== true) throw new Error((r && r.error) || 'el servidor no lo aceptó');
+  const c = _pendFacLeer_();
+  c.filas.forEach(f => { if (f.tipo === PEND_FAC_APP.tipo && String(f.id) === String(id)) f.contestado = datos.uuidCfdi ? 'UUID' : 'SIN_UUID'; });
+  localStorage.setItem(PEND_FAC_APP.claveCache, JSON.stringify(c));
+  _pintarPendientesFactura_();
+}
+
+let _pendFacIdEnCurso = '';
+function _pendFacFoto_(id) {
+  _pendFacIdEnCurso = String(id);
+  const input = document.getElementById('pendFacArchivo');
+  if (input) { input.value = ''; input.click(); }
+}
+
+async function _pendFacArchivoElegido_() {
+  const input = document.getElementById('pendFacArchivo');
+  const file = input && input.files ? input.files[0] : null;
+  const id = _pendFacIdEnCurso;
+  if (!file || !id) return;
+  if (!navigator.onLine) { _pendFacDecir_('Sin señal: inténtalo cuando haya conexión.'); return; }
+  _pendFacDecir_('Leyendo la factura…');
+  try {
+    let leido = await _leerQrDeArchivo_(file);
+    let origen = 'QR';
+    if (!leido) {
+      origen = 'FOTO';
+      const r = await _pendFacPedir_({ tipo: 'ocr_ticket', foto: await PEND_FAC_APP.comprimir(file) });
+      const uuid = String((r && r.campos && r.campos.uuid) || '').toUpperCase();
+      if (_PEND_FAC_UUID_RE_.test(uuid)) leido = { uuid, rfcEmisor: String((r.campos && r.campos.rfcEmisor) || '') };
+    }
+    if (!leido) { _pendFacDecir_('No pude leer el UUID en esa foto. Acerca la cámara al folio fiscal o al código QR, o usa «Tengo factura».'); return; }
+    if (!confirm('UUID leído de la factura:\n\n' + leido.uuid + (leido.rfcEmisor ? '\nRFC emisor: ' + leido.rfcEmisor : '') + '\n\n¿Es la factura de este documento?')) { _pendFacDecir_(''); return; }
+    await _pendFacContestar_(id, { uuidCfdi: leido.uuid, rfcEmisor: leido.rfcEmisor || '', origen });
+    _pendFacDecir_('Enviado ✓ El ERP lo aplica al traer las facturas del celular.');
+  } catch (e) {
+    _pendFacDecir_('No se pudo enviar: ' + ((e && e.message) || 'error') + '.');
+  }
+}
+
+async function _pendFacTengo_(id) {
+  if (!navigator.onLine) { _pendFacDecir_('Sin señal: inténtalo cuando haya conexión.'); return; }
+  if (!confirm('Vas a declarar que SÍ tienes la factura de este documento, sin capturar su UUID.\n\nSu IVA se va a acreditar y quedará pendiente hasta capturar el UUID.\n\n¿Confirmas que tienes la factura?')) return;
+  try {
+    await _pendFacContestar_(id, { tengoFactura: true, origen: 'CONFIRMADO' });
+    _pendFacDecir_('Enviado ✓ El ERP lo aplica al traer las facturas del celular.');
+  } catch (e) {
+    _pendFacDecir_('No se pudo enviar: ' + ((e && e.message) || 'error') + '.');
+  }
+}
+// ── fin PENDIENTES DE FACTURA ────────────────────────────────────────────────
