@@ -15,3 +15,25 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;border
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 
 fieldset{min-inline-size:0;border:1px solid var(--borde,#bbc8cc);border-radius:12px;margin:14px 0;padding:14px}legend{font-weight:600}details>summary{cursor:pointer;padding:12px 0;font-weight:600}.selector-catalogo{margin:12px 0}.resultados-catalogo{display:grid;gap:6px}.resultados-catalogo button{white-space:normal;overflow-wrap:anywhere;text-align:left}.panel li{margin:10px 0;overflow-wrap:anywhere}
+
+/* Preparar salida en cuatro pasos y acción principal de Hoy (2026-10-06) */
+[data-paso][hidden]{display:none!important}
+.pasos{display:flex;gap:6px;list-style:none;padding:0;margin:4px 0 14px}
+.pasos li{flex:1;min-width:0;text-align:center;font-size:12px;line-height:1.2;padding:7px 4px;border-radius:10px;background:var(--sm-surface-2,#eef2f6);color:var(--sm-muted,#616f7f);border:1px solid transparent}
+.pasos li span{display:inline-grid;place-items:center;width:18px;height:18px;margin-right:2px;border-radius:50%;background:var(--sm-line,#dbe3ec);font-weight:700;font-size:11px}
+.pasos li.hecho{color:var(--sm-green-texto,#057448)}
+.pasos li.activo{border-color:currentColor;color:var(--sm-navy,#023561);font-weight:700;background:var(--sm-surface,#fff)}
+.pasos li.activo span{background:var(--sm-navy,#023561);color:#fff}
+.pasos-nav{display:flex;gap:10px;margin:14px 0 24px}
+.pasos-nav button{flex:1;min-height:48px}
+.pasos-nav button[hidden]{display:none}
+.accion-principal{display:grid;gap:10px;margin-bottom:16px}
+.accion-principal h2,.accion-principal p{margin:0}
+.accion-principal button{width:100%;min-height:52px;font-size:16px}
+
+/* Resultados: cuatro cifras arriba y el detalle plegado (2026-10-06) */
+.resumen-cifras{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}
+.resumen-cifras div{display:grid;gap:4px;padding:14px;border-radius:14px;background:var(--sm-surface-2,#eef2f6);border:1px solid var(--sm-line,#dbe3ec)}
+.resumen-cifras strong{font-size:28px;line-height:1}
+.resumen-cifras span{font-size:13px;color:var(--sm-muted,#616f7f)}
+.detalle-resultados>summary{display:flex;align-items:center;min-height:44px;font-weight:700;cursor:pointer;margin:8px 0}

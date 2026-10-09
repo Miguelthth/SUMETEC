@@ -30,6 +30,13 @@
     if (typeof valor !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,3})?)?(?:Z|[+-]\d\d:\d\d)$/.test(valor) || !diaValido(valor.slice(0, 10)) || !Number.isFinite(Date.parse(valor))) throw Error('Fecha del hecho inválida');
     return valor;
   }
+  // Lado mayor al que se reduce una foto antes de guardarla (plan, sección 11).
+  const FOTO_LADO_MAX = 1600;
+  function medidasFoto(ancho, alto, ladoMax = FOTO_LADO_MAX) {
+    if (!(ancho > 0) || !(alto > 0)) throw Error('Foto sin medidas válidas');
+    const escala = Math.min(1, ladoMax / Math.max(ancho, alto));
+    return { ancho: Math.max(1, Math.round(ancho * escala)), alto: Math.max(1, Math.round(alto * escala)) };
+  }
   function fechaDesdeTijuana(valor) {
     if (typeof valor !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(valor) || !diaValido(valor.slice(0,10))) throw Error('Fecha del hecho inválida');
     const utc = Date.parse(valor + ':00Z');
@@ -297,5 +304,5 @@
       cerrar: () => db.close()
     };
   }
-  return { abrir, RESULTADOS, crearNegocio, crearVisita, crearPrecio, crearOperacion, fechaDesdeTijuana, ordenarOperaciones };
+  return { abrir, RESULTADOS, crearNegocio, crearVisita, crearPrecio, crearOperacion, fechaDesdeTijuana, ordenarOperaciones, medidasFoto, FOTO_LADO_MAX };
 });
