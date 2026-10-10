@@ -2495,6 +2495,8 @@ function _aplicarFormasPagoPublicadas(){
 // quedó cacheado de la última vez).
 function _aplicarConfiguracionPublicada(datos){
   if(!datos)return;
+  // Acceso (2026-10-09): minutos de bloqueo y equipos sin PIN que fijó el ERP. Ver acceso.js.
+  if(typeof sumetecAplicarAcceso==='function'){ try{ sumetecAplicarAcceso('cotizador',datos.ACCESO); sumetecVigilarInactividad('cotizador','Remisiones'); }catch(_){ } }
   if(datos.EMPRESA&&Object.keys(datos.EMPRESA).length){
     empresaPublicada={...datos.EMPRESA};
     _resolverEmpresa();

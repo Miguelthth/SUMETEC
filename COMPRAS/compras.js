@@ -638,7 +638,9 @@ async function _actualizarListasCompras_(pin) {
     const token = await abrirSesionDireccion(pin);
     const pedir = tipo => fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ tipo, token }) }).then(x => x.json());
-    const [listas, catalogo, equivs] = await Promise.all([pedir('listas_gasto'), pedir('catalogo'), pedir('equivalencias')]);
+    const [listas, catalogo, equivs, cfg] = await Promise.all([pedir('listas_gasto'), pedir('catalogo'), pedir('equivalencias'), pedir('configuracion').catch(() => null)]);
+    // Acceso (2026-10-09): minutos de bloqueo y equipos sin PIN que fijó el ERP. seguridad.js los consulta. Ver acceso.js.
+    if (cfg && cfg.ok && cfg.datos && typeof sumetecAplicarAcceso === 'function') { try { sumetecAplicarAcceso('compras', cfg.datos.ACCESO); } catch (_) { } }
     const previa = _leerListasCompras_();
     const out = { ts: Date.now(), proveedores: previa.proveedores, productos: previa.productos };
     // D-03: una lista vacía (o que pierde más de la mitad) del servidor NO pisa la copia buena del teléfono.

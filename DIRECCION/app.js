@@ -216,7 +216,7 @@ async function vincular() {
 // aún (primera vez), sigue con los valores de fábrica de corte.js/seguridad.js.
 try {
   const cacheCfg = JSON.parse(localStorage.getItem('sumetec_direccion_config_cache') || 'null');
-  if (cacheCfg && cacheCfg.datos) _aplicarConfigDireccionPublicada_(cacheCfg.datos.DIRECCION);
+  if (cacheCfg && cacheCfg.datos) { _aplicarConfigDireccionPublicada_(cacheCfg.datos.DIRECCION); _aplicarAccesoDireccion_(cacheCfg.datos); }
   // Umbral de "stock teórico viejo" de Inventario: vive en la sección GASTOS
   // de la configuración central (así lo publica el ERP desde antes de F4).
   if (cacheCfg && cacheCfg.datos && typeof _aplicarConfigInventarioPublicada_ === 'function') {

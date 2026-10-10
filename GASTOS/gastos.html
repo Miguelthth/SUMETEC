@@ -624,10 +624,15 @@ function _aplicarConfigGastosPublicada_(gastos) {
     FOTO_TOPE_KB_PUBLICADO = gastos.foto_tope_kb;
   }
 }
+// Acceso (2026-10-09): minutos de bloqueo y equipos sin PIN que fijó el ERP. Ver acceso.js.
+function _aplicarAccesoGastos_(datos) {
+  if (typeof sumetecAplicarAcceso !== 'function' || !datos) return;
+  try { sumetecAplicarAcceso('gastos', datos.ACCESO); sumetecVigilarInactividad('gastos', 'Gastos'); } catch (_) { }
+}
 async function _cargarConfiguracionEcosistema_() {
   if (!navigator.onLine || !API_TOKEN) {
     const cache = leerSeguro('config_ecosistema_cache', null);
-    if (cache && cache.datos) _aplicarConfigGastosPublicada_(cache.datos.GASTOS);
+    if (cache && cache.datos) { _aplicarConfigGastosPublicada_(cache.datos.GASTOS); _aplicarAccesoGastos_(cache.datos); }
     return;
   }
   try {
@@ -640,9 +645,10 @@ async function _cargarConfiguracionEcosistema_() {
     if (!r || !r.ok || !r.datos) throw new Error('respuesta inválida');
     guardarSeguro('config_ecosistema_cache', { ts: r.ts || '', datos: r.datos });
     _aplicarConfigGastosPublicada_(r.datos.GASTOS);
+    _aplicarAccesoGastos_(r.datos);
   } catch (_) {
     const cache = leerSeguro('config_ecosistema_cache', null);
-    if (cache && cache.datos) _aplicarConfigGastosPublicada_(cache.datos.GASTOS);
+    if (cache && cache.datos) { _aplicarConfigGastosPublicada_(cache.datos.GASTOS); _aplicarAccesoGastos_(cache.datos); }
   }
 }
 

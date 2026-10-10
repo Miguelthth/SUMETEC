@@ -103,6 +103,13 @@ function _aplicarConfigDireccionPublicada_(direccion) {
   }
 }
 
+// Acceso (2026-10-09): minutos de bloqueo y equipos sin PIN que fijó el ERP (Ecosistema → Acceso de las apps).
+// seguridad.js los consulta en cada pedirPinDireccion(); aquí solo se guarda lo que llegó. Ver acceso.js.
+function _aplicarAccesoDireccion_(datos) {
+  if (typeof sumetecAplicarAcceso !== 'function' || !datos) return;
+  try { sumetecAplicarAcceso('direccion', datos.ACCESO); } catch (_) { }
+}
+
 async function cargarDashboardDireccion(pin) {
   const url = localStorage.getItem('sumetec_direccion_url');
   const token = await abrirSesionDireccion(pin);
@@ -130,6 +137,7 @@ async function cargarDashboardDireccion(pin) {
     if (rc && rc.ok && rc.datos) {
       localStorage.setItem('sumetec_direccion_config_cache', JSON.stringify({ ts: rc.ts || '', datos: rc.datos }));
       _aplicarConfigDireccionPublicada_(rc.datos.DIRECCION);
+      _aplicarAccesoDireccion_(rc.datos);
       if (typeof _aplicarConfigInventarioPublicada_ === 'function') _aplicarConfigInventarioPublicada_(rc.datos.GASTOS);
     }
   }).catch(() => {});

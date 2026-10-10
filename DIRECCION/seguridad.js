@@ -4,6 +4,14 @@ const SESION_KEY = 'sumetec_direccion_sesion';
 // horneado aquí (10 min) -- ver _aplicarConfigDireccionPublicada_ en
 // dashboard.js, que lo puede ajustar con lo que publique el ERP.
 let PIN_TIMEOUT_MS = 600000;
+// Acceso configurable desde el ERP (2026-10-09, ver acceso.js): minutos de bloqueo de ESTA app y si este equipo
+// está autorizado a entrar sin PIN. Sin nada publicado, vale PIN_TIMEOUT_MS como siempre.
+const APP_ACCESO = 'direccion';
+function _msBloqueoPin() {
+  const respaldo = PIN_TIMEOUT_MS / 60000;
+  const min = (typeof sumetecMinutosBloqueo === 'function') ? sumetecMinutosBloqueo(APP_ACCESO, respaldo) : respaldo;
+  return min === 0 ? Infinity : min * 60000;   // 0 = no se bloquea por inactividad
+}
 
 // El token vinculado vive cifrado en localStorage (AES-GCM, clave derivada
 // del PIN con PBKDF2). abrirSesionDireccion() lo descifra y renueva el
@@ -54,10 +62,12 @@ async function abrirSesionDireccion(pin) {
     // durante los próximos 10 minutos en vez de volver a preguntar.
     _pinCache = null;
     _pinCacheTs = 0;
+    if (typeof sumetecOlvidarPinGuardado === 'function') sumetecOlvidarPinGuardado(APP_ACCESO);   // un PIN guardado que ya no abre no se reintenta
     throw Error('PIN incorrecto');
   }
   r.ts = Date.now();
   localStorage.setItem(SESION_KEY, JSON.stringify(r));
+  if (typeof sumetecRecordarPin === 'function') sumetecRecordarPin(APP_ACCESO, pin);   // solo lo guarda si el ERP autorizó este equipo
   return new TextDecoder().decode(plano);
 }
 
@@ -76,7 +86,7 @@ let _pinCache = null;
 let _pinCacheTs = 0;
 
 function _pinVigente() {
-  return _pinCache !== null && (Date.now() - _pinCacheTs) < PIN_TIMEOUT_MS;
+  return _pinCache !== null && (Date.now() - _pinCacheTs) < _msBloqueoPin();
 }
 
 // Tras vincular, el PIN recién escrito ya es válido: se recuerda en memoria
@@ -88,6 +98,9 @@ function recordarPinDireccion(pin) {
 
 function pedirPinDireccion() {
   if (_pinVigente()) return Promise.resolve(_pinCache);
+  // Equipo autorizado desde el ERP: no se pregunta el PIN (ni al abrir ni por inactividad).
+  const guardado = (typeof sumetecPinGuardado === 'function') ? sumetecPinGuardado(APP_ACCESO) : '';
+  if (guardado) { _pinCache = guardado; _pinCacheTs = Date.now(); return Promise.resolve(guardado); }
 
   return new Promise((resolve, reject) => {
     const dialogo = document.querySelector('#pin-modal');

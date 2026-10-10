@@ -65,6 +65,94 @@ async function sumetecAbrirTokenCifrado(app,pin) {
 }
 function sumetecOlvidarTokenCifrado(app) { localStorage.removeItem(_sumetecClaveToken(app)); }
 
+// ═══ Acceso configurable desde el ERP (Ecosistema → Acceso de las apps, 2026-10-09) ═══
+// El dueño decide en el ERP, con su PIN maestro: (1) a los cuántos minutos sin uso cada app vuelve a pedir el PIN
+// (0 = no se bloquea por inactividad) y (2) en qué equipos NO se pide el PIN. Esa sección (ACCESO) llega con la
+// configuración publicada y cada app se la pasa a sumetecAplicarAcceso().
+// En un equipo autorizado el PIN de ESE equipo se guarda aquí, en localStorage, para abrir sin preguntarlo: quien
+// tenga el equipo en la mano entra directo. Por eso solo se activa desde el ERP y equipo por equipo; al quitar la
+// autorización, la siguiente configuración que llega borra el PIN guardado. En los demás equipos nada cambia: el
+// PIN sigue viviendo solo en memoria.
+const SUMETEC_CLAVE_ACCESO = 'sumetec_acceso_cfg';
+const SUMETEC_APPS_ACCESO = ['cotizador', 'gastos', 'compras', 'direccion', 'logistica', 'fact'];
+const _sumetecPinSesion = {};
+function _sumetecAppAcceso(app) {
+  if (!SUMETEC_APPS_ACCESO.includes(app)) throw Error('Aplicación desconocida');
+  return app;
+}
+function sumetecAccesoGuardado() {
+  try { const c = JSON.parse(localStorage.getItem(SUMETEC_CLAVE_ACCESO) || 'null'); return c && typeof c === 'object' ? c : null; }
+  catch (_) { return null; }
+}
+// ¿El dueño autorizó ESTE equipo (por su ID de vinculación) a entrar sin PIN en esta app?
+function sumetecEquipoSinPin(app) {
+  const c = sumetecAccesoGuardado(), id = localStorage.getItem(`sumetec_${_sumetecAppAcceso(app)}_dispositivo`) || '';
+  return !!(id && c && Array.isArray(c.equipos_sin_pin) && c.equipos_sin_pin.includes(id));
+}
+// Minutos de inactividad antes de volver a pedir el PIN; `respaldo` si el ERP no ha publicado nada. 0 = no se bloquea.
+function sumetecMinutosBloqueo(app, respaldo) {
+  const c = sumetecAccesoGuardado(), v = c && c.bloqueo_minutos ? c.bloqueo_minutos[_sumetecAppAcceso(app)] : undefined;
+  return (typeof v === 'number' && isFinite(v) && v >= 0) ? v : respaldo;
+}
+// El PIN guardado de este equipo, o '' si el equipo no está (o ya no está) autorizado. Si dejó de estarlo, se borra.
+function sumetecPinGuardado(app) {
+  const clave = `sumetec_sinpin_${_sumetecAppAcceso(app)}`;
+  if (!sumetecEquipoSinPin(app)) { localStorage.removeItem(clave); return ''; }
+  return localStorage.getItem(clave) || '';
+}
+// Tras un PIN correcto: se recuerda en memoria y, solo si el equipo está autorizado, también en el equipo.
+function sumetecRecordarPin(app, pin) {
+  if (!pin) return;
+  _sumetecPinSesion[_sumetecAppAcceso(app)] = pin;
+  if (sumetecEquipoSinPin(app)) localStorage.setItem(`sumetec_sinpin_${app}`, pin);
+}
+function sumetecOlvidarPinGuardado(app) {
+  localStorage.removeItem(`sumetec_sinpin_${_sumetecAppAcceso(app)}`);
+  delete _sumetecPinSesion[app];
+}
+// Recibe la sección ACCESO de la configuración publicada (o nada, si el servidor aún no la trae: se conserva la
+// última). Devuelve { sinPin, minutos } ya resueltos para esta app en este equipo.
+function sumetecAplicarAcceso(app, acceso) {
+  _sumetecAppAcceso(app);
+  if (acceso && typeof acceso === 'object' && !Array.isArray(acceso)) {
+    localStorage.setItem(SUMETEC_CLAVE_ACCESO, JSON.stringify({
+      bloqueo_minutos: (acceso.bloqueo_minutos && typeof acceso.bloqueo_minutos === 'object') ? acceso.bloqueo_minutos : {},
+      equipos_sin_pin: Array.isArray(acceso.equipos_sin_pin) ? acceso.equipos_sin_pin.map(String) : [] }));
+  }
+  const sinPin = sumetecEquipoSinPin(app);
+  if (!sinPin) localStorage.removeItem(`sumetec_sinpin_${app}`);
+  else if (_sumetecPinSesion[app]) localStorage.setItem(`sumetec_sinpin_${app}`, _sumetecPinSesion[app]);
+  return { sinPin, minutos: sumetecMinutosBloqueo(app, undefined) };
+}
+// Bloqueo por inactividad para las apps que cifran su token aquí (Cotizador, Gastos, Logística): pasado el tiempo
+// que fijó el ERP sin tocar la pantalla, se pide el PIN encima de lo que haya. No recarga ni borra nada: lo que
+// estaba a medio capturar sigue ahí al desbloquear. Dirección y Compras tienen su propio bloqueo (seguridad.js).
+let _sumetecInactividad = null;
+function sumetecVigilarInactividad(app, nombre) {
+  _sumetecAppAcceso(app);
+  if (_sumetecInactividad || typeof document === 'undefined') return;
+  const estado = _sumetecInactividad = { ultima: Date.now(), bloqueada: false };
+  const tocar = () => { if (!estado.bloqueada) estado.ultima = Date.now(); };
+  ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, tocar, { capture: true, passive: true }));
+  estado.revisar = async () => {
+    const min = sumetecMinutosBloqueo(app, 0);
+    if (estado.bloqueada || !min || sumetecEquipoSinPin(app) || !localStorage.getItem(_sumetecClaveToken(app))) return false;
+    if (Date.now() - estado.ultima < min * 60000) return false;
+    estado.bloqueada = true;
+    let mensaje = 'Se bloqueó por inactividad.';
+    for (;;) {
+      const pin = await sumetecPedirPinToken(nombre, false, mensaje);
+      if (pin === null) { mensaje = 'Escribe tu PIN para seguir.'; continue; }
+      try { await sumetecAbrirTokenCifrado(app, pin); sumetecRecordarPin(app, pin); break; }
+      catch (e) { mensaje = e.message || 'PIN incorrecto'; }
+    }
+    estado.ultima = Date.now(); estado.bloqueada = false;
+    return true;
+  };
+  setInterval(estado.revisar, 15000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') estado.revisar(); });
+}
+
 let _sumetecPinPromesa = null;
 // ═══ Teclado de PIN estándar v3 (2026-10, propuesta 1b «pantalla completa») ═══
 // UNA sola pantalla para los 4 usos: crear (2 pasos: escribir → Continuar → confirmar), desbloquear,
@@ -224,11 +312,17 @@ function sumetecPedirPinToken(nombre, crear=false, mensaje='') {
 async function sumetecRestaurarTokenApp(app,nombre,claveLegada) {
   const cifrado=localStorage.getItem(_sumetecClaveToken(app));
   if (cifrado) {
+    // Equipo autorizado desde el ERP: se abre con el PIN guardado, sin preguntar. Si ya no sirve, se pregunta.
+    const guardado=sumetecPinGuardado(app);
+    if (guardado) {
+      try { const t=await sumetecAbrirTokenCifrado(app,guardado); _sumetecPinSesion[app]=guardado; return t; }
+      catch (_) { sumetecOlvidarPinGuardado(app); }
+    }
     let mensaje='';
     for (let intento=0;intento<3;intento++) {
       const pin=await sumetecPedirPinToken(nombre,false,mensaje);
       if (pin===null) return '';
-      try { return await sumetecAbrirTokenCifrado(app,pin); }
+      try { const t=await sumetecAbrirTokenCifrado(app,pin); sumetecRecordarPin(app,pin); return t; }
       catch (e) { const quedan=2-intento; mensaje=(e.message||'PIN incorrecto')+(quedan>0?' · te quedan '+quedan+' intento'+(quedan===1?'':'s'):''); }
     }
     return '';
@@ -238,6 +332,7 @@ async function sumetecRestaurarTokenApp(app,nombre,claveLegada) {
   const pin=await sumetecPedirPinToken(nombre,true);
   if (pin===null) return '';
   await sumetecGuardarTokenCifrado(app,legado,pin);
+  sumetecRecordarPin(app,pin);
   localStorage.removeItem(claveLegada);
   return legado;
 }
