@@ -430,7 +430,7 @@ function sumetecMostrarAccesoBloqueado(reintentar, mensaje = 'Ingresa tu PIN par
 // veces; si sigue igual, se DETIENE con su motivo a la vista (no gasta cuota de Apps Script ni bloquea a
 // los demás). Sin señal, tiempo agotado, servidor ocupado o token vencido NO cuentan: eso se arregla esperando.
 const SUMETEC_MAX_FALLOS_SERVIDOR = 6;
-const SUMETEC_TIEMPO_ENVIO_MS = 120000;
+const SUMETEC_TIEMPO_ENVIO_MS = 30000;
 
 // fetch con tope de tiempo: una petición colgada ya no detiene para siempre la fila de envíos.
 // Si vence, lanza AbortError (las apps ya lo tratan como «sin respuesta» y reintentan luego).
@@ -494,7 +494,61 @@ function sumetecMotivoRespuesta(r, respaldo) {
 function sumetecAnotarFallo(item, motivo, servidor) {
   item._try = (item._try || 0) + 1;
   if (motivo) item._lastError = String(motivo).slice(0, 200);
+  item._retryAt = Date.now() + Math.min(120000, 30000 * Math.pow(2, Math.min(item._try - 1, 2)))
+    + Math.floor(Math.random() * 5000);
   if (!servidor) return false;
   item._srv = (item._srv || 0) + 1;
   return item._srv >= SUMETEC_MAX_FALLOS_SERVIDOR;
+}
+function sumetecPuedeReintentar(item) { return !item._retryAt || Date.now() >= item._retryAt; }
+
+// Timbre propio: consulta versiones ligeras al servidor actual, sin otro servicio.
+let _sumetecTimbre = { ultimo: {}, callback: null, respaldo: null, observando: false, intervalo: null, consultando: false };
+function _sumetecTimbreAplicar_(recibidos) {
+  if (!recibidos || typeof recibidos !== 'object') return;
+  const cambiados = [];
+  for (const tema of ['datos', 'catalogo', 'erp', 'configuracion', 'pendientes', 'resumen']) {
+    const valor = recibidos[tema];
+    if (valor === null || valor === undefined || !Number.isFinite(Number(valor))) continue;
+    const version = String(valor);
+    if (_sumetecTimbre.ultimo[tema] !== version) {
+      _sumetecTimbre.ultimo[tema] = version;
+      cambiados.push(tema);
+    }
+  }
+  if (cambiados.length && _sumetecTimbre.callback) {
+    try { _sumetecTimbre.callback(cambiados); } catch (_) { /* el aviso no afecta la captura */ }
+  }
+}
+async function _sumetecTimbreRespaldo_() {
+  if (document.hidden || !_sumetecTimbre.respaldo || _sumetecTimbre.consultando) return false;
+  _sumetecTimbre.consultando = true;
+  try { const r=await _sumetecTimbre.respaldo(); if(!r)return false; _sumetecTimbreAplicar_(r); return true; } catch (_) { return false; }
+  finally { _sumetecTimbre.consultando = false; }
+}
+function sumetecEscucharTimbre(alCambiar, respaldo) {
+  _sumetecTimbre.callback = typeof alCambiar === 'function' ? alCambiar : null;
+  _sumetecTimbre.respaldo = typeof respaldo === 'function' ? respaldo : null;
+  if (!_sumetecTimbre.observando) {
+    _sumetecTimbre.observando = true;
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) _sumetecTimbreRespaldo_();
+    });
+  }
+  if (!_sumetecTimbre.intervalo && typeof SumetecSync !== 'undefined') {
+    _sumetecTimbre.intervalo = SumetecSync.reloj(_sumetecTimbreRespaldo_);
+  }
+  return true;
+}
+
+async function sumetecVersionesTimbre(url, token) {
+  if (!url || !token || (typeof navigator !== 'undefined' && !navigator.onLine)) return null;
+  try {
+    const res = await sumetecFetchLimite(url, {method:'POST', headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({tipo:'ping', token})}, 12000);
+    const r = await res.json();
+    if (!r || r.ok !== true) return null;
+    return {datos:r.ver, catalogo:r.catVer, erp:r.erpVer,
+      configuracion:r.configVer, pendientes:r.pendientesVer, resumen:r.resumenVer};
+  } catch (_) { return null; }
 }

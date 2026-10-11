@@ -28,7 +28,7 @@
   🛟 Antes de cambios grandes, haz primero una copia de seguridad de este archivo.
 ═══════════════════════════════════════════════════════════════════════════
 -->
-<html lang="es" data-app="cotizador">
+<html data-sync-app="cotizador" lang="es" data-app="cotizador">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -815,7 +815,6 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
     </div>
     <div class="sumetec-acceso-campos">
       <div class="sumetec-acceso-campo sumetec-acceso-campo--principal"><label for="tg_nombre">Tu nombre</label><input id="tg_nombre" type="text" autocomplete="name" placeholder="Tu nombre" oninput="_tgSyncBtn()"></div>
-      
       <div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="tg_codigo">Código de vinculación</label><input id="tg_codigo" type="text" maxlength="8" autocomplete="off" placeholder="8 caracteres" oninput="_tgSyncBtn()"></div><details class="sumetec-acceso-alternativa"><summary>Tengo un token de acceso</summary><div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="tg_input">Token de acceso</label><input id="tg_input" type="password" autocomplete="off" placeholder="Token de acceso" oninput="_tgSyncBtn()"></div></details>
     </div>
     <div id="tg_error" class="sumetec-acceso-error" role="alert" aria-live="polite" style="display:none"></div>
@@ -1409,6 +1408,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 </div></div>
 
 <div class="toast" id="toast"></div>
+<script src="./sync_cliente.js"></script>
 <script src="./acceso.js"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════════
@@ -1656,7 +1656,7 @@ async function procesarColaCancel(){
   try{
     let ok=0;
     for(const item of [...cola]){
-      if(item._detenido)continue;
+      if(item._detenido||!sumetecPuedeReintentar(item))continue;
       try{
         const res=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
           body:JSON.stringify({tipo:'cancelar_remision',token:API_TOKEN,id:item.id,folio:item.folio,
@@ -1864,6 +1864,7 @@ function actualizarUltimaSync(){actualizarPanelConexion();}
 let _ultimaRevisionExcepciones=0;
 async function heartbeat(){
   if(_hbEnCurso)return;
+  _hbUltimaConsulta=Date.now();
   _hbEnCurso=true;
   _chequearAlmacenamiento(); // #6: avisa si la memoria del navegador se está llenando
   _repararERPAuto_(); // ventas que no llegaron al ERP se reenvían solas, con espera creciente
@@ -2012,7 +2013,17 @@ async function _pedirAlmacenamientoPersistente(){
     await navigator.storage.persist();
   }catch(_){ /* sin soporte: no pasa nada, comportamiento anterior */ }
 }
-function startHeartbeat(){heartbeat();_hbTimer=setInterval(heartbeat,10000);}
+let _hbUltimaConsulta=0, _hbUltimaActividad=Date.now();
+function _heartbeatProgramado(){
+  if(document.hidden)return;
+  const ahora=Date.now();
+  const activo=ahora-_hbUltimaActividad<120000;
+  if(ahora-_hbUltimaConsulta<(activo?30000:120000))return;
+  _hbUltimaConsulta=ahora;
+  heartbeat();
+}
+['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{_hbUltimaActividad=Date.now();},{passive:true}));
+function startHeartbeat(){heartbeat();_hbTimer=SumetecSync.reloj(async()=>{await heartbeat();return ESTADO_HEARTBEAT==='conectado'||ESTADO_HEARTBEAT==='online';});}
 window.addEventListener('online',()=>{heartbeat();setTimeout(procesarColaElim,900);setTimeout(procesarColaRemisiones,1500);setTimeout(procesarCola,2100);setTimeout(procesarColaPDF,2700);setTimeout(_procesarColaCotR,3300);setTimeout(procesarColaNuevos,3600);setTimeout(procesarColaCancel,3900);});
 window.addEventListener('offline',()=>setOnlineState(false));
 
@@ -2029,7 +2040,7 @@ function _pendientesTotal(){
        +leerSeguro('cola_cot_r',[]).length // cotizaciones pendientes
        +leerSeguro('cola_nuevos',[]).length // clientes/productos nuevos pendientes
        +leerSeguro('cola_cancel',[]).length
-       +leerSeguro('cola_resultado_cot',[]).length; // resultados de cotización pendientes
+       +leerSeguro('cola_resultado_cot',[]).length+leerSeguro('cola_devoluciones',[]).length; // resultados de cotización pendientes
 }
 // Al minimizar/cambiar de app: si hay señal, intenta vaciar las colas en segundo plano
 // (clave en iPhone, que puede borrar los datos tras ~7 días sin abrir la app).
@@ -2075,12 +2086,42 @@ function _escrituraOrdenada(tarea){
   _escrituraTurno=actual.catch(()=>{});
   return actual;
 }
+let _buzonDisponible=null;
+async function _enviarConBuzon_(url,documento){
+  const post=async cuerpo=>{
+    const respuesta=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(cuerpo)});
+    return respuesta.json();
+  };
+  const directo=()=>sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(documento)});
+  if(_buzonDisponible===false)return directo();
+  // Los datos de reintento son del teléfono y cambian; el documento durable no.
+  const limpio={};
+  for(const k of Object.keys(documento))if(k[0]!=='_'&&k!=='token')limpio[k]=documento[k];
+  // Una celda de Sheets no puede guardar este documento; la ruta habitual sí.
+  if(JSON.stringify(limpio).length>45000)return directo();
+  const emular=d=>({ok:true,status:200,json:async()=>d});
+  const recibido=await post({tipo:'buzon_recibir',documento:limpio});
+  if(recibido?.codigo==='BUZON_DOCUMENTO_GRANDE')return directo();
+  if(!recibido?.ok&&(
+    recibido?.codigo==='BUZON_NO_ACTIVO'||
+    /tipo desconocido|no autorizado/i.test(String(recibido?.error||'')))){
+    _buzonDisponible=false;return directo();
+  }
+  _buzonDisponible=true;
+  if(!recibido?.ok)return emular(recibido?.estado==='CONFLICTO_ID'?{...recibido,conflict:true}:recibido);
+  const reintentarCaja=recibido.estado==='RECHAZADO'&&recibido.resultado?.cajaConflicto===true;
+  if(recibido.estado==='APLICADO'||recibido.estado==='RECHAZADO'&&!reintentarCaja)return emular(recibido.resultado);
+  _estado('📥 Documento recibido; esperando aplicación en el servidor');
+  const aplicado=await post({tipo:'buzon_procesar',id:recibido.id,...(reintentarCaja?{reintentarCaja:true}:{})});
+  if(aplicado?.ok&&(aplicado.estado==='APLICADO'||aplicado.estado==='RECHAZADO'))return emular(aplicado.resultado);
+  return emular({ok:false,buzonPendiente:true,error:'Documento recibido; reintenta hasta confirmar su aplicación'});
+}
 async function bajarCobros(){
   if(!isOnline||_bajandoCobros)return;
   const url=getScriptUrl();if(!url)return;
   _bajandoCobros=true;
   try{
-    const r=await sumetecFetchLimite(url+'?tipo=cobros_pendientes',{cache:'no-store'},4000);   // el límite cubre también la lectura del cuerpo
+    const r=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'cobros_pendientes',token:API_TOKEN}),cache:'no-store'},60000);   // el límite cubre también la lectura del cuerpo
     const d=await r.json();
     if(d&&d.ok&&Array.isArray(d.cobros)){
       guardarSeguro('cache_cobros',JSON.stringify(d.cobros));
@@ -2423,12 +2464,12 @@ function _urlAppsScriptValida(u){
       }
       // R-04: red de seguridad contra conexiones "colgadas" (con señal pero sin respuesta).
       // Si la llamada NO trae su propio AbortController (ping/cobros sí lo traen), límite de
-      // 25s — mayor que el waitLock(15s) del servidor + su proceso. Al vencer, la llamada
+      // 30s — mayor que el waitLock(15s) del servidor + su proceso. Al vencer, la llamada
       // falla y el ítem QUEDA en su cola para reintentar. Seguro: registrarPago/Remision son
       // idempotentes por UUID, así que un reintento no duplica.
       if(!init.signal){
         const _ctrl=new AbortController();
-        const _tid=setTimeout(()=>_ctrl.abort(),25000);
+        const _tid=setTimeout(()=>_ctrl.abort(),30000);
         init={...init,signal:_ctrl.signal};
         return _f(input,init).finally(()=>clearTimeout(_tid));
       }
@@ -2658,9 +2699,9 @@ async function procesarColaNuevos(){
   _procNuevosEnCurso=true;
   try{
     for(const e of cola.slice()){
-      if(e._detenido)continue;   // el servidor lo rechazó varias veces: se conserva, pero ya no frena a los demás
+      if(e._detenido||!sumetecPuedeReintentar(e))continue;   // conserva el pendiente sin saturar al servidor
       try{
-        const {_k,_try,_srv,_lastError,_detenido,...payload}=e;
+        const {_k,_try,_srv,_lastError,_detenido,_retryAt,...payload}=e;
         const res=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
           body:JSON.stringify({...payload,token:API_TOKEN})});
         const d=await res.json();
@@ -2982,7 +3023,7 @@ async function procesarColaPDF(){
     const remsGuardadas=leerSeguro('r_rems',[]);
     let ok=0; const huerfanos=[];
     for(const entry of [...cola]){
-      if(entry._conflict||entry._detenido)continue;
+      if(entry._conflict||entry._detenido||!sumetecPuedeReintentar(entry))continue;
       const rem=remisiones.find(x=>String(x.id)===String(entry.id))
               ||remsGuardadas.find(x=>String(x.id)===String(entry.id));
       if(!rem||!rem.data){
@@ -3919,10 +3960,9 @@ async function procesarColaRemisiones(){
     const ordenada=[...cola].sort((a,b)=>(a.ts||0)-(b.ts||0));
     let ok=0;
     for(const item of ordenada){
-      if(item._conflict||item._detenido)continue;
+      if(item._conflict||item._detenido||!sumetecPuedeReintentar(item))continue;
       try{
-        const res=await _escrituraOrdenada(()=>sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({tipo:'remision',...item})}));
+        const res=await _escrituraOrdenada(()=>_enviarConBuzon_(url,{tipo:'remision',...item,_retryAt:undefined}));
         if(res.ok){
           const d=await res.json();
           if(d&&d.ok){
@@ -4702,7 +4742,7 @@ async function exportarCobrosCSV(){
       const url=getScriptUrl();
       const ctrl=new AbortController();
       const t=setTimeout(()=>ctrl.abort(),8000);
-      const r=await fetch(url+'?tipo=cobros_pendientes',{signal:ctrl.signal,cache:'no-store'});
+      const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'cobros_pendientes',token:API_TOKEN}),signal:ctrl.signal,cache:'no-store'});
       clearTimeout(t);
       const d=await r.json();
       if(d&&d.ok&&Array.isArray(d.cobros)){ cobros=d.cobros; origen='servidor en vivo'; }
@@ -5178,6 +5218,69 @@ function _pipelineHTML(r){
     +chip(p.guardado,'Guardado')+chip(p.registrado,'Registrado')+chip(p.pdf,'PDF')+chip(p.erp,'ERP')
     +'</div>';
 }
+
+// Devoluciones parciales: conserva la solicitud antes del envío y su mismo UUID.
+function _colaDevoluciones(){return leerSeguro('cola_devoluciones',[]);}
+let _enviandoDevoluciones=false;
+async function _postDevolucion(d){
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),30000);
+ try{return await fetch(getScriptUrl(),{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...d,token:API_TOKEN}),signal:ctrl.signal}).then(r=>r.json());}
+ finally{clearTimeout(timer);}
+}
+async function reenviarDevoluciones(manual){
+ if(_enviandoDevoluciones||!navigator.onLine||!API_TOKEN)return;
+ _enviandoDevoluciones=true;
+ try{
+  for(const d of _colaDevoluciones()){
+   if(!manual&&(d.detenido||Date.now()<Number(d.reintentarEn||0)))continue;
+   const {error,reintentarEn,detenido,estadoServidor,...limpio}=d;
+   let r;try{r=await _postDevolucion(limpio);}catch(e){r={error:'Sin respuesta; la devolución sigue pendiente'};}
+   const cola=_colaDevoluciones();
+   if(r.ok&&r.estado==='APLICADO'){
+    guardarSeguro('cola_devoluciones',JSON.stringify(cola.filter(x=>x.id!==d.id)));
+    const rems=leerSeguro('r_rems',[]),plan=r.plan;
+    rems.forEach(x=>{if(String(x.folio)===d.documento){x.total=plan.totalDespues;x.saldo=Math.max(0,Number(x.saldo||0)-plan.monto);x._soloLecturaRemota=true;x._tieneDevolucion=true;}});
+    guardarSeguro('r_rems',JSON.stringify(rems));
+    toast('Devolución registrada. Crédito: '+fmt(plan.monto)+'; dinero devuelto: '+fmt(plan.reembolso),'ok');
+   }else{
+    guardarSeguro('cola_devoluciones',JSON.stringify(cola.map(x=>x.id===d.id?{...x,error:r.error||'No aplicada',reintentarEn:Date.now()+30000,estadoServidor:r.estado||'',detenido:['RECHAZADO','CONFLICTO_ID'].includes(r.estado)}:x)));
+    if(manual)toast(r.error||'Devolución pendiente','err');
+   }
+  }
+ }finally{_enviandoDevoluciones=false;}
+}
+async function abrirDevolucionParcial(folio){
+ try{
+  const pendiente=_colaDevoluciones().find(x=>x.documento===folio);
+  if(pendiente&&pendiente.estadoServidor==='RECHAZADO'){if(confirm('El servidor rechazó esta devolución sin aplicarla. ¿Descartarla y volver a consultar?')){guardarSeguro('cola_devoluciones',JSON.stringify(_colaDevoluciones().filter(x=>x.id!==pendiente.id)));return abrirDevolucionParcial(folio);}return;}
+  if(pendiente){if(confirm('Esta devolución sigue pendiente: '+(pendiente.error||'enviar')+'. ¿Reintentar la misma operación?'))await reenviarDevoluciones(true);return;}
+  if(!navigator.onLine)throw Error('Conecta para consultar las cantidades disponibles antes de devolver.');
+  const r=await _postDevolucion({tipo:'detalle_devolucion',folio});if(!r.ok)throw Error(r.error);
+  const hdr=r.hdr,qi=hdr.indexOf('Cant.'),di=hdr.indexOf('Descripción'),ci=hdr.indexOf('Código');
+  const dlg=document.createElement('dialog');dlg.style.maxWidth='520px';dlg.style.width='90%';dlg.style.maxHeight='90vh';dlg.style.overflow='auto';
+  dlg.innerHTML=`<form><h2>Devolución parcial · ${esc(folio)}</h2><p>El crédito baja la deuda; el exceso de lo cobrado se devuelve al cliente.</p>${r.filas.map((f,i)=>Number(f.valores[qi])>0?`<label style="display:block;margin:10px 0">${esc(String(f.valores[ci]))} · ${esc(String(f.valores[di]))}<input data-indice="${i}" type="number" min="0" max="${Number(f.valores[qi])}" step="1" value="0" aria-label="Cantidad a devolver de ${escAttr(String(f.valores[ci]))}"></label>`:'').join('')}<label>Motivo <input name="motivo" required></label><label>Fecha <input name="fecha" type="date" value="${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}" required></label><label>Cómo se devuelve el dinero <input name="metodo" value="EFECTIVO" required></label><p role="status"></p><button>Registrar devolución</button><button type="button" data-cancelar>Cancelar</button></form>`;
+  document.body.appendChild(dlg);dlg.showModal();dlg.addEventListener('close',()=>dlg.remove());dlg.querySelector('[data-cancelar]').onclick=()=>dlg.close();
+  const actualizarPrevia=()=>{
+   const entradas=[...dlg.querySelectorAll('[data-indice]')],cantidades=new Map(entradas.map(x=>[Number(x.dataset.indice),Number(x.value)]));
+   const base=r.filas.map((f,i)=>({qty:Number(f.valores[qi])-(cantidades.get(i)||0),precio:Number(f.valores[hdr.indexOf('P. Esp.')]),iva:Number(f.valores[hdr.indexOf('IVA línea')]===''||f.valores[hdr.indexOf('IVA línea')]===undefined?f.valores[hdr.indexOf('IVA %')]:f.valores[hdr.indexOf('IVA línea')]),regalo:['SI','SÍ'].includes(String(f.valores[hdr.indexOf('Regalo')]).toUpperCase())}));
+   const primera=r.filas[0].valores,pct=primera[hdr.indexOf('Descuento %')]===''?Number(primera[hdr.indexOf('Descuento')])*100/Number(primera[hdr.indexOf('Subtotal')]):Number(primera[hdr.indexOf('Descuento %')]);
+   const total=_calcTot(base,pct,false).tot;
+   const credito=Math.max(0,Math.round((r.total-total)*100)/100),reembolso=Math.max(0,Math.round((credito-r.saldo)*100)/100);
+   dlg.querySelector('[role=status]').textContent='Crédito: '+fmt(credito)+' · Dinero a devolver: '+fmt(reembolso);
+  };
+  dlg.querySelectorAll('[data-indice]').forEach(x=>x.oninput=actualizarPrevia);actualizarPrevia();
+  dlg.querySelector('form').onsubmit=async e=>{
+   e.preventDefault();const f=e.target;
+   const lineas=[...f.querySelectorAll('[data-indice]')].filter(x=>Number(x.value)>0).map(x=>({indice:Number(x.dataset.indice),cantidad:Number(x.value)}));
+   if(!lineas.length){f.querySelector('[role=status]').textContent='Elige al menos una cantidad';return;}
+   const d={id:crypto.randomUUID(),tipo:'devolucion_parcial',documento:folio,huella:r.huella,lineas,fecha:f.elements.fecha.value,metodo:f.elements.metodo.value,motivo:f.elements.motivo.value};
+   guardarSeguro('cola_devoluciones',JSON.stringify(_colaDevoluciones().concat(d)));dlg.close();await reenviarDevoluciones(true);verHist();
+  };
+ }catch(e){toast(e.message,'err');}
+}
+window.addEventListener('online',()=>reenviarDevoluciones(false));
+setInterval(()=>{if(!document.hidden)reenviarDevoluciones(false);},30000);
+
 function renderRems(list){
   const div=document.getElementById('remList');
   if(!list.length){
@@ -5197,7 +5300,7 @@ function renderRems(list){
       ?`<button class="btn" style="padding:4px 8px;font-size:11px;background:#e0f0ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:6px" onclick="event.stopPropagation();modificarRem('${r.id}')" title="Modificar">✏️</button>`
       :'';
     // MC-28 (2026-09-16): reenviar el PDF sin tener que abrir la remisión primero.
-    const accionPDF=tieneItems
+    const accionPDF=tieneItems&&!r._tieneDevolucion
       ?`<button class="btn" style="padding:4px 8px;font-size:11px;background:#fef3e8;color:#b45309;border:1px solid #fde3c2;border-radius:6px" onclick="event.stopPropagation();reenviarPDFHistorial('${r.id}')" title="Descargar/reenviar PDF">📄</button>`
       :'';
     const accionCancelar=r.estado!=='cancelada'&&!_esRemisionSoloConsulta(r)
@@ -5207,6 +5310,8 @@ function renderRems(list){
     const accionTraza=!String(r.folio||'').startsWith('TMP-')
       ?`<button class="btn" style="padding:4px 8px;font-size:11px;background:#f3f0ff;color:#5b21b6;border:1px solid #ddd6fe;border-radius:6px" onclick="event.stopPropagation();abrirTrazabilidad('${escAttr(r.folio)}')" title="Trazabilidad">🔎</button>`
       :'';
+    const accionDevolver=r.estado!=='cancelada'&&!String(r.folio||'').startsWith('TMP-')
+      ?`<button class="btn" title="Devolución parcial" onclick="event.stopPropagation();abrirDevolucionParcial('${escAttr(r.folio)}')">↩️</button>`:'';
     // Las del servidor ya se pueden abrir: se baja su detalle completo de Drive.
     const onclick=esServidor
       ?`onclick="abrirRemisionRemota('${escAttr(r.folio)}')"`
@@ -5219,7 +5324,7 @@ function renderRems(list){
     return`<div class="rem-i" ${onclick} style="${esServidor?'cursor:pointer':''}">
       <div class="rem-i-hd">
         <div class="rem-fo">${r.folio}</div>
-        <div class="rem-i-actions">${accionCobrar}${accionModificar}${accionPDF}${accionCancelar}${accionTraza}</div>
+        <div class="rem-i-actions">${accionCobrar}${accionModificar}${accionPDF}${accionCancelar}${accionTraza}${accionDevolver}</div>
       </div>
       ${etiqueta?`<div style="margin-top:2px">${etiqueta}</div>`:''}
       <div style="flex:1;min-width:0">
@@ -5419,7 +5524,7 @@ async function procesarColaElim(){
   _procElimEnCurso=true;
   try{
     for(const e of cola.slice()){
-      if(e._detenido)continue;
+      if(e._detenido||!sumetecPuedeReintentar(e))continue;
       try{
         const res=await sumetecFetchLimite(getScriptUrl(),{method:'POST',headers:{'Content-Type':'text/plain'},
           body:JSON.stringify({tipo:'eliminar_remision',folio:e.folio,id:e.id})});
@@ -8033,7 +8138,8 @@ function renderPagos(){
         // en el ERP (no existe ese Pago allá) y solo desincroniza el saldo
         // hasta la próxima publicación. Un abono/pago_completo hecho en el
         // celular sí se puede anular normal, sea de una remisión del ERP o no.
-        const btnAnular=(!estaAnulado&&p.tipo!=='ajuste_erp')?"<button class='anular-btn' onclick='abrirAnulacion(\""+p.uuid+"\")'>Anular</button>":'';
+        const btnAnular=(!estaAnulado&&p.tipo!=='ajuste_erp'&&p.tipo!=='devolucion')?"<button class='anular-btn' onclick='abrirAnulacion(\""+p.uuid+"\")'>Anular</button>":'';
+        if(p.tipo==='devolucion')return "<div class='pago-row'>Devolución al cliente: "+fmt(Math.abs(p.monto))+" MXN &mdash; "+esc(p.fecha)+"</div>";
         if(p.tipo==='pago_completo')
           return "<div class='pago-row "+(estaAnulado?'pago-anulado':'pago-completo')+"'>Pago completo: "+fmt(p.monto)+" MXN &mdash; "+p.fecha+btnAnular+"</div>";
         return "<div class='pago-row "+(estaAnulado?'pago-anulado':'pago-abono')+"'>Abono: "+fmt(p.monto)+" MXN &middot; Saldo: "+fmt(p.saldo_despues)+" MXN &middot; "+p.fecha+btnAnular+"</div>";
@@ -8193,6 +8299,7 @@ function _alertarNoAutorizado(d){
 //   ok:false + yaPagada     → el otro dispositivo ya la cobró → NO duplicar
 function _resolverRespuestaPago(r,pago,d){
   if(!d) return false;
+  if(d.buzonPendiente){_estado('📥 Cobro recibido; esperando aplicación en el servidor');return false;}
   if(d.ok){
     if(d.ajustado && d.montoRegistrado!=null){
       const nuevo=Math.round((+d.montoRegistrado)*100)/100;
@@ -8273,11 +8380,10 @@ async function procesarCola(){
   try{
     let enviados=0;
     for(const item of [...cola]){
-      if(item._detenido)continue;   // 2026-09-29: ya se intentó lo suficiente; espera «Reintentar» en Estado del sistema
+      if(item._detenido||!sumetecPuedeReintentar(item))continue;
       try{
-        const res=await _escrituraOrdenada(()=>sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({tipo:'actualizar_remision',id:item.id||'',folio:item.folio,saldo:item.saldo,estado:item.estado,pago:item.pago,device:item.device})
-        }));
+        const res=await _escrituraOrdenada(()=>_enviarConBuzon_(url,
+          {tipo:'actualizar_remision',id:item.id||'',folio:item.folio,saldo:item.saldo,estado:item.estado,pago:item.pago,device:item.device}));
         const d=await res.json();
         // Reconciliar contra la remisión local correcta (maneja sobrecobro: ajustado / ya_pagada)
         const remLoc=remisiones.find(x=>String(x.id)===String(item.id)||x.folio===item.folio)||null;
@@ -8422,7 +8528,7 @@ function _bumpTry(clave,pred,motivo,servidor,inmediato){
 function _reintentarDetenidos(){
   ['cola_remisiones','cola_pdf','cola_offline','cola_cot_r','cola_elim','cola_nuevos','cola_cancel','cola_resultado_cot'].forEach(clave=>{
     const cola=leerSeguro(clave,[]); let ch=false;
-    cola.forEach(e=>{ if(e._detenido){ delete e._detenido; e._srv=0; e._try=0; ch=true; } });
+    cola.forEach(e=>{ if(e._detenido){ delete e._detenido; e._srv=0; e._try=0; delete e._retryAt; ch=true; } });
     if(ch) guardarSeguro(clave,JSON.stringify(cola));
   });
   _reintentarTodo();
@@ -8504,6 +8610,11 @@ function verEstado(){
 }
 function _reintentarTodo(){
   if(!isOnline){toast('Sin conexión — se reintentará solo al volver la señal','warn',4000);return;}
+  ['cola_remisiones','cola_pdf','cola_offline','cola_cot_r','cola_elim','cola_nuevos','cola_cancel','cola_resultado_cot'].forEach(clave=>{
+    const cola=leerSeguro(clave,[]);let ch=false;
+    cola.forEach(e=>{if(e._retryAt){delete e._retryAt;ch=true;}});
+    if(ch)guardarSeguro(clave,JSON.stringify(cola));
+  });
   toast('🔄 Reintentando envíos…','ok',3000);
   procesarColaElim();procesarColaRemisiones();procesarCola();procesarColaPDF();_procesarColaCotR();procesarColaNuevos();procesarColaCancel();_procesarColaResultadoCot();
   _reintentarERP(); // C-02: reenvía las ventas que no llegaron al ERP
@@ -8604,7 +8715,10 @@ function _resolverConflicto_(id,cola,conservar){
   if(!item)return;
   if(conservar){
     if(!confirm('Tu versión REEMPLAZARÁ lo que cambió el otro equipo en '+(item.folio||'esta remisión')+'. ¿Continuar?'))return;
-    delete item._conflict;item._srv=0;item._try=0;delete item._detenido;
+    delete item._conflict;item._srv=0;item._try=0;delete item._detenido;delete item._retryAt;
+    // La revisión aceptada cambia el documento: el buzón conserva el rechazo
+    // anterior bajo su ID y esta decisión necesita una operación nueva.
+    item.operationId=globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2);
     const rem=remisiones.find(x=>String(x.id)===String(item.id));
     if(item._revServidor!=null){
       if(cola==='cola_remisiones')item.expectedRevision=item._revServidor;
@@ -9469,13 +9583,14 @@ async function _procesarColaCotR(){
   _procCotEnCurso=true;
   try{
   for(const entry of [...cola]){
+    if(entry._detenido||!sumetecPuedeReintentar(entry))continue;
     try{
       let folio=entry.folio, b64=entry.pdf;
       // El PDF ya no se guarda en localStorage → se regenera aquí desde los datos.
       // Si jsPDF aún no cargó, dejar la cotización en la cola y reintentar luego.
       if(!b64 && !window.jspdf){ continue; }
       if(String(folio).startsWith('TMP-')){
-        const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'folio',token:API_TOKEN})}).then(x=>x.json()).catch(()=>null);
+        const r=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'folio',token:API_TOKEN})}).then(x=>x.json()).catch(()=>null);
         if(r&&r.folio){ folio=r.folio; }
       }
       if(!b64 && window.jspdf && entry.data){
@@ -10628,15 +10743,18 @@ function _cotEstadoBadge(entry){
     _procResultadoCotEnCurso=true;
     try{
       for(const t of cola){
+        if(t._detenido||!sumetecPuedeReintentar(t))continue;
         try{
-          const r=await _escrituraOrdenada(()=>fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},
+          const r=await _escrituraOrdenada(()=>sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
             body:JSON.stringify({tipo:'cotizacion_resultado',token:API_TOKEN,folio:t.folio,resultado:t.resultado,operationId:t.operationId})}).then(x=>x.json()));
           if(r&&r.ok){
             const rest=leerSeguro('cola_resultado_cot',[]).filter(x=>x.folio!==t.folio ||
               (x.operationId||String(x.ts)+'|'+x.resultado)!==(t.operationId||String(t.ts)+'|'+t.resultado));
             guardarSeguro('cola_resultado_cot',JSON.stringify(rest));
+          }else{
+            _bumpTry('cola_resultado_cot',e=>e.folio===t.folio&&e.operationId===t.operationId,sumetecMotivoRespuesta(r,'respuesta sin ok del servidor'),!sumetecFalloTransitorio(r));
           }
-        }catch(e){ console.warn('_procesarColaResultadoCot',e); }
+        }catch(e){ _bumpTry('cola_resultado_cot',x=>x.folio===t.folio&&x.operationId===t.operationId,'sin respuesta del servidor',false);console.warn('_procesarColaResultadoCot',e); }
       }
       actualizarBadgePendientes();
     }finally{_procResultadoCotEnCurso=false;}

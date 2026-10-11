@@ -11,7 +11,7 @@ let _comprasUltimoError = '';
 
 function estado() {
   const el = $('#estado');
-  const pendientes = leer(COLAS.compras).length;
+  const pendientes = leer(COLAS.compras).length + (typeof _leerAbonosCompra_==='function'?_leerAbonosCompra_().length:0);
   const fijar = (variante, texto) => {
     el.className = 'sm-chip sm-chip-boton' + (variante ? ' sm-chip--' + variante : '');
     el.innerHTML = `<span class="sm-chip-punto"></span>${texto}`;

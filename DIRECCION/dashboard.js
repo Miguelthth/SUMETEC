@@ -113,6 +113,17 @@ function _aplicarAccesoDireccion_(datos) {
 async function cargarDashboardDireccion(pin) {
   const url = localStorage.getItem('sumetec_direccion_url');
   const token = await abrirSesionDireccion(pin);
+  if(typeof _actualizarFormasCaja_==='function') _actualizarFormasCaja_().catch(()=>{});
+  if (typeof sumetecEscucharTimbre === 'function') sumetecEscucharTimbre(temas => {
+    if (!(typeof _pinVigente === 'function' && _pinVigente())) return;
+    if (temas.includes('resumen') && vistaActivaDireccion() === 'resumen') activarDashboardDireccion();
+    if(temas.includes('catalogo') && typeof _actualizarFormasCaja_==='function') _actualizarFormasCaja_().catch(()=>{});
+    if (temas.includes('catalogo') && vistaActivaDireccion() === 'inventario') cargarCatalogoInventario();
+    if (temas.includes('configuracion') && vistaActivaDireccion() === 'resumen') activarDashboardDireccion();
+  }, async () => {
+    if (!(typeof _pinVigente === 'function' && _pinVigente())) return null;
+    return sumetecVersionesTimbre(url, await abrirSesionDireccion(await pedirPinDireccion()));
+  });
   const r = await fetch(url, {
     method: 'POST', headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ tipo: 'dashboard_snapshot', token })

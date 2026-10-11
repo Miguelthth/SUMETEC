@@ -159,8 +159,8 @@ async function enviarComprasCampo(pin) {
   const fallos = [];   // {id, motivo, transitorio}: lo que el SERVIDOR contestó con error (2026-09-29, incidente REM-0020)
   try {
     for (const compra of leer(COLAS.compras)) {
-      if (compra.rechazo) continue;
-      const { rechazo, _try, _srv, _lastError, ...limpia } = compra;
+      if (compra.rechazo || !sumetecPuedeReintentar(compra)) continue;
+      const { rechazo, _try, _srv, _lastError, _retryAt, ...limpia } = compra;
       // D-02: «sin red» detiene el envío; una respuesta que no es JSON cuenta como fallo del servidor de ESTA
       // compra y se sigue con la siguiente (antes atoraba toda la cola sin marcarla nunca como detenida).
       const { r, sinRed } = await sumetecPostJsonSeguro(url, {
@@ -168,7 +168,7 @@ async function enviarComprasCampo(pin) {
         body: JSON.stringify({ ...limpia, tipo: 'compra_campo', token,
           device: localStorage.getItem('sumetec_compras_dispositivo') || '' })
       });
-      if (sinRed) break;   // sin red: lo ya confirmado se descuenta abajo y el resto sigue en cola
+      if (sinRed) { fallos.push({ id: compra.id, motivo: 'sin respuesta del servidor', transitorio: true }); break; }
       if (r.ok && (r.estado === 'CREADO' || r.estado === 'YA_EXISTIA')) {
         idsEnviados.push(compra.id);
         enviadasOk.push(compra);
@@ -206,15 +206,21 @@ async function enviarComprasCampo(pin) {
 async function procesarColaCompras(pedir) {
   const hayCompras = leer(COLAS.compras).some(c => !c.rechazo);
   const hayEquiv = _leerColaEquiv_().length > 0;
-  if (!hayCompras && !hayEquiv) return;
+  const hayAbonos = _leerAbonosCompra_().length > 0;
+  if (!hayCompras && !hayEquiv && !hayAbonos) return;
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
   if (!localStorage.getItem('sumetec_compras_url')) return;
   if (!pedir && !(typeof _pinVigente === 'function' && _pinVigente())) return;
   try {
     const pin = await pedirPinDireccion();
-    if (hayCompras) await enviarComprasCampo(pin);
+    if (hayCompras) {
+      await enviarComprasCampo(pin);
+      if (!leer(COLAS.compras).length) _comprasUltimoError = '';
+    }
     if (hayEquiv) await _enviarColaEquiv_(pin);
+    if(hayAbonos) await _enviarAbonosCompra_(pin);
   } catch (_) { /* se reintenta en el siguiente ciclo */ }
+  if (typeof document !== 'undefined') _actualizarBotonEnviar_();
   if (typeof estado === 'function') estado();
 }
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
@@ -281,6 +287,7 @@ function _htmlHistorialComprasDireccion_(items) {
     ${it.estado === 'RECHAZADA' ? `<small class="motivo" style="color:#c0392b">Motivo: ${_escHtmlCompra_(it.motivo)}</small>
       <button type="button" class="btn btn-outline-secondary" onclick="_reintentarCompra_('${_escHtmlCompra_(it.id)}')">Reintentar</button>
       <button type="button" class="btn btn-outline-secondary" onclick="_descartarCompra_('${_escHtmlCompra_(it.id)}')">Descartar</button>` : ''}
+    ${!['PENDIENTE_ENVIO','RECHAZADA','ANULADA'].includes(it.estado) ? `<button type="button" class="btn btn-outline-secondary" data-abonar-compra="${_escHtmlCompra_(it.id)}">Abonar / liquidar</button>` : ''}
     ${it.folio ? `<small class="folio">Folio ERP: ${_escHtmlCompra_(it.folio)}</small>` : ''}
     ${it.fecha ? `<small class="fecha">${_escHtmlCompra_(String(it.fecha).replace('T', ' '))}</small>` : ''}
   </li>`).join('');
@@ -297,7 +304,7 @@ function _htmlHistorialComprasDireccion_(items) {
 function _reintentarCompra_(id) {
   localStorage.setItem(COLAS.compras, JSON.stringify(leer(COLAS.compras).map(c => {
     if (c.id !== id) return c;
-    const y = { ...c, _srv: 0, _try: 0 }; delete y.rechazo; return y;
+    const y = { ...c, _srv: 0, _try: 0 }; delete y.rechazo; delete y._retryAt; return y;
   })));
   if (typeof procesarColaCompras === 'function') procesarColaCompras(true);
   _renderHistorialComprasDireccion_(); if (typeof estado === 'function') estado();
@@ -316,7 +323,10 @@ function _renderHistorialComprasDireccion_() {
   const el = document.querySelector('#historial-compras');
   if (!el) return;
   const items = _historialComprasDireccion_(leer(COLAS.compras), leer(CLAVE_HISTORIAL_COMPRAS), _leerSnapshotCacheDireccion_());
-  el.innerHTML = _htmlHistorialComprasDireccion_(items);
+  el.innerHTML = _htmlHistorialComprasDireccion_(items) + _htmlAbonosCompra_();
+  el.querySelectorAll('[data-abonar-compra]').forEach(b=>b.onclick=()=>_abrirAbonoCompra_(b.dataset.abonarCompra));
+  el.querySelectorAll('[data-descartar-abono]').forEach(b=>b.onclick=()=>{if(confirm('El servidor rechazó este abono y no lo aplicó. ¿Descartar para capturarlo de nuevo?')){localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().filter(x=>x.id!==b.dataset.descartarAbono)));_renderHistorialComprasDireccion_();if(typeof estado==='function')estado();}});
+  el.querySelectorAll('[data-reintentar-abono]').forEach(b=>b.onclick=()=>{localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().map(x=>x.id===b.dataset.reintentarAbono?{...x,_retryAt:0,detenido:false}:x))); procesarColaCompras(true);});
 }
 
 // Compras no tiene un Resumen propio (esa pantalla se quedó en Dirección) --
@@ -338,6 +348,7 @@ function _pintarListasCompras_() {
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   const dlp = document.getElementById('dl-proveedores-compra');
   if (dlp) dlp.innerHTML = l.proveedores.map(p => `<option value="${esc(p)}">`).join('');
+  document.querySelectorAll('#pagos-compra select.metodo').forEach(el=>{ const valor=el.value; el.innerHTML=_opcionesMetodoCompra_(valor); el.value=valor; });
   const dlc = document.getElementById('dl-productos-compra');
   if (dlc) dlc.innerHTML = l.productos.map(p => `<option value="${esc(p.c)}">${esc(p.d)}</option>`).join('');
 }
@@ -606,20 +617,21 @@ async function _enviarColaEquiv_(pin) {
   try {
     const token = await abrirSesionDireccion(pin);
     for (const par of [...cola]) {
-      if (par._detenido) continue;   // el servidor la rechazó varias veces: sigue guardada, ya no se manda sola
-      const { _try, _srv, _lastError, _detenido, ...limpio } = par;
+      if (par._detenido || !sumetecPuedeReintentar(par)) continue;
+      const { _try, _srv, _lastError, _retryAt, _detenido, ...limpio } = par;
       const { r, sinRed } = await sumetecPostJsonSeguro(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ tipo: 'registrar_equivalencia_campo', token, ...limpio }) });
-      if (sinRed) break;   // D-02: sin red se detiene; una respuesta ilegible cuenta como fallo de ESA equivalencia
-      if (r && !r.ok && !sumetecFalloTransitorio(r)) {
+      if (sinRed || (r && !r.ok)) {
         const nuevo = _leerColaEquiv_().map(x => {
           if (x.id !== par.id) return x;
           const y = { ...x };
-          if (sumetecAnotarFallo(y, sumetecMotivoRespuesta(r), true)) y._detenido = true;
+          if (sumetecAnotarFallo(y, sinRed ? 'sin respuesta del servidor' : sumetecMotivoRespuesta(r),
+            !sinRed && !sumetecFalloTransitorio(r))) y._detenido = true;
           return y;
         });
         localStorage.setItem(CLAVE_COLA_EQUIV, JSON.stringify(nuevo));
       }
+      if (sinRed) break;
       if (r && r.ok) {
         // No reescribir la fotografía tomada antes del fetch: durante el envío
         // pudo agregarse otra equivalencia. Se retira solo el ID confirmado de
@@ -634,6 +646,15 @@ async function _enviarColaEquiv_(pin) {
 async function _actualizarListasCompras_(pin) {
   const url = localStorage.getItem('sumetec_compras_url');
   if (!url || !navigator.onLine) { _pintarListasCompras_(); return; }
+  if (typeof sumetecEscucharTimbre === 'function') sumetecEscucharTimbre(temas => {
+    if (!(typeof _pinVigente === 'function' && _pinVigente())) return;
+    if (temas.includes('catalogo') || temas.includes('configuracion')) _actualizarListasCompras_(pin);
+    if (temas.includes('resumen')) _actualizarSnapshotCompras_(pin);
+    if (temas.includes('pendientes') && document.getElementById('pendFacturaCaja')) _cargarPendientesFactura_();
+  }, async () => {
+    if (!(typeof _pinVigente === 'function' && _pinVigente())) return null;
+    return sumetecVersionesTimbre(url, await abrirSesionDireccion(await pedirPinDireccion()));
+  });
   try {
     const token = await abrirSesionDireccion(pin);
     const pedir = tipo => fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
@@ -642,7 +663,8 @@ async function _actualizarListasCompras_(pin) {
     // Acceso (2026-10-09): minutos de bloqueo y equipos sin PIN que fijó el ERP. seguridad.js los consulta. Ver acceso.js.
     if (cfg && cfg.ok && cfg.datos && typeof sumetecAplicarAcceso === 'function') { try { sumetecAplicarAcceso('compras', cfg.datos.ACCESO); } catch (_) { } }
     const previa = _leerListasCompras_();
-    const out = { ts: Date.now(), proveedores: previa.proveedores, productos: previa.productos };
+    const out = { ts: Date.now(), proveedores: previa.proveedores, productos: previa.productos, formas: previa.formas || [] };
+    if(Array.isArray(listas)) out.formas=[...new Set(listas.filter(f=>String(f.CLASE||'').toUpperCase()==='FORMA').map(f=>String(f.NOMBRE||'').trim()).filter(Boolean))];
     // D-03: una lista vacía (o que pierde más de la mitad) del servidor NO pisa la copia buena del teléfono.
     if (Array.isArray(listas)) {
       const vistos = new Set();
@@ -697,11 +719,15 @@ function _filaLineaCompra() {
   </li>`;
 }
 
+function _opcionesMetodoCompra_(actual) {
+  const formas=[...new Set((_leerListasCompras_().formas||[]).concat(actual?[actual]:[]))];
+  return '<option value="">Elige cómo se pagó</option>'+formas.map(x=>`<option value="${_escHtmlCompra_(x)}">${_escHtmlCompra_(x)}</option>`).join('');
+}
 function _filaPagoCompra() {
   return `<li class="pago">
     <input placeholder="Fecha" aria-label="Fecha del pago" type="date" class="fecha form-control">
     <input placeholder="Monto" aria-label="Monto del pago" type="number" min="0.01" step="0.01" class="monto form-control">
-    <select aria-label="Método de pago" class="metodo form-select"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option><option>CHEQUE</option></select>
+    <select aria-label="Método de pago" class="metodo form-select" required>${_opcionesMetodoCompra_()}</select>
     <button type="button" aria-label="Eliminar pago" class="quitar btn btn-outline-secondary"><i class="bi bi-x-lg"></i></button>
   </li>`;
 }
@@ -1406,7 +1432,8 @@ async function _pendFacPedir_(cuerpo) {
   if (!url || !navigator.onLine) throw new Error('sin señal');
   const token = await PEND_FAC_APP.token();
   if (!token) throw new Error('falta vincular el teléfono');
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ ...cuerpo, token }) });
+  const pedir = typeof sumetecFetchLimite === 'function' ? sumetecFetchLimite : fetch;
+  const res = await pedir(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ ...cuerpo, token }) });
   return res.json();
 }
 
@@ -1424,9 +1451,20 @@ async function _cargarPendientesFactura_() {
 function _pendFacDecir_(texto) { const el = document.getElementById('pendFacEstado'); if (el) el.textContent = texto; }
 
 async function _pendFacContestar_(id, datos) {
-  const r = await _pendFacPedir_({ tipo: 'factura_recibida', id: crypto.randomUUID(), docTipo: PEND_FAC_APP.tipo, docId: id,
+  const clave = 'sumetec_pendfac_envio_' + PEND_FAC_APP.tipo + ':' + id;
+  const firma = JSON.stringify(datos);
+  let previo = null;
+  try { previo = JSON.parse(localStorage.getItem(clave) || 'null'); } catch (_) {}
+  if (previo && previo.firma !== firma) throw new Error('Primero confirma el envío anterior de este documento antes de cambiar su respuesta');
+  const envioId = previo && previo.firma === firma ? previo.id : crypto.randomUUID();
+  localStorage.setItem(clave, JSON.stringify({ id: envioId, firma }));
+  const r = await _pendFacPedir_({ tipo: 'factura_recibida', id: envioId, docTipo: PEND_FAC_APP.tipo, docId: id,
     device: PEND_FAC_APP.device(), ...datos });
-  if (!r || r.ok !== true) throw new Error((r && r.error) || 'el servidor no lo aceptó');
+  if (!r || r.ok !== true) {
+    localStorage.removeItem(clave);
+    throw new Error((r && r.error) || 'el servidor no lo aceptó');
+  }
+  localStorage.removeItem(clave);
   const c = _pendFacLeer_();
   c.filas.forEach(f => { if (f.tipo === PEND_FAC_APP.tipo && String(f.id) === String(id)) f.contestado = datos.uuidCfdi ? 'UUID' : 'SIN_UUID'; });
   localStorage.setItem(PEND_FAC_APP.claveCache, JSON.stringify(c));
@@ -1476,3 +1514,41 @@ async function _pendFacTengo_(id) {
   }
 }
 // ── fin PENDIENTES DE FACTURA ────────────────────────────────────────────────
+
+// Abonos posteriores: el documento original queda intacto; cada abono tiene su UUID.
+function _leerAbonosCompra_(){try{return JSON.parse(localStorage.getItem('sumetec_compras_abonos')||'[]');}catch(_){return [];}}
+function _htmlAbonosCompra_(){return _leerAbonosCompra_().map(x=>`<p role="status">Abono $${Number(x.monto).toFixed(2)}: ${_escHtmlCompra_(x.error||'pendiente de envío')} <button type="button" data-reintentar-abono="${_escHtmlCompra_(x.id)}">Reintentar</button>${x.estadoServidor==='RECHAZADO'?`<button type="button" data-descartar-abono="${_escHtmlCompra_(x.id)}">Descartar rechazado</button>`:''}</p>`).join('');}
+let _enviandoAbonosCompra=false;
+async function _enviarAbonosCompra_(pin){
+  if(_enviandoAbonosCompra)return; _enviandoAbonosCompra=true;
+  try{
+    const token=await abrirSesionDireccion(pin),url=localStorage.getItem('sumetec_compras_url');
+    for(const d of _leerAbonosCompra_()){
+      if(d.detenido||Date.now()<Number(d._retryAt||0))continue;
+      const {error,_retryAt,detenido,estadoServidor,...limpio}=d;
+      const {r,sinRed}=await sumetecPostJsonSeguro(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...limpio,token})});
+      const cola=_leerAbonosCompra_();
+      if(!sinRed&&r.ok&&r.estado==='APLICADO')localStorage.setItem('sumetec_compras_abonos',JSON.stringify(cola.filter(x=>x.id!==d.id)));
+      else localStorage.setItem('sumetec_compras_abonos',JSON.stringify(cola.map(x=>x.id===d.id?{...x,error:sinRed?'Sin respuesta':r.error,_retryAt:Date.now()+30000,estadoServidor:sinRed?'':r.estado,detenido:!sinRed&&['CONFLICTO_ID','RECHAZADO'].includes(r.estado)}:x)));
+      if(sinRed)break;
+    }
+  }finally{_enviandoAbonosCompra=false;_renderHistorialComprasDireccion_();if(typeof estado==='function')estado();}
+}
+async function _abrirAbonoCompra_(id){
+ try{
+  if(_leerAbonosCompra_().some(x=>x.documento===id))throw Error('Ya hay un abono pendiente para esta compra; reinténtalo antes de registrar otro.');
+  const pin=await pedirPinDireccion(),token=await abrirSesionDireccion(pin),url=localStorage.getItem('sumetec_compras_url');
+  const {r,sinRed}=await sumetecPostJsonSeguro(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'detalle_compra_campo',id,token})});
+  if(sinRed||!r.ok)throw Error(r&&r.error||'No se pudo consultar el saldo');
+  if(!(r.saldo>0))throw Error('Esta compra ya está liquidada');
+  const dlg=document.createElement('dialog');
+  dlg.innerHTML=`<form><h2>Abonar a ${_escHtmlCompra_(r.proveedor)}</h2><p>Saldo consultado: $${r.saldo.toFixed(2)}</p><label>Monto <input name="monto" type="number" min="0.01" max="${r.saldo}" step="0.01" value="${r.saldo}" required></label><label>Fecha <input name="fecha" type="date" value="${_fechaLocalDireccion_()}" required></label><label>Forma de pago <select name="metodo" required>${_opcionesMetodoCompra_()}</select></label><label>Referencia / nota <input name="motivo"></label><p role="status"></p><button>Guardar abono</button><button type="button" data-cancelar>Cancelar</button></form>`;
+  document.body.appendChild(dlg);dlg.showModal();dlg.addEventListener('close',()=>dlg.remove());dlg.querySelector('[data-cancelar]').onclick=()=>dlg.close();
+  dlg.querySelector('form').onsubmit=async e=>{
+   e.preventDefault();const f=e.target,monto=Number(f.elements.monto.value);
+   if(!Number.isFinite(monto)||monto<=0||monto>r.saldo)return;
+   const d={id:crypto.randomUUID(),tipo:'abono_compra_campo',documento:id,monto,fecha:f.elements.fecha.value,metodo:f.elements.metodo.value,motivo:f.elements.motivo.value};
+   localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().concat(d)));dlg.close();_renderHistorialComprasDireccion_();await _enviarAbonosCompra_(pin);
+  };
+ }catch(e){alert(e.message);}
+}

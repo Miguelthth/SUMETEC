@@ -51,7 +51,7 @@ function formularioCajaDireccion() {
   <div class="campos-mas" id="campos-mas-caja">
     <label class="form-label" for="caja-fecha">Fecha<input id="caja-fecha" class="form-control" name="fecha" type="date" required></label>
     <label class="form-label" for="caja-metodo">Método
-      <select id="caja-metodo" name="metodo" class="form-select"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option></select>
+      <select id="caja-metodo" name="metodo" class="form-select" required>${_opcionesFormasCaja_()}</select>
     </label>
     <label class="form-label" for="caja-referencia">Referencia (si aplica)<input id="caja-referencia" class="form-control" name="referencia"></label>
   </div>
@@ -109,14 +109,14 @@ async function enviarMovimientosDireccion(pin) {
     // La cola se vuelve a leer por cada movimiento y solo se quita el confirmado: mientras el envío
     // (uno por uno) está en curso se pudo capturar algo nuevo (hallazgo DIR-K01/H-01).
     for (const mov of leer(COLAS.movimientos)) {
-      if (mov.rechazo) continue;
-      const { rechazo, _try, _srv, _lastError, ...limpio } = mov;
+      if (mov.rechazo || !sumetecPuedeReintentar(mov)) continue;
+      const { rechazo, _try, _srv, _lastError, _retryAt, ...limpio } = mov;
       // D-02: sin red se detiene el envío; una respuesta que no es JSON cuenta como fallo de ESTE movimiento.
       const { r, sinRed } = await sumetecPostJsonSeguro(url, {
         method: 'POST', headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ ...limpio, tipo: 'movimiento_caja', token, origen: 'direccion' })
       });
-      if (sinRed) break;   // sin red: el resto sigue en la cola para el siguiente intento
+      if (sinRed) { _fallaServidorCola_(COLAS.movimientos, mov.id, 'sin respuesta del servidor', true); break; }
       // El servidor dedupe por id (registrarMovimientoCaja_): CREADO o YA_EXISTIA son los dos
       // resultados en los que el movimiento YA está registrado y puede salir de la cola.
       if (r.ok && (r.estado === 'CREADO' || r.estado === 'YA_EXISTIA')) _quitarDeCola_(COLAS.movimientos, mov.id);
@@ -138,12 +138,12 @@ async function enviarAnulacionesDireccion(pin) {
   _enviandoAnulaciones = true;
   try {
     for (const a of leer(COLAS.anulaciones)) {
-      if (a.rechazo) continue;
+      if (a.rechazo || !sumetecPuedeReintentar(a)) continue;
       const { r, sinRed } = await sumetecPostJsonSeguro(url, {
         method: 'POST', headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ tipo: 'anular_movimiento_caja', id: a.id, anulaA: a.anulaA, motivo: a.motivo, token, origen: 'direccion' })
       });
-      if (sinRed) break;
+      if (sinRed) { _fallaServidorCola_(COLAS.anulaciones, a.id, 'sin respuesta del servidor', true); break; }
       if (r.ok) _quitarDeCola_(COLAS.anulaciones, a.id);   // CREADO o YA_ANULADO: ya quedó corregido
       else if (/no existe|no encontrado/.test(String(r.error || ''))) _marcarRechazoCola_(COLAS.anulaciones, a.id, String(r.error));
       else _fallaServidorCola_(COLAS.anulaciones, a.id, sumetecMotivoRespuesta(r), sumetecFalloTransitorio(r));
@@ -341,7 +341,7 @@ function _pintarRechazadosCaja_(despuesDe) {
     const r2 = document.createElement('button');
     r2.type = 'button'; r2.className = 'btn btn-outline-secondary'; r2.textContent = 'Reintentar';
     r2.onclick = () => {
-      _guardarCola_(COLAS[k], leer(COLAS[k]).map(y => { if (y.id !== x.id) return y; const z = { ...y, _srv: 0, _try: 0 }; delete z.rechazo; return z; }));
+      _guardarCola_(COLAS[k], leer(COLAS[k]).map(y => { if (y.id !== x.id) return y; const z = { ...y, _srv: 0, _try: 0 }; delete z.rechazo; delete z._retryAt; return z; }));
       if (typeof procesarColaCaja === 'function') procesarColaCaja(true);
       p.remove();
     };
@@ -354,6 +354,7 @@ function activarCajaDireccion() {
   const f = document.querySelector('#form-caja');
   if (!f) return;
   f.fecha.value = _fechaLocalDireccion_();
+  _actualizarFormasCaja_().catch(()=>{});
 
   // Campos secundarios colapsados en celular (siempre visibles en
   // escritorio, ver estilos.css @media min-width:640px): solo Movimiento,
@@ -463,4 +464,16 @@ function activarCajaDireccion() {
   if (typeof _pinVigente === 'function' && _pinVigente()) {
     pedirPinDireccion().then(refrescarLista).catch(() => {});
   }
+}
+
+function _formasCaja_(){try{return JSON.parse(localStorage.getItem('sumetec_direccion_formas_pago')||'[]');}catch(_){return [];}}
+function _opcionesFormasCaja_(actual){const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');return '<option value="">Elige cómo se pagó</option>'+[...new Set(_formasCaja_().concat(actual?[actual]:[]))].map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');}
+async function _actualizarFormasCaja_(){
+ if(!navigator.onLine||!localStorage.getItem('sumetec_direccion_url')||!_pinVigente())return;
+ const token=await abrirSesionDireccion(await pedirPinDireccion());
+ const {r,sinRed}=await sumetecPostJsonSeguro(localStorage.getItem('sumetec_direccion_url'),{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'listas_gasto',token})});
+ if(sinRed||!Array.isArray(r))return;
+ const formas=[...new Set(r.filter(x=>String(x.CLASE||'').toUpperCase()==='FORMA').map(x=>String(x.NOMBRE||'').trim()).filter(Boolean))];
+ localStorage.setItem('sumetec_direccion_formas_pago',JSON.stringify(formas));
+ const el=document.getElementById('caja-metodo');if(el){const valor=el.value;el.innerHTML=_opcionesFormasCaja_(valor);el.value=valor;}
 }

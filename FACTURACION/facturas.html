@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-app="facturacion">
+<html data-sync-app="facturacion" lang="es" data-app="facturacion">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -431,6 +431,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 <script src="./ventas_erp_loader.js"></script>
 <script src="./pac_adapter.js"></script>
 <script src="./reportes_fiscales.js"></script>
+<script src="./sync_cliente.js"></script>
 <script src="./acceso.js"></script>
 <script>
 // "Act. software" (2026-09-11): VERSION_CODIGO viene de version.js (lo escribe
@@ -497,7 +498,7 @@ async function configurarTokenFact(){
   if (v) {
     const pin=await sumetecPedirPinToken('Facturación',true);
     if(pin===null)return;
-    await sumetecGuardarTokenCifrado('fact',v,pin);
+    await sumetecGuardarTokenCifrado('fact',v,pin);sumetecRecordarPin('fact',pin);
     localStorage.removeItem('sumetec_fact_token');
   } else sumetecOlvidarTokenCifrado('fact');
   _factTokenMem=v;
@@ -605,6 +606,37 @@ const api = {
     return _post({ tipo:'cancelar_factura', folio, motivo });
   }, // mejora #8
 };
+// Las escrituras por google.script.run también invalidan la lectura confirmada.
+['guardarClaveSat','guardarFiscal','facturar','cancelar'].forEach(nombre=>{
+ const escribir=api[nombre];api[nombre]=async function(...args){
+   try{return await escribir.apply(this,args);}finally{SumetecSync.invalidar();}
+ };
+});
+// Ambos contenedores usan el mismo cursor fiscal; google.script.run conserva su transporte.
+const URL_SYNC_FISCAL=URL_BACKEND_FACT || (_GAS?location.origin+location.pathname:'');
+async function leerFiscalSync(tema){
+ if(api.modo==='demo'||!_tokenFact())return null;
+ return SumetecSync.leer(URL_SYNC_FISCAL,_tokenFact(),'facturacion',tema,_GAS?d=>_run('syncCambiosApp')(d,_tokenFact()):undefined);
+}
+const lecturasFiscalesAntes={ventas:api.ventas,clientes:api.clientes,facturadas:api.facturadas,catalogoFiscal:api.catalogoFiscal};
+api.ventas=async function(mes){const filas=await leerFiscalSync('ventas');return filas===null?lecturasFiscalesAntes.ventas(mes):filas.filter(o=>{
+ const fecha=_parseFechaMX(o.Fecha);if(!fecha || isNaN(fecha.getTime()))return false;
+ const iso=_isoLocal(fecha);return typeof mes==='string'?iso.slice(0,7)===mes:(!mes || ((!mes.desde||iso>=mes.desde)&&(!mes.hasta||iso<=mes.hasta)));
+});};
+api.clientes=async()=>{const r=await leerFiscalSync('clientes_maestro');return r===null?lecturasFiscalesAntes.clientes():r;};
+api.facturadas=async()=>{const r=await leerFiscalSync('facturadas');return r===null?lecturasFiscalesAntes.facturadas():r;};
+api.catalogoFiscal=async()=>{const r=await leerFiscalSync('catalogo_fiscal');return r===null?lecturasFiscalesAntes.catalogoFiscal():r;};
+let ultimaHuellaFiscal='';
+SumetecSync.reloj(async()=>{
+ if(api.modo==='demo'||!_tokenFact())return false;
+ const r=await SumetecSync.consultar(URL_SYNC_FISCAL,_tokenFact(),'facturacion',_GAS?d=>_run('syncCambiosApp')(d,_tokenFact()):undefined);
+ if(!r)return false;
+ const huella=JSON.stringify({epochs:r.epochs,hasta:r.hasta});
+ if(ultimaHuellaFiscal!==huella){
+   if(!document.querySelector('.overlay.open, dialog[open]') && !_cargandoVentas){await init();ultimaHuellaFiscal=huella;}
+ }
+ return true;
+});
 document.addEventListener('DOMContentLoaded', ()=> setStatusChip(api.modo==='demo'?'warn':'ok', api.modo==='demo'?'Modo prueba · sin PAC':(api.modo==='google'?'🔒 Conectado · tu cuenta Google':'Conectado al backend')));
 // Service worker de verdad SOLO en modo 'fetch' (app servida desde su propio
 // origen, ej. GitHub Pages) -- en 'google' sigue el banner de polling de
@@ -832,6 +864,7 @@ function periodoAtajoMes(val){
 
 // ── Arranque: catálogo + (si hay backend) ventas y clientes reales ──
 async function init(){
+  if(api.modo!=='demo' && _tokenFact()){try{const c=await leerFiscalSync('configuracion');if(c)sumetecAplicarAcceso('fact',c.datos?.ACCESO);}catch(e){console.warn('Configuración de acceso no disponible');}sumetecVigilarInactividad('fact','Facturación');}
   setOnlineState(navigator.onLine); // por si arranca ya sin señal
   const dEl = document.getElementById('periodoDesde'), hEl = document.getElementById('periodoHasta');
   if(dEl) dEl.value = _isoLocal(periodoDesde);
@@ -944,7 +977,7 @@ async function _tokenGateFactEntrar(){
     await sumetecMarcarAccesoValidado(v, _FACT_HUELLA_VALIDADA);
     const pin=await sumetecPedirPinToken('Facturación',true);
     if(pin===null){_factTokenMem=anterior;return;}
-    await sumetecGuardarTokenCifrado('fact',v,pin);
+    await sumetecGuardarTokenCifrado('fact',v,pin);sumetecRecordarPin('fact',pin);
     localStorage.removeItem('sumetec_fact_token');
     document.getElementById('tokenGateFact').style.display='none';
     sumetecBloquearFondo(document.getElementById('tokenGateFact'),false);

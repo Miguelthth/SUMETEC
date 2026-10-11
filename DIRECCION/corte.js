@@ -142,12 +142,12 @@ async function enviarCortesDireccion(pin) {
   _enviandoCortes = true;
   try {
     for (const c of leer(COLAS.cortes)) {
-      if (c.rechazo) continue;
+      if (c.rechazo || !sumetecPuedeReintentar(c)) continue;
       try {
         await cerrarCorteDireccion(pin, { id: c.id, fecha: c.fecha, fondo: c.fondo, contado: c.contado, hashResumen: c.hashResumen });
         _quitarCorteCola_(c.id);
       } catch (e) {
-        if (!e.respondioServidor) continue; // sin respuesta: se queda para el siguiente intento
+        if (!e.respondioServidor) { _falloServidorCorte_(c.id, 'sin respuesta del servidor', true); continue; }
         // Ya hay un corte igual guardado (mismo fondo, contado y movimientos): nada se pierde.
         if (e.codigo === 'CORTE_DUPLICADO') _quitarCorteCola_(c.id);
         else if (e.codigo === 'MOVIMIENTOS_CAMBIARON' || e.codigo === 'CONFLICTO_ID') _marcarCorteRechazado_(c.id, e.message);
@@ -191,7 +191,7 @@ function _pintarCortesRechazados_(out) {
     const r2 = document.createElement('button');
     r2.type = 'button'; r2.className = 'btn btn-outline-secondary'; r2.textContent = 'Reintentar';
     r2.onclick = () => {
-      _guardarColaCortes_(leer(COLAS.cortes).map(y => { if (y.id !== c.id) return y; const z = { ...y, _srv: 0, _try: 0 }; delete z.rechazo; return z; }));
+      _guardarColaCortes_(leer(COLAS.cortes).map(y => { if (y.id !== c.id) return y; const z = { ...y, _srv: 0, _try: 0 }; delete z.rechazo; delete z._retryAt; return z; }));
       if (typeof procesarColaCortes === 'function') procesarColaCortes(true);
       p.remove();
     };

@@ -94,6 +94,7 @@ function _pinVigente() {
 function recordarPinDireccion(pin) {
   _pinCache = pin;
   _pinCacheTs = Date.now();
+  if (typeof sumetecRecordarPin === 'function') sumetecRecordarPin(APP_ACCESO, pin);
 }
 
 function pedirPinDireccion() {

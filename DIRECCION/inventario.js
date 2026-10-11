@@ -974,11 +974,11 @@ async function procesarColaConteo(pedir) {
   _procConteoEnCurso = true;
   try {
     for (const item of [...cola]) {
-      if (item._detenido) continue;   // 2026-09-29: ya se intentó lo suficiente; espera «Reenviar»
+      if (item._detenido || !sumetecPuedeReintentar(item)) continue;
       try {
         const res = await sumetecFetchLimite(url, {
           method: 'POST', headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ tipo: 'conteo_inventario', token, ...item }),
+          body: JSON.stringify({ tipo: 'conteo_inventario', token, ...item, _retryAt: undefined }),
         });
         const d = await res.json();
         if (d && d.ok) {
@@ -1055,7 +1055,7 @@ function verColaPendiente() {
 }
 function _reenviarUno_(id) {
   const cola = leerSeguro(CLAVE_INV_COLA, []);
-  cola.forEach(e => { if (e.id === id) { e._try = 0; e._srv = 0; delete e._detenido; } });
+  cola.forEach(e => { if (e.id === id) { e._try = 0; e._srv = 0; delete e._detenido; delete e._retryAt; } });
   guardarSeguro(CLAVE_INV_COLA, cola);
   procesarColaConteo(true).then(verColaPendiente);
 }

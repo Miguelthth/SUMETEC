@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-app="gastos">
+<html data-sync-app="gastos" lang="es" data-app="gastos">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -309,6 +309,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 
 <div id="toast" class="toast"></div>
 
+<script src="sync_cliente.js"></script>
 <script src="acceso.js"></script>
 <script>
 // B5: token propio de Gastos, descifrado sólo durante la sesión.
@@ -428,7 +429,7 @@ async function _tgGuardar() {
   }
   const pin=await sumetecPedirPinToken('Gastos',true);
   if(pin===null){sumetecEntrando(boton,false);return;}
-  try{await sumetecGuardarTokenCifrado('gastos',v,pin);localStorage.removeItem('api_token');}
+  try{await sumetecGuardarTokenCifrado('gastos',v,pin);sumetecRecordarPin('gastos',pin);localStorage.removeItem('api_token');}
   catch(e){error.textContent=e.message;sumetecEntrando(boton,false);return;}
   _guardarVendedorCompartido(nombre);
   API_TOKEN = v;
@@ -630,6 +631,11 @@ function _aplicarAccesoGastos_(datos) {
   try { sumetecAplicarAcceso('gastos', datos.ACCESO); sumetecVigilarInactividad('gastos', 'Gastos'); } catch (_) { }
 }
 async function _cargarConfiguracionEcosistema_() {
+  if (typeof sumetecEscucharTimbre === 'function') sumetecEscucharTimbre(temas => {
+    if (temas.includes('catalogo')) _cargarListasGasto_();
+    if (temas.includes('configuracion')) _cargarConfiguracionEcosistema_();
+    if (temas.includes('pendientes') && document.getElementById('pendFacturaCaja')) _cargarPendientesFactura_();
+  }, () => sumetecVersionesTimbre(getScriptUrl(), API_TOKEN));
   if (!navigator.onLine || !API_TOKEN) {
     const cache = leerSeguro('config_ecosistema_cache', null);
     if (cache && cache.datos) { _aplicarConfigGastosPublicada_(cache.datos.GASTOS); _aplicarAccesoGastos_(cache.datos); }
@@ -894,7 +900,8 @@ async function _pendFacPedir_(cuerpo) {
   if (!url || !navigator.onLine) throw new Error('sin señal');
   const token = await PEND_FAC_APP.token();
   if (!token) throw new Error('falta vincular el teléfono');
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ ...cuerpo, token }) });
+  const pedir = typeof sumetecFetchLimite === 'function' ? sumetecFetchLimite : fetch;
+  const res = await pedir(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ ...cuerpo, token }) });
   return res.json();
 }
 
@@ -912,9 +919,20 @@ async function _cargarPendientesFactura_() {
 function _pendFacDecir_(texto) { const el = document.getElementById('pendFacEstado'); if (el) el.textContent = texto; }
 
 async function _pendFacContestar_(id, datos) {
-  const r = await _pendFacPedir_({ tipo: 'factura_recibida', id: crypto.randomUUID(), docTipo: PEND_FAC_APP.tipo, docId: id,
+  const clave = 'sumetec_pendfac_envio_' + PEND_FAC_APP.tipo + ':' + id;
+  const firma = JSON.stringify(datos);
+  let previo = null;
+  try { previo = JSON.parse(localStorage.getItem(clave) || 'null'); } catch (_) {}
+  if (previo && previo.firma !== firma) throw new Error('Primero confirma el envío anterior de este documento antes de cambiar su respuesta');
+  const envioId = previo && previo.firma === firma ? previo.id : crypto.randomUUID();
+  localStorage.setItem(clave, JSON.stringify({ id: envioId, firma }));
+  const r = await _pendFacPedir_({ tipo: 'factura_recibida', id: envioId, docTipo: PEND_FAC_APP.tipo, docId: id,
     device: PEND_FAC_APP.device(), ...datos });
-  if (!r || r.ok !== true) throw new Error((r && r.error) || 'el servidor no lo aceptó');
+  if (!r || r.ok !== true) {
+    localStorage.removeItem(clave);
+    throw new Error((r && r.error) || 'el servidor no lo aceptó');
+  }
+  localStorage.removeItem(clave);
   const c = _pendFacLeer_();
   c.filas.forEach(f => { if (f.tipo === PEND_FAC_APP.tipo && String(f.id) === String(id)) f.contestado = datos.uuidCfdi ? 'UUID' : 'SIN_UUID'; });
   localStorage.setItem(PEND_FAC_APP.claveCache, JSON.stringify(c));
@@ -1436,11 +1454,11 @@ async function procesarColaGastos() {
   actualizarBadgePendientes();
   try {
     for (const item of [...cola]) {
-      if (item._detenido) continue;   // 2026-09-29: ya se intentó lo suficiente; espera «Reenviar» en Pendientes de enviar
+      if (item._detenido || !sumetecPuedeReintentar(item)) continue;
       try {
         const res = await sumetecFetchLimite(url, {
           method: 'POST', headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ ...item, token: API_TOKEN }),
+          body: JSON.stringify({ ...item, _retryAt: undefined, token: API_TOKEN }),
         });
         const d = await res.json();
         if (d && d.ok && item.foto && d.fotoOk === false) {
@@ -1703,11 +1721,11 @@ async function procesarColaConteo() {
   actualizarBadgePendientes();
   try {
     for (const item of [...cola]) {
-      if (item._detenido) continue;
+      if (item._detenido || !sumetecPuedeReintentar(item)) continue;
       try {
         const res = await sumetecFetchLimite(url, {
           method: 'POST', headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ tipo: 'conteo_inventario', token: API_TOKEN, ...item }),
+          body: JSON.stringify({ tipo: 'conteo_inventario', token: API_TOKEN, ...item, _retryAt: undefined }),
         });
         const d = await res.json();
         if (d && d.ok) {
@@ -1849,7 +1867,7 @@ function verColaPendiente() {
 function _reenviarUno_(id, tipoCola) {
   const clave = tipoCola === 'gasto' ? 'cola_gastos' : 'cola_conteo';
   const cola = leerSeguro(clave, []);
-  cola.forEach(e => { if (e.id === id) { e._try = 0; e._srv = 0; delete e._detenido; } });
+  cola.forEach(e => { if (e.id === id) { e._try = 0; e._srv = 0; delete e._detenido; delete e._retryAt; } });
   guardarSeguro(clave, cola);
   const proc = tipoCola === 'gasto' ? procesarColaGastos : procesarColaConteo;
   proc().then(verColaPendiente);
