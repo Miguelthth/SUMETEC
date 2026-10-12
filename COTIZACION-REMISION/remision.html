@@ -5440,7 +5440,7 @@ function _pedirPinUI(titulo,subtitulo){
   // Misma promesa que antes: el texto escrito o null si cancela.
   return new Promise(resolve=>{
     const dlg=document.createElement('dialog');
-    sumetecTecladoPin(dlg,{modo:'codigo',nombre:'Cotizador',texto:subtitulo||'',inputId:'_pinInp',max:6});
+    sumetecTecladoPin(dlg,{modo:'codigo',nombre:'Cotizador',texto:subtitulo||'',inputId:'_pinInp',max:12});
     dlg.addEventListener('close',()=>{
       const inp=dlg.querySelector('input'), v=dlg.returnValue==='ok'?inp.value.trim():null;
       inp.value=''; dlg.remove(); resolve(v);
