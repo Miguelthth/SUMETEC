@@ -1236,6 +1236,7 @@ let _facturandoGlobal = false;
 async function facturarGlobal(){
   if(!_ultimoGlobal || _facturandoGlobal) return;
   if(api.modo!=='demo' && !isOnline){ toast('📵 Sin conexión — necesitas internet para timbrar.','err',5000); return; }
+  if(!await _autorizarFact_('timbrar_global','libre')) return;
   const t = _ultimoGlobal.totales;
   const ok = confirm(`¿Timbrar la factura global de ${_pendientesGlobal.length} remisión(es)?\n\nTotal: $${t.total.toFixed(2)} MXN\n\nEsta acción no se puede deshacer.`);
   if(!ok) return;
@@ -1435,8 +1436,15 @@ function renderLista(){
 // soportado aún -- necesitaría el UUID de la nueva factura), 02 sin
 // sustitución, 03 operación no realizada, 04 factura global por cliente.
 const MOTIVOS_CANCELACION={'02':'02 — Comprobante con errores sin relación','03':'03 — Operación no realizada','04':'04 — Global, a solicitud del cliente'};
+// 2026-10-14: el ERP decide por acción si pide el código de seguridad, pasa sin pedirlo o no se permite
+// (Ecosistema → Facturación → Permisos). Sin nada publicado: lo de siempre (`porDefecto`). Ver acceso.js.
+function _autorizarFact_(accion, porDefecto){
+  if(typeof sumetecAutorizarAccion!=='function') return Promise.resolve(porDefecto!=='bloqueado');
+  return sumetecAutorizarAccion('fact',accion,porDefecto,{nombre:'Facturación',avisar:m=>toast(m,'err',8000)});
+}
 async function cancelarFacturaUI(){
   const r=remActual();if(!r||!r.facturada)return;
+  if(!await _autorizarFact_('cancelar_factura','libre'))return;
   const opciones=Object.entries(MOTIVOS_CANCELACION).map(([k,v])=>k+': '+v).join('\n');
   const motivo=prompt('Motivo de cancelación (SAT):\n'+opciones+'\n\nEscribe la clave (02, 03 o 04):','02');
   if(motivo===null)return;

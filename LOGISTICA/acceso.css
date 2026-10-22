@@ -224,3 +224,22 @@ dialog.sumetec-pin-teclado::backdrop{background:#031a2e}
 .sumetec-pin-teclado .sumetec-pin-aviso .sumetec-pin-guardar{margin-top:28px}
 .sumetec-pin-teclado .sumetec-pin-aviso .sumetec-pin-volver{width:100%;min-height:54px;border-radius:14px;border:1px solid rgb(255 255 255 / .25);background:transparent;color:#f6fbff;font:700 16px "IBM Plex Sans",system-ui,sans-serif;cursor:pointer}
 @media (max-height:680px){.sumetec-pin-teclado .sumetec-tecla{height:52px;font-size:22px}.sumetec-pin-teclado .sumetec-pin-teclas{gap:8px}.sumetec-pin-teclado h2{margin-top:4px;font-size:22px}.sumetec-pin-teclado .sumetec-pin-texto{margin-top:4px}.sumetec-pin-pasos{margin-bottom:10px}.sumetec-pin-teclado .sumetec-pin-puntos{margin-top:12px}.sumetec-pin-teclado .sumetec-pin-guardar{min-height:48px;margin-top:10px}.sumetec-pin-cuerpo{padding:8px 0}}
+
+/* ═══ Huella o Face ID y permiso del dueño (2026-10-20, acceso.js) ═══ */
+.sumetec-pin-teclado .sumetec-pin-huella{flex:none;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;margin:0 0 12px;border:1px solid color-mix(in srgb,var(--acento,#76b82a) 60%,transparent);border-radius:14px;background:color-mix(in srgb,var(--acento,#76b82a) 16%,transparent);color:#fff;font:600 15.5px "IBM Plex Sans",system-ui,sans-serif;cursor:pointer;touch-action:manipulation}
+.sumetec-pin-teclado .sumetec-pin-huella span{font-size:20px;line-height:1}
+.sumetec-pin-teclado .sumetec-pin-huella:disabled{opacity:.55}
+dialog.sumetec-permiso{box-sizing:border-box;width:min(92vw,400px);padding:24px 20px 18px;border:0;border-radius:20px;background:#102335;color:#f6fbff;font:400 15px/1.5 "IBM Plex Sans",system-ui,sans-serif;text-align:center;box-shadow:0 20px 60px rgb(0 0 0 / .45)}
+dialog.sumetec-permiso::backdrop{background:rgb(4 14 24 / .72)}
+.sumetec-permiso-icono{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 10px;border-radius:50%;background:rgb(255 255 255 / .1);font-size:30px}
+dialog.sumetec-permiso h2{margin:0 0 8px;font-size:20px;line-height:1.25;color:#fff}
+.sumetec-permiso-texto{margin:0;color:#c9d7e2;font-size:14.5px}
+.sumetec-permiso-estado{min-height:1.5em;margin:12px 0 0;font-weight:600;color:#ffd58a}
+.sumetec-permiso-estado:empty{display:none}
+.sumetec-permiso-estado[data-estado="RECHAZADA"]{color:#ff9d8f}
+.sumetec-permiso-botones{display:grid;gap:10px;margin-top:18px}
+.sumetec-permiso-botones button{min-height:50px;border-radius:14px;font:700 15.5px "IBM Plex Sans",system-ui,sans-serif;cursor:pointer}
+.sumetec-permiso-botones .principal{border:0;background:#76b82a;color:#102335}
+.sumetec-permiso-botones .secundario{border:1px solid rgb(255 255 255 / .28);background:transparent;color:#f6fbff}
+.sumetec-permiso-botones button[hidden]{display:none}
+.sumetec-permiso-botones button:disabled{opacity:.55}

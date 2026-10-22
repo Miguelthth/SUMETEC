@@ -54,11 +54,14 @@ function crearAPI(){sumetecVigilarInactividad('logistica','Logística');ultimaRe
    if(!tokenLogistica || !apiComercial)return true;
    const r=await SumetecSync.consultar(configLogistica.url,tokenLogistica,'logistica');
    if(!r)return false;
-   const revision=await SumetecSync.leer(configLogistica.url,tokenLogistica,'logistica','comercial_revision');
+   // F1-SYNC-LOG (auditoría 2026-10-12): si el diario no entrega la revisión (permiso, versión vieja del servidor o
+   // sin leer aún), el reloj ya no se rompe antes de mandar las capturas pendientes: sigue con lo que sí sabe.
+   let revision=null;try{revision=await SumetecSync.leer(configLogistica.url,tokenLogistica,'logistica','comercial_revision');}catch(_){}
+   const revisionActual=revision?revision.revision:undefined;
    const huellaConfig=JSON.stringify([r.epochs?.configuracion,r.hasta?.configuracion]);
    const pendientes=await baseLocal.pendientes();
-   if(ultimaRevisionComercial!==revision.revision || huellaConfig!==ultimaConfiguracionLogistica || pendientes.some(x=>x.estadoLocal==='PENDIENTE')){
-     const d=await apiComercial.sincronizar();if(!d.ocupado){ultimaRevisionComercial=revision.revision;ultimaConfiguracionLogistica=huellaConfig;}
+   if((revision&&ultimaRevisionComercial!==revisionActual) || huellaConfig!==ultimaConfiguracionLogistica || pendientes.some(x=>x.estadoLocal==='PENDIENTE')){
+     const d=await apiComercial.sincronizar();if(!d.ocupado){if(revision)ultimaRevisionComercial=revisionActual;ultimaConfiguracionLogistica=huellaConfig;}
      configLogistica.parametros=await baseLocal.meta('parametros')||{};await actualizarEstado();
      if(!document.querySelector('dialog[open], form'))await mostrarPantalla(pantallaActual);
    }

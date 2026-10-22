@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "SUMETEC Pedidos",
+  "short_name": "Pedidos",
+  "description": "Tu pedido con las mismas medidas. SUMETEC confirma precio y existencia.",
+  "lang": "es-MX",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef2f6",
+  "theme_color": "#76B82A",
+  "icons": [
+    {"src":"logos/sumetec-pedidos-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"logos/sumetec-pedidos-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"logos/sumetec-pedidos-maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+  ]
+}

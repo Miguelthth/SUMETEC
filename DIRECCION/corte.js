@@ -152,7 +152,7 @@ async function enviarCortesDireccion(pin) {
         if (e.codigo === 'CORTE_DUPLICADO') _quitarCorteCola_(c.id);
         else if (e.codigo === 'MOVIMIENTOS_CAMBIARON' || e.codigo === 'CONFLICTO_ID') _marcarCorteRechazado_(c.id, e.message);
         // cualquier otra respuesta se cuenta: lo transitorio ("servidor ocupado, reintenta") no suma, lo demás llega al tope
-        else _falloServidorCorte_(c.id, e.message, sumetecFalloTransitorio({ error: e.message, estado: e.codigo }));
+        else _falloServidorCorte_(c.id, textoErrorRed(e), sumetecFalloTransitorio({ error: e.message, estado: e.codigo }));
       }
     }
   } finally { _enviandoCortes = false; }
@@ -283,7 +283,7 @@ function formularioCorteDireccion() {
 // cerrar (plan de mejoras 2026-09-14): un corte descuadrado por unos
 // centavos es normal; uno descuadrado por cientos de pesos merece una
 // pausa, no un guardado de un solo toque.
-const UMBRAL_CONFIRMAR_DIFERENCIA = 100;
+let UMBRAL_CONFIRMAR_DIFERENCIA = 100; // el ERP lo puede cambiar (Ecosistema → Dirección)
 
 // Separada de la lectura del DOM para poder probarla sin navegador: dado
 // [{valor, cantidad}, ...] regresa el total en efectivo -- exactamente lo
@@ -437,13 +437,18 @@ function activarCorteDireccion() {
   if (typeof _pinVigente === 'function' && _pinVigente()) {
     pedirPinDireccion().then(previa).catch(() => {});
   }
+  // El timbre (dashboard.js) vuelve a pedir la previa cuando cambia el efectivo del día en otro teléfono.
+  // No toca lo que Miguel ya contó: la previa se recalcula con su conteo actual.
+  window._refrescarCorteDireccion_ = () => {
+    if (typeof _pinVigente === 'function' && _pinVigente()) pedirPinDireccion().then(previa).catch(() => {});
+  };
 
   document.querySelector('#ver-previa').onclick = async () => {
     try {
       const pin = await pedirPinDireccion();
       await previa(pin);
     } catch (e) {
-      out.textContent = e.message;
+      out.textContent = textoErrorRed(e);
     }
   };
 
@@ -496,7 +501,7 @@ function activarCorteDireccion() {
         `<p>Diferencia: <strong class="num ${_claseDiferencia(dif)}">${_etiquetaDiferencia(dif)} $${Math.abs(dif).toFixed(2)}</strong></p>`;
       estado();
     } catch (err) {
-      out.textContent = err.message;
+      out.textContent = textoErrorRed(err);
     }
   };
 }

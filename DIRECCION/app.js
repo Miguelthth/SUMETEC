@@ -66,7 +66,7 @@ async function enviarPendientesDireccion() {
     if (typeof toast === 'function') toast((n || nConteos) ? `${n + nConteos} envío(s) siguen pendientes.` : 'Todo se envió.');
   } catch (err) {
     _enviandoDireccion = false; estado();
-    if (typeof toast === 'function') toast(err.message); else alert(err.message);
+    { const _m = textoErrorRed(err); if (typeof toast === 'function') toast(_m); else alert(_m); }
   }
 }
 
@@ -121,7 +121,7 @@ function vistaActivaDireccion() { return _vistaActivaDireccion; }
 
 // Rediseño 2026-09-24: la barra de arriba dice en qué sección estás (el
 // <h1> dentro de cada vista queda oculto por CSS, ver estilos.css).
-const _TITULOS_VISTA_ = { resumen: 'Resumen', caja: 'Caja', corte: 'Corte del día', inventario: 'Inventario' };
+const _TITULOS_VISTA_ = { resumen: 'Resumen', panel: 'Panel', caja: 'Caja', corte: 'Corte del día', inventario: 'Inventario', permisos: 'Permisos' };
 
 function vista(nombre) {
   _vistaActivaDireccion = nombre;
@@ -137,7 +137,9 @@ function vista(nombre) {
     caja: formularioCajaDireccion,
     corte: formularioCorteDireccion,
     resumen: () => '<h1>Resumen</h1><p class="text-muted">Cargando fotografía oficial…</p>',
-    inventario: () => '<h1>Inventario</h1><p class="text-muted">Cargando catálogo…</p>'
+    panel: () => '<h1>Panel</h1><p class="text-muted">Cargando el panel…</p>',
+    inventario: () => '<h1>Inventario</h1><p class="text-muted">Cargando catálogo…</p>',
+    permisos: formularioPermisosDireccion
   };
   const generador = vistas[nombre];
   $('#app').innerHTML = generador
@@ -147,7 +149,9 @@ function vista(nombre) {
   if (nombre === 'caja') activarCajaDireccion();
   if (nombre === 'corte') activarCorteDireccion();
   if (nombre === 'resumen') activarDashboardDireccion();
+  if (nombre === 'panel') activarPanelDireccion();
   if (nombre === 'inventario') activarInventarioDireccion();
+  if (nombre === 'permisos') activarPermisosDireccion();
 }
 
 // Bug #4 (2026-09-23): igual que el Cotizador -- hostname EXACTO, no "contiene": una URL mal

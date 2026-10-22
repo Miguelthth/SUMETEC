@@ -229,6 +229,14 @@ function activarInventarioDireccion() {
   else cargarCatalogoInventario();
 }
 
+// Costo con el que se valúa una diferencia de conteo: lo que le cuesta a SUMETEC (COSTO_PROVEEDOR,
+// sin IVA, ya viaja en productos.csv). COSTO_CLIENTE es el precio al cliente y inflaba el faltante
+// (2026-10-12: una pieza de $100 se mostraba como -$200). Es una estimación en pantalla: el ERP
+// vuelve a valuar al importar con su costo promedio.
+function _costoDeConteo_(p) {
+  return Number(p.COSTO_PROVEEDOR) || Number(p.COSTO_CLIENTE) || 0;
+}
+
 async function cargarCatalogoInventario() {
   _pintarInventario_('<h1>Inventario</h1><div class="card card-body text-muted">Cargando catálogo…</div>');
   try {
@@ -238,7 +246,7 @@ async function cargarCatalogoInventario() {
     const nuevo = (filas || []).map(p => ({
       codigo: p.CODIGO || '', descripcion: p.DESCRIPCION || '',
       categoria: (p.CATEGORIA || '').trim() || 'Sin categoría',
-      costo: Number(p.COSTO_CLIENTE) || 0,
+      costo: _costoDeConteo_(p),
     })).filter(p => p.codigo);
     // D-03 (revisión 2026-10-01): un catálogo vacío del servidor (archivo en blanco en Drive) no pisa la copia buena.
     if (!nuevo.length) throw new Error('el catálogo llegó vacío');
@@ -847,6 +855,7 @@ function _renderRevisionDiferencias_() {
     <div class="card card-body">
       <strong><i class="bi bi-search"></i> Revisar diferencias (${diffs.length})</strong>
       <p class="text-muted" style="font-size:12px;margin:4px 0 0">Ordenadas de mayor a menor en pesos -- las que más importan van primero.</p>
+      <p class="text-muted" style="font-size:12px;margin:4px 0 0">Los pesos son una <strong>estimación</strong> con el costo del proveedor sin IVA que trae el catálogo; al importar, el ERP vuelve a valuar con su costo promedio y esa cifra es la oficial.</p>
     </div>
     <div class="card card-body">${filasHtml}</div>
     <div class="card card-body">
@@ -867,11 +876,13 @@ async function _confirmarCierreConteo_() {
   const netoTxt = (neto >= 0 ? '+$' : '-$') + Math.abs(neto).toFixed(2);
   const msg =
     `${r.contados}/${CONTEO_ACTUAL.items.length} contados · ${r.cuadran} cuadran exacto · ${r.difieren} difieren\n` +
-    `Diferencia neta en pesos: ${netoTxt}\n` +
+    `Diferencia neta en pesos (estimada; la oficial la calcula el ERP): ${netoTxt}\n` +
     `ERI estimado: ${r.eri.toFixed(1)}% (${r.nivel})\n\n` +
     '¿Cerrar este conteo?';
   if (!confirm(msg)) return;
-  if (!await pedirCodigoSeguridad('Código de seguridad: autoriza CERRAR este conteo.', c => _codigoCorrecto_(c))) return;
+  // 2026-10-21: el servidor de Google también exige el permiso; el envío lleva el documento sobre el que se pidió.
+  const docPermiso = String(CONTEO_ACTUAL.id || ('conteo-' + Date.now().toString(36)));
+  if (!await _autorizarDireccion_('cerrar_conteo', 'codigo', docPermiso, 'Cerrar conteo ' + (CONTEO_ACTUAL.categoria || '') + ' · ' + r.contados + ' contados')) return;
   if (!CONTEO_ACTUAL.contador) {
     const guardado = _contadorGuardado_();
     const quien = (guardado || (prompt('Tus iniciales (para saber quién contó, opcional):') || '')).trim();
@@ -879,12 +890,12 @@ async function _confirmarCierreConteo_() {
     CONTEO_ACTUAL.contador = quien;
   }
   CONTEO_ACTUAL.cerrado = true;
-  _encolarConteo(CONTEO_ACTUAL);
+  _encolarConteo(CONTEO_ACTUAL, docPermiso);
   renderListaConteo();
 }
 
 async function editarCampoCerrado(idx) {
-  if (!await pedirCodigoSeguridad('Este conteo ya está cerrado. Código de seguridad para editar este producto:', c => _codigoCorrecto_(c))) return;
+  if (!await _autorizarDireccion_('editar_conteo_cerrado', 'codigo', (CONTEO_ACTUAL.id || 'conteo') + '|' + idx, 'Editar ' + CONTEO_ACTUAL.items[idx].codigo + ' en un conteo cerrado')) return;
   const nuevo = prompt('Nueva cantidad para ' + CONTEO_ACTUAL.items[idx].codigo + ':',
                        CONTEO_ACTUAL.items[idx].cantidad);
   if (nuevo === null) return;
@@ -939,9 +950,11 @@ function _armarPayloadConteo_(conteo, fechaISO, stockMap, referenciaTs) {
 
 let _procConteoEnCurso = false;
 
-function _encolarConteo(conteo) {
+function _encolarConteo(conteo, docPermiso) {
   const cacheST = leerSeguro(CLAVE_INV_STOCK, null);
   const payload = _armarPayloadConteo_(conteo, _fechaLocalDireccion_(), STOCK_TEORICO, cacheST && cacheST.ts);
+  payload.appPermiso = 'direccion';                       // permiso del dueño que revisa el servidor (acción cerrar_conteo)
+  payload.permisoDoc = String(docPermiso || conteo.id || payload.id);
   CONTEO_ACTUAL.queueId = payload.id;
   const cola = leerSeguro(CLAVE_INV_COLA, []);
   if (!_dedupeCola_(cola, payload.id)) cola.push({ ...payload, ts: Date.now(), _try: 0 });
@@ -1059,7 +1072,17 @@ function _reenviarUno_(id) {
   guardarSeguro(CLAVE_INV_COLA, cola);
   procesarColaConteo(true).then(verColaPendiente);
 }
-function _descartarUno_(id) {
+// 2026-10-14: el ERP decide por acción si pide código, pasa sin pedirlo o no se permite (Ecosistema → Dirección →
+// Permisos). Sin nada publicado, cada acción hace lo de siempre (`porDefecto`). Ver sumetecAutorizarAccion en acceso.js.
+// 2026-10-20: «pide» = permiso del dueño. En el teléfono del dueño basta su huella (o su PIN de Dirección si el
+// teléfono no tiene huella); en otro teléfono de Dirección se le pide a él (acceso.js → sumetecPedirPermisoDueno).
+function _autorizarDireccion_(accion, porDefecto, documento, detalle) {
+  if (typeof sumetecAutorizarAccion !== 'function') return Promise.resolve(porDefecto === 'libre');
+  return sumetecAutorizarAccion('direccion', accion, porDefecto, { nombre: 'Dirección', documento, detalle,
+    respaldo: () => pedirPinDireccion().then(pin => abrirSesionDireccion(pin)).then(() => true, () => false) });
+}
+async function _descartarUno_(id) {
+  if (!await _autorizarDireccion_('descartar_pendiente', 'libre', id, 'Descartar un conteo pendiente')) return;
   if (!confirm('¿Descartar este conteo pendiente? Esos datos NO llegarán al ERP y esta acción no se puede deshacer.')) return;
   guardarSeguro(CLAVE_INV_COLA, leerSeguro(CLAVE_INV_COLA, []).filter(e => e.id !== id));
   _avisarPendientesInventario_();

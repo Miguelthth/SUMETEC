@@ -13,7 +13,7 @@ body { max-width: 720px; margin: 0 auto; padding: 0 0 calc(96px + env(safe-area-
    verde arriba del icono. ── */
 .sm-nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
   max-width: 720px; margin: 0 auto;
   padding: 4px 6px max(8px, env(safe-area-inset-bottom));
   background: var(--sm-surface); border-top: 1px solid var(--sm-line);
@@ -395,3 +395,30 @@ body.sin-sesion .hoja, body.sin-sesion #app { visibility: hidden; }
 }
 .inv-acciones .btn:last-child { border-bottom: 0; }
 .inv-acciones .btn .bi { color: var(--sm-icon-muted); }
+
+/* ── Panel (2026-10-14): dueño / administrador / contador. Mismos tokens del tema. ── */
+.panel-mes { margin: 0 0 4px; font-size: 12.5px; color: var(--sm-muted); }
+.panel-bloque { display: flex; flex-direction: column; gap: 8px; }
+.panel-bloque h2 { display: flex; align-items: baseline; gap: 8px; margin: 0; }
+.panel-bloque h2 small { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--sm-muted); }
+.panel-bloque h3 { margin: 6px 0 0; font-size: 13px; color: var(--sm-ink); }
+.panel-nota { margin: 0; font-size: 12.5px; color: var(--sm-muted); }
+.metrica-aviso { box-shadow: inset 3px 0 0 var(--sm-aviso); }
+.metrica-mal { box-shadow: inset 3px 0 0 var(--sm-chart-4); }
+.panel-lista { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .4rem; }
+.panel-lista li { display: flex; justify-content: space-between; align-items: center; gap: .75rem; border: 1px solid var(--sm-line); border-left-width: 4px; border-radius: var(--sm-r-sm); padding: .5rem .7rem; background: var(--sm-glass-tarjeta-fondo); }
+.panel-lista li.vencido { border-left-color: var(--sm-aviso); }
+.panel-lista span { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.panel-lista small { font-size: 11.5px; color: var(--sm-muted); }
+.btn-nav span { white-space: nowrap; }
+/* La app solo declara los íconos que usa (sumetec-tema.css); estos son los del Panel. */
+.bi-grid-1x2::before { content: "\f3f4"; }
+.bi-graph-up-arrow::before { content: "\f673"; }
+.bi-wallet2::before { content: "\f615"; }
+.bi-bank2::before { content: "\f62f"; }
+
+/* Permisos del dueño (2026-10-20, aprobaciones.js): cuántos esperan, sobre el botón de abajo. */
+.sm-nav .btn-nav { position: relative; }
+.insignia-permisos { position: absolute; top: 4px; right: calc(50% - 22px); min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: #e5484d; color: #fff; font: 700 11px/18px "IBM Plex Sans", system-ui, sans-serif; text-align: center; }
+.insignia-permisos[hidden] { display: none; }

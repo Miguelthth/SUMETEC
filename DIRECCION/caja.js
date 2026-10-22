@@ -22,7 +22,10 @@ function validarMovimientoDireccion(d) {
   return {
     id: d.id || crypto.randomUUID(), fecha: d.fecha, hora: d.hora || new Date().toISOString(),
     tipoMovimiento: clase, monto, metodo: String(d.metodo).toUpperCase(),
-    referencia: String(d.referencia || ''), notas: concepto, cuentaSocio
+    referencia: String(d.referencia || ''), notas: concepto,
+    // Observación 2026-10-21: el campo «Socio» trae un nombre de fábrica y viajaba con cualquier clase;
+    // solo aportes y retiros de socio llevan cuenta de socio.
+    cuentaSocio: ['APORTE_SOCIO', 'RETIRO_SOCIO'].includes(clase) ? cuentaSocio : ''
   };
 }
 
@@ -409,6 +412,8 @@ function activarCajaDireccion() {
       f.reset();
       f.fecha.value = _fechaLocalDireccion_();
       actualizarCampoSocio();
+      // Observación 2026-10-21: «Movimientos de hoy» no se actualizaba al guardar; había que salir y volver a Caja.
+      refrescarLista(pin);
       document.querySelector('#resultado-caja').textContent = r.estado === 'EN_COLA'
         ? 'Guardado en este teléfono. Se enviará solo al volver la conexión (con la app desbloqueada) o al tocar el aviso de pendientes.'
         : 'Movimiento registrado.';
@@ -418,7 +423,7 @@ function activarCajaDireccion() {
       // fallo de red no sabemos si llegó, así que se conserva para que el
       // reintento no cuente como un movimiento distinto.
       if (err && err.respondioServidor) soltarCapturaCaja();
-      document.querySelector('#resultado-caja').textContent = err.message;
+      document.querySelector('#resultado-caja').textContent = textoErrorRed(err);
     } finally {
       if (boton) boton.disabled = false;
     }
@@ -432,6 +437,8 @@ function activarCajaDireccion() {
       const movs = await cargarMovimientosCajaDireccion(pin, f.fecha.value || _fechaLocalDireccion_());
       lista.innerHTML = `<h2>Movimientos de hoy</h2>${renderMovimientosCaja(movs)}`;
       lista.querySelectorAll('button.anular').forEach(b => b.onclick = async () => {
+        if (typeof _autorizarDireccion_ === 'function' && !await _autorizarDireccion_('anular_movimiento_caja', 'libre',
+          b.dataset.id, 'Corregir un movimiento de caja')) return;
         const motivo = prompt('Explica la corrección (mínimo 10 caracteres)');
         if (motivo === null) return;
         try {
@@ -439,11 +446,11 @@ function activarCajaDireccion() {
           if (rAnul.estado === 'EN_COLA' && typeof toast === 'function') toast('Corrección guardada en este teléfono; se enviará sola al volver la conexión.');
           await refrescarLista(pin);
         } catch (err) {
-          if (typeof toast === 'function') toast(err.message); else alert(err.message);
+          { const _m = textoErrorRed(err); if (typeof toast === 'function') toast(_m); else alert(_m); }
         }
       });
     } catch (err) {
-      lista.innerHTML = `<h2>Movimientos de hoy</h2><p>${_escCaja(err.message)}</p>`;
+      lista.innerHTML = `<h2>Movimientos de hoy</h2><p>${_escCaja(textoErrorRed(err))}</p>`;
     }
   }
 
@@ -464,6 +471,10 @@ function activarCajaDireccion() {
   if (typeof _pinVigente === 'function' && _pinVigente()) {
     pedirPinDireccion().then(refrescarLista).catch(() => {});
   }
+  // El timbre (dashboard.js) vuelve a pedir la lista cuando otro teléfono cobra, anula o cancela.
+  window._refrescarCajaDireccion_ = () => {
+    if (typeof _pinVigente === 'function' && _pinVigente()) pedirPinDireccion().then(refrescarLista).catch(() => {});
+  };
 }
 
 function _formasCaja_(){try{return JSON.parse(localStorage.getItem('sumetec_direccion_formas_pago')||'[]');}catch(_){return [];}}

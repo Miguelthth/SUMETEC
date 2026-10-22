@@ -76,9 +76,86 @@ function redondeoEfectivo(){return false;}
 // it.costoIva llega vacío para productos capturados a mano (Productos
 // Maestro) o catálogos viejos sin publicar todavía la columna nueva — en ese
 // caso cae a it.costo, mismo comportamiento que antes de este cambio.
+// 2026-10-14 (pedido de Miguel: "que el Cotizador y el ERP calculen igual"): si el ERP ya publica COSTO_UTILIDAD
+// (it.costoUtil), se usa ESE, sea cual sea el IVA de la venta -- es el mismo costo con que el ERP mide la utilidad
+// (services/costeo.py::costo_para_utilidad: promedio de compras, con el IVA dentro solo si la compra "No se
+// facturará"; regla del 2026-10-12). Catálogos viejos sin esa columna conservan la regla de arriba.
 function costoEfectivo(it){
+  if(+it.costoUtil>0) return +it.costoUtil;
   const sinIva=+it.costo||0, conIva=+it.costoIva||sinIva;
   return (+it.iva>0)?sinIva:conIva;
+}
+
+// ── Mensaje de agradecimiento editable (2026-10-14, Ecosistema → Cotizador) ──
+// {variable} se reemplaza por su valor; un [segmento] desaparece completo si alguna de sus variables viene vacía;
+// un espacio que queda suelto antes de coma o punto se quita. Así «Hola[ {cliente}], gracias…» -- y también
+// «Hola {cliente}, gracias…» -- sin nombre de cliente quedan «Hola, gracias…», nunca «Hola , gracias…».
+// La vista previa del ERP (templates/admin/ecosistema.html) usa esta MISMA regla.
+function rellenarPlantilla(plantilla, valores){
+  const val=k=>{const x=valores&&valores[k];return x==null?'':String(x).trim();};
+  const poner=t=>t.replace(/\{(\w+)\}/g,(_,k)=>val(k));
+  const s=String(plantilla||'').replace(/\[([^\[\]]*)\]/g,(_,seg)=>{
+    const claves=(seg.match(/\{(\w+)\}/g)||[]).map(x=>x.slice(1,-1));
+    if(!claves.length) return seg;
+    return claves.every(k=>val(k))?poner(seg):'';
+  });
+  return poner(s).replace(/[ \t]+([,.;:])/g,'$1').replace(/[ \t]{2,}/g,' ').replace(/[ \t]+\n/g,'\n')
+    .replace(/\n{3,}/g,'\n\n').trim();
+}
+
+// ── Precio de venta propuesto (2026-10-14) ──
+// MISMA fórmula que la calculadora de Costos del ERP (templates/costos/lista.html, paso 3 «Calcúlalo»):
+//   base 'sin' = costo antes de IVA (el IVA de la compra se recupera) · 'con' = costo con IVA (no se recupera)
+//   formula 'utilidad' = costo × (1 + %)   ·   'margen' = costo ÷ (1 − %)
+// El precio que sale es SIN IVA de venta (así se guarda el precio en el ERP); el IVA de venta solo da el total.
+// `ivaVenta` va como fracción (0.16). Sin costo, o con % fuera de 0–99.99, `valido` es false.
+function precioPropuesto(o){
+  o=o||{};
+  const costoSin=+o.costoSinIva||0, costoCon=+o.costoConIva||costoSin;
+  const costo=o.base==='con'?costoCon:costoSin;
+  const tasa=(+o.porcentaje||0)/100, ivaVenta=+o.ivaVenta||0;
+  const precio=o.formula==='margen'?costo/(1-tasa):costo*(1+tasa);
+  const valido=Number.isFinite(precio)&&costo>0&&tasa>=0&&tasa<1;
+  const ganancia=precio-costo;
+  return {valido,costo,precio:valido?precio:0,ganancia:valido?ganancia:0,
+    margenPct:valido&&precio>0?ganancia/precio*100:null,
+    ivaCliente:valido?precio*ivaVenta:0,totalCliente:valido?precio*(1+ivaVenta):0};
+}
+// «Regla automática» del ERP: costo con IVA × factor_precio_sugerido (Configuración → Datos del negocio).
+function precioReglaAutomatica(costoConIva, factor){
+  const c=+costoConIva||0, f=+factor||0;
+  return c>0&&f>0?c*f:0;
+}
+
+// ── Calculadora de negocio (mismas fórmulas que la del ERP, static/js/erp-comun.js) ──
+// margen = (precio − costo) / precio, la convención de todo el ERP.
+function precioPorMargen(costo, margenPct){
+  const c=+costo, m=(+margenPct)/100;
+  return c>0&&Number.isFinite(m)&&m<1?c/(1-m):null;
+}
+function margenDePrecio(costo, precio){
+  const c=+costo, p=+precio;
+  return c>=0&&p>0?(p-c)/p*100:null;
+}
+// direccion 'sin' = el monto no trae IVA (se le agrega) · 'con' = ya lo trae (se le quita).
+function ivaConSin(monto, tasa, direccion){
+  const m=+monto, t=+tasa||0;
+  if(!(m>=0)) return null;
+  if(direccion==='con'){ const sinIva=m/(1+t); return {iva:m-sinIva, sinIva, conIva:m}; }
+  return {iva:m*t, sinIva:m, conIva:m+m*t};
+}
+function utilidadLineaCalc(cant, costo, precio){
+  const q=+cant, c=+costo, p=+precio;
+  if(!(q>0)||!(p>0)||!Number.isFinite(c)) return null;
+  return {utilidad:(p-c)*q, margenPct:(p-c)/p*100};
+}
+// Calculadora normal: una operación. ÷0 da NaN (la pantalla muestra «Error»).
+function calcOperar(a, op, b){
+  if(op==='+') return a+b;
+  if(op==='−') return a-b;
+  if(op==='×') return a*b;
+  if(op==='÷') return b===0?NaN:a/b;
+  return b;
 }
 
 function margenLinea(it, descPct){
@@ -508,12 +585,24 @@ function cobradoDeRemision(r){
   return Math.max(porPagos,porSaldo);
 }
 
+// Cancelar una remisión con cobros en un solo paso (2026-10-12, pedido de Miguel): qué cobros se
+// anulan primero y cuánto queda que NO se puede anular desde este celular (lo cobrado en el ERP,
+// `ajuste_erp`, o una remisión traída del servidor sin lista de pagos).
+function cobrosParaCancelar(r){
+  const anulables=pagosValidosDe(r).filter(p=>p.tipo==='abono'||p.tipo==='pago_completo');
+  const suma=anulables.reduce((s,p)=>s+(Number(p.monto)||0),0);
+  const resto=Math.round((cobradoDeRemision(r)-suma)*100)/100;
+  return {anulables, noAnulable: resto>0.004?resto:0};
+}
+
 // Exportar para los tests de Node sin afectar al navegador (allí no existe `module`).
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { esc, escAttr, fmt, n2l, words, _calcTot, redondeoEfectivo, costoEfectivo, margenLinea, pagoValido,
                       descuentoValido, renglonValido, telWA, msgCobroWA, tasaIvaLbl,
                       rentabilidadPorProducto, simulaEscenarioPrecio,
-                      parseFechaMX, pagosValidosDe, cobradoDeRemision, recortarTrazoFirma, encajarImagen, pagosDeCajaDe, corteDeCaja, costosQueSubieron,
+                      parseFechaMX, pagosValidosDe, cobradoDeRemision, cobrosParaCancelar, recortarTrazoFirma, encajarImagen, pagosDeCajaDe, corteDeCaja, costosQueSubieron,
                       deudaCliente, diasPagoPorCliente, utilidadOperacion,
-                      parseMonto, formatearMontoTexto };
+                      parseMonto, formatearMontoTexto,
+                      precioPropuesto, precioReglaAutomatica, precioPorMargen, margenDePrecio, ivaConSin,
+                      utilidadLineaCalc, calcOperar, rellenarPlantilla };
 }

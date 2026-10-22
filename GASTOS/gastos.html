@@ -314,6 +314,8 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 <script>
 // B5: token propio de Gastos, descifrado sólo durante la sesión.
 let API_TOKEN = '';
+// Permiso del dueño (2026-10-20, acceso.js): a qué servidor y con qué token pedirlo (se leen al momento).
+if (typeof sumetecRegistrarServidor === 'function') sumetecRegistrarServidor('gastos', () => ({ url: getScriptUrl(), token: API_TOKEN }));
 let _gastosAccesoAutorizado = false;
 const _GASTOS_HUELLA_VALIDADA = 'sumetec_gastos_token_validado';
 
@@ -324,7 +326,7 @@ let FOTO_TOPE_KB_PUBLICADO = 250;
 // Mejora (2026-09-02, confirmado por Miguel): a partir de este total, pedir
 // confirmación explícita antes de guardar el gasto -- suele ser un cero de
 // más al teclear, no un límite que bloquee gastos grandes reales.
-const UMBRAL_GASTO_ATIPICO = 2000;
+let UMBRAL_GASTO_ATIPICO = 2000; // el ERP lo puede cambiar (Ecosistema → Gastos)
 
 // Escapa texto y valores de atributo HTML (mismo comportamiento que
 // esc()/escAttr() en calculos.js -- inline aquí porque inventario.html no
@@ -623,6 +625,9 @@ function _aplicarConfigGastosPublicada_(gastos) {
   if (!gastos) return;
   if (typeof gastos.foto_tope_kb === 'number' && gastos.foto_tope_kb > 0) {
     FOTO_TOPE_KB_PUBLICADO = gastos.foto_tope_kb;
+  }
+  if (typeof gastos.umbral_gasto_atipico === 'number' && gastos.umbral_gasto_atipico > 0) {
+    UMBRAL_GASTO_ATIPICO = gastos.umbral_gasto_atipico;
   }
 }
 // Acceso (2026-10-09): minutos de bloqueo y equipos sin PIN que fijó el ERP. Ver acceso.js.
@@ -1681,12 +1686,17 @@ async function _enviarConteoHuerfano_() {
   const h = _conteoHuerfano_();
   if (!h) return;
   if (!confirm('¿Cerrar y enviar este conteo con los ' + h.contados + ' producto(s) que contaste? Lo que no tocaste NO se envía.')) return;
-  if (!await pedirCodigoSeguridad('Código de seguridad: autoriza CERRAR y enviar este conteo.', c => _codigoCorrecto_(c))) return;
+  // 2026-10-14: el ERP decide si pide permiso, pasa sin pedirlo o no se permite (Ecosistema → Gastos → Permisos).
+  // 2026-10-21: el servidor de Google también exige el permiso; el envío lleva el documento sobre el que se pidió.
+  const docPermiso = String(h.conteo.id || ('conteo-' + Date.now().toString(36)));
+  if (!await _autorizarGastos_('cerrar_conteo', 'codigo', docPermiso, 'Cerrar conteo ' + (h.conteo.categoria || '') + ' · ' + h.contados + ' producto(s)')) return;
   const c = h.conteo;
   if (!c.contador) c.contador = _leerVendedorCompartido() || '';
   const cacheST = leerSeguro('stock_teorico_cache', null);
   const payload = _armarPayloadConteo_(c, _fechaLocal_(),
     _construirStockTeoricoMap(cacheST && cacheST.filas), cacheST && cacheST.ts);
+  payload.appPermiso = 'gastos';                          // permiso del dueño que revisa el servidor (acción cerrar_conteo)
+  payload.permisoDoc = docPermiso;
   const cola = leerSeguro('cola_conteo', []);
   if (!_dedupeCola_(cola, payload.id)) cola.push({ ...payload, ts: Date.now(), _try: 0 });
   if (!guardarSeguro('cola_conteo', cola)) {
@@ -1872,7 +1882,14 @@ function _reenviarUno_(id, tipoCola) {
   const proc = tipoCola === 'gasto' ? procesarColaGastos : procesarColaConteo;
   proc().then(verColaPendiente);
 }
-function _descartarUno_(id, tipoCola) {
+// 2026-10-20: «pide» ya no es un código: el dueño aprueba desde su teléfono con su huella (acceso.js).
+// `documento` = qué se toca (el permiso vale solo para eso); `detalle` = lo que ve el dueño.
+function _autorizarGastos_(accion, porDefecto, documento, detalle) {
+  if (typeof sumetecAutorizarAccion !== 'function') return Promise.resolve(porDefecto === 'libre');
+  return sumetecAutorizarAccion('gastos', accion, porDefecto, { nombre: 'Gastos', documento, detalle, avisar: m => toast(m, 'err', 9000) });
+}
+async function _descartarUno_(id, tipoCola) {
+  if (!await _autorizarGastos_('descartar_pendiente', 'libre', id, 'Descartar un pendiente sin enviar (' + (tipoCola === 'gasto' ? 'gasto' : 'conteo') + ')')) return;
   if (!confirm('¿Descartar este pendiente? Esos datos NO llegarán al ERP y esta acción no se puede deshacer.')) return;
   const clave = tipoCola === 'gasto' ? 'cola_gastos' : 'cola_conteo';
   const cola = leerSeguro(clave, []).filter(e => e.id !== id);

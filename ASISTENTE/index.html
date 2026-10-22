@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0D3B66"><meta name="description" content="Tu espacio comercial de SUMETEC: instrucciones, correos y borradores en una conversación.">
+  <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Asistente"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/asistente-180.png">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>SUMETEC · Asistente comercial</title><link rel="icon" href="favicon.png" type="image/png" sizes="32x32"><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Ir al contenido</a>
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Navegación principal">
+    <a class="brand" href="#chat" aria-label="SUMETEC Asistente"><img class="brand-icon" src="icons/asistente-192.png" alt=""><span>SUMETEC<small>ASISTENTE COMERCIAL</small></span></a>
+    <button class="new-chat" data-action="general"><span aria-hidden="true">＋</span> Nueva conversación</button>
+    <p class="nav-caption">TU ESPACIO</p>
+    <nav><button class="nav-item active" data-view="chat"><span aria-hidden="true">◌</span> Chat <span class="nav-end">↗</span></button><button class="nav-item" data-view="mail"><span aria-hidden="true">✉</span> Correos <b id="mail-count">0</b></button><button class="nav-item" data-view="summary"><span aria-hidden="true">≡</span> Resumen <b id="draft-count">0</b></button></nav>
+    <div class="sidebar-bottom"><div class="connection-card"><span class="connection-icon" aria-hidden="true">↔</span><strong>Conecta tu operación</strong><p>Gmail y la IA están pendientes de vincular.</p><button data-action="connections">Ver conexiones <span aria-hidden="true">↗</span></button></div><button class="owner" data-action="rules"><span class="avatar">M</span><span>Miguel<small>Propietario de SUMETEC</small></span><span aria-hidden="true">⚙</span></button></div>
+  </aside>
+  <main id="main" tabindex="-1">
+    <header class="topbar"><div><span class="eyebrow">SUMETEC / COMERCIAL</span><h1 id="page-title">Tu asistente comercial</h1></div><div class="top-actions"><span id="save-state" class="save-state">Guardado local</span><button class="icon-button" data-action="export" aria-label="Exportar respaldo" title="Exportar respaldo">↓</button><button id="install-app" class="button subtle" type="button">Instalar app</button><button class="button subtle" data-action="connections">Conexiones</button></div></header>
+    <div id="storage-warning" class="warning" role="alert" hidden></div>
+    <div class="modebar"><span id="mode-label">Tu espacio de trabajo</span><span class="mode-description" id="mode-description">Gmail e IA pendientes. Tus indicaciones se conservan aquí.</span><button id="mode-toggle" data-action="toggle-demo">Probar con ejemplos <span aria-hidden="true">→</span></button></div>
+    <section id="chat-view" class="view chat-layout" aria-label="Chat con el asistente">
+      <div class="conversation">
+        <div class="context-bar"><span class="context-label">Trabajando en</span><label class="sr-only" for="context-select">Correo o conversación actual</label><select id="context-select"><option value="">Conversación general</option></select><button class="text-button" data-action="open-context">Ver correo <span aria-hidden="true">↗</span></button></div>
+        <div id="chat-log" class="chat-log" role="log" aria-label="Mensajes" aria-live="polite"></div>
+        <div class="composer-area"><div class="quick-actions"><button data-template="quote">＋ Pedir cotización</button><button data-template="shipping">Preguntar por el envío</button><button data-template="followup">Dar seguimiento</button></div><form id="chat-form" class="composer"><label class="sr-only" for="instruction">Indicación para el agente</label><textarea id="instruction" rows="2" maxlength="4000" placeholder="Escribe una indicación para tu agente…"></textarea><div class="composer-bottom"><span>Enter para guardar · Mayús + Enter para otra línea</span><button type="submit" class="send-button" aria-label="Guardar indicación">↑</button></div></form><p class="composer-note">Primera versión de prueba. Las plantillas y los ejemplos no envían correos.</p></div>
+      </div>
+      <aside class="review-panel" aria-label="Borradores en revisión"><div class="panel-heading"><h2>En revisión</h2><span id="review-count">0</span></div><p class="panel-intro">Los borradores de esta conversación, a la mano.</p><div id="review-list"></div><div class="rules-note"><span class="rule-icon" aria-hidden="true">✓</span><strong>Tú tienes la última palabra</strong><p>Precios de venta y compromisos comerciales pasan por tu revisión.</p><button class="text-button" data-action="rules">Ver reglas del asistente →</button></div></aside>
+    </section>
+    <section id="mail-view" class="view content-view" aria-label="Conversaciones de correo" hidden><div class="section-heading"><div><h2>Todo empieza con una conversación</h2><p>Revisa el correo y dale una indicación al agente.</p></div><button class="button primary" data-action="add-mail">＋ Agregar correo</button></div><div class="search-box"><span aria-hidden="true">⌕</span><label class="sr-only" for="mail-search">Buscar correos</label><input id="mail-search" placeholder="Buscar proveedor, asunto o correo…" type="search"></div><div id="mail-list" class="mail-list"></div><p class="footnote">Los correos agregados aquí son manuales. Gmail todavía no está sincronizado.</p></section>
+    <section id="summary-view" class="view content-view" aria-label="Resumen comercial" hidden><div class="section-heading"><div><h2>Tu operación, de un vistazo</h2><p>Lo que preparaste y lo que sigue pendiente.</p></div><button class="button subtle" data-action="export">Exportar respaldo ↓</button></div><div id="summary-stats" class="summary-stats"></div><div class="summary-columns"><div><h3>Borradores para revisar</h3><div id="summary-drafts"></div></div><div><h3>Indicaciones pendientes</h3><div id="summary-tasks"></div></div></div><div class="summary-notice"><strong>Decisiones con respaldo</strong><p>Este resumen cuenta conversaciones, borradores e indicaciones. La comparación de cotizaciones y el costo puesto en Tijuana estarán disponibles al conectar las fuentes y la IA.</p></div></section>
+  </main>
+</div>
+<dialog id="modal"><div class="dialog-top"><h2 id="modal-title"></h2><button class="icon-button" data-action="close-modal" aria-label="Cerrar ventana">×</button></div><div id="modal-body"></div></dialog>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<noscript>Activa JavaScript para usar las conversaciones y guardar borradores en este navegador.</noscript>
+<aside id="pwa-update" class="pwa-update" role="status" hidden><div><strong>Actualización disponible</strong><p id="pwa-update-text">Tu trabajo se conserva. Actualiza cuando termines.</p></div><button id="pwa-update-button" class="button primary" type="button">Actualizar app</button></aside>
+<p id="pwa-status" class="warning" role="status" hidden></p>
+<dialog id="install-help"><div class="dialog-top"><h2>Instalar SUMETEC Asistente</h2><button id="close-install-help" class="icon-button" aria-label="Cerrar ayuda de instalación" type="button">×</button></div><div class="install-help-body"><p>La app se abre con su icono y en una ventana independiente.</p><ul><li><strong>Android:</strong> abre el menú de Chrome y elige «Instalar app» o «Agregar a pantalla principal».</li><li><strong>iPhone o iPad:</strong> abre la app en Safari, toca Compartir y elige «Agregar a pantalla de inicio».</li><li><strong>Computadora:</strong> en Chrome o Edge usa «Instalar» en la barra de direcciones o en el menú del navegador.</li></ul><p>Para instalarla en tu celular necesita un enlace HTTPS, como tus otras apps. El acceso local de prueba sólo corresponde a esta computadora.</p></div></dialog>
+<script type="module" src="app.mjs"></script><script type="module" src="pwa.js"></script>
+</body></html>

@@ -1,0 +1,11 @@
+.portal-pedidos{box-sizing:border-box;width:min(680px,calc(100% - 24px));max-height:88dvh;overflow:auto;border:0;border-radius:16px;padding:22px;color:#17374d;background:#fff;box-shadow:0 20px 80px #0005;font-family:inherit}
+.portal-pedidos::backdrop{background:#06233bb8}
+.portal-pedidos header,.portal-pedidos nav{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.portal-pedidos h2{margin:0;font-size:22px}.portal-pedidos h3{margin:8px 0;font-size:18px}
+.portal-pedidos label{display:block;margin:18px 0 8px;font-weight:700}
+.portal-pedidos input,.portal-pedidos select,.portal-pedidos textarea{display:block;width:100%;box-sizing:border-box;min-height:46px;padding:10px;margin:7px 0;border:1px solid #aec1cf;border-radius:6px;font:inherit;font-size:16px;background:#fff;color:#17374d}
+.portal-boton{min-height:44px;border:1px solid #0d3b66;border-radius:8px;background:#f2f7fa;color:#0d3b66;padding:10px 14px;font:inherit;font-weight:700;cursor:pointer;margin:5px 6px 5px 0}
+.portal-boton:disabled{opacity:.5;cursor:wait}.portal-boton:focus-visible,.portal-pedidos input:focus-visible,.portal-pedidos select:focus-visible,.portal-pedidos textarea:focus-visible{outline:3px solid #76b82a;outline-offset:3px}
+.portal-fila{border-top:1px solid #dae5eb;padding:16px 0}.portal-fila small,.portal-ayuda{color:#4d6474;font-size:14px;line-height:1.5}.portal-mensaje{color:#0d3b66;font-weight:600;line-height:1.5;min-height:20px}.portal-nota{white-space:pre-wrap}
+@media(max-width:480px){.portal-pedidos{padding:16px}.portal-pedidos nav{display:block}.portal-pedidos nav button{width:100%}}
+@media(max-width:780px){#btnPedidosPortal{display:none}}

@@ -149,3 +149,15 @@ html[data-app=facturacion] .barra-facturar{padding-bottom:var(--sm-pie)!importan
   html[data-app] body > header,html[data-app] body header.sm-barra,html[data-app] body .tb{animation:none}
   html[data-app] *,html[data-app] *::before,html[data-app] *::after,html[data-app] dialog::backdrop{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.01ms!important}
 }
+
+/* ── 16. Celular: sin zoom accidental (2026-10-14, pedido de Miguel) ──
+   1) El doble toque ya no amplía la pantalla (touch-action:manipulation); el pellizco para ampliar SÍ se conserva.
+   2) iPhone amplía solo al tocar un campo con letra menor a 16 px y deja la pantalla agrandada hasta pellizcar.
+      Por eso los campos miden 16 px en celular; en pantalla grande se queda el tamaño de cada app.
+   3) Si el teléfono gira, no re-escala el texto. */
+html[data-app]{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html[data-app] body,html[data-app] button,html[data-app] a,html[data-app] label,html[data-app] summary{touch-action:manipulation}
+@media (max-width:820px){
+  html[data-app] input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=hidden]),
+  html[data-app] select,html[data-app] textarea{font-size:16px!important}
+}

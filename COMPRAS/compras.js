@@ -78,6 +78,27 @@ function _pedirEvidenciaCompra_() {
 // MAX_HISTORIAL_COMPRAS: es un historial reciente, no un archivo completo.
 const CLAVE_HISTORIAL_COMPRAS = 'sumetec_compras_historial_compras';
 const MAX_HISTORIAL_COMPRAS = 30;
+// 2026-10-14 (Ecosistema → Compras → Ajustes): el ERP publica COMPRAS {foto_tope_kb, max_historial}; se guarda al
+// llegar la configuración y se lee al usarlo. Sin dato válido, el valor de fábrica de este archivo.
+const CLAVE_AJUSTES_COMPRAS = 'sumetec_compras_ajustes';
+function _ajusteCompras_(clave, fabrica) {
+  try {
+    const a = JSON.parse(localStorage.getItem(CLAVE_AJUSTES_COMPRAS) || 'null'), v = a && a[clave];
+    return (typeof v === 'number' && isFinite(v) && v > 0) ? v : fabrica;
+  } catch (_) { return fabrica; }
+}
+// Permisos por acción (Ecosistema → Compras → Permisos). Sin nada publicado: lo de siempre (`porDefecto`).
+// 2026-10-20: «pide» = permiso del dueño, que lo aprueba desde su teléfono con su huella (acceso.js).
+function _autorizarCompras_(accion, porDefecto, documento, detalle) {
+  if (typeof sumetecAutorizarAccion !== 'function') return Promise.resolve(porDefecto === 'libre');
+  return sumetecAutorizarAccion('compras', accion, porDefecto, { nombre: 'Compras', documento, detalle });
+}
+// A qué servidor y con qué token pedir permiso: el token sale con el PIN (o la huella) de este teléfono.
+if (typeof sumetecRegistrarServidor === 'function') sumetecRegistrarServidor('compras', async () => {
+  const url = localStorage.getItem('sumetec_compras_url');
+  if (!url) return null;
+  return { url, token: await abrirSesionDireccion(await pedirPinDireccion()) };
+});
 const CLAVE_BORRADOR_COMPRA = 'sumetec_compras_borrador';
 
 function _leerBorradorCompra_() {
@@ -140,14 +161,16 @@ function _registrarEnvioCompras_(compras) {
     if (idx >= 0) historial.splice(idx, 1);
     historial.unshift(entrada);
   });
-  localStorage.setItem(CLAVE_HISTORIAL_COMPRAS, JSON.stringify(historial.slice(0, MAX_HISTORIAL_COMPRAS)));
+  localStorage.setItem(CLAVE_HISTORIAL_COMPRAS, JSON.stringify(historial.slice(0, _ajusteCompras_('max_historial', MAX_HISTORIAL_COMPRAS))));
 }
 
 // A-COLAS / B11 (auditoría incremental 2026-09-28): la compra ya entra a la cola ANTES de enviarse
 // (nuevaCompraCampo) y ahora se reenvía sola (procesarColaCompras, abajo). Un solo transmisor a la vez:
 // dos envíos simultáneos (botón + reenvío automático) mandaban la misma compra dos veces.
 let _enviandoCompras = false;
-async function enviarComprasCampo(pin) {
+// `manual` (2026-10-20, igual que «Reintentar ahora» del Cotizador): el botón se salta la espera de 30/60/120 s
+// tras un fallo; el reenvío solo la respeta. El contador de fallos y lo rechazado no cambian.
+async function enviarComprasCampo(pin, manual) {
   const url = localStorage.getItem('sumetec_compras_url');
   if (!url) throw Error('Vincula el teléfono primero');
   const token = await abrirSesionDireccion(pin);
@@ -159,7 +182,7 @@ async function enviarComprasCampo(pin) {
   const fallos = [];   // {id, motivo, transitorio}: lo que el SERVIDOR contestó con error (2026-09-29, incidente REM-0020)
   try {
     for (const compra of leer(COLAS.compras)) {
-      if (compra.rechazo || !sumetecPuedeReintentar(compra)) continue;
+      if (compra.rechazo || (!manual && !sumetecPuedeReintentar(compra))) continue;
       const { rechazo, _try, _srv, _lastError, _retryAt, ...limpia } = compra;
       // D-02: «sin red» detiene el envío; una respuesta que no es JSON cuenta como fallo del servidor de ESTA
       // compra y se sigue con la siguiente (antes atoraba toda la cola sin marcarla nunca como detenida).
@@ -309,7 +332,8 @@ function _reintentarCompra_(id) {
   if (typeof procesarColaCompras === 'function') procesarColaCompras(true);
   _renderHistorialComprasDireccion_(); if (typeof estado === 'function') estado();
 }
-function _descartarCompra_(id) {
+async function _descartarCompra_(id) {
+  if (!await _autorizarCompras_('descartar_compra', 'libre')) return;
   if (!confirm('¿Descartar esta compra? NO llegará al ERP y esta acción no se puede deshacer.')) return;
   localStorage.setItem(COLAS.compras, JSON.stringify(leer(COLAS.compras).filter(c => c.id !== id)));
   _renderHistorialComprasDireccion_(); if (typeof estado === 'function') estado();
@@ -325,7 +349,7 @@ function _renderHistorialComprasDireccion_() {
   const items = _historialComprasDireccion_(leer(COLAS.compras), leer(CLAVE_HISTORIAL_COMPRAS), _leerSnapshotCacheDireccion_());
   el.innerHTML = _htmlHistorialComprasDireccion_(items) + _htmlAbonosCompra_();
   el.querySelectorAll('[data-abonar-compra]').forEach(b=>b.onclick=()=>_abrirAbonoCompra_(b.dataset.abonarCompra));
-  el.querySelectorAll('[data-descartar-abono]').forEach(b=>b.onclick=()=>{if(confirm('El servidor rechazó este abono y no lo aplicó. ¿Descartar para capturarlo de nuevo?')){localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().filter(x=>x.id!==b.dataset.descartarAbono)));_renderHistorialComprasDireccion_();if(typeof estado==='function')estado();}});
+  el.querySelectorAll('[data-descartar-abono]').forEach(b=>b.onclick=async()=>{if(!await _autorizarCompras_('descartar_abono','libre'))return;if(confirm('El servidor rechazó este abono y no lo aplicó. ¿Descartar para capturarlo de nuevo?')){localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().filter(x=>x.id!==b.dataset.descartarAbono)));_renderHistorialComprasDireccion_();if(typeof estado==='function')estado();}});
   el.querySelectorAll('[data-reintentar-abono]').forEach(b=>b.onclick=()=>{localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().map(x=>x.id===b.dataset.reintentarAbono?{...x,_retryAt:0,detenido:false}:x))); procesarColaCompras(true);});
 }
 
@@ -662,6 +686,7 @@ async function _actualizarListasCompras_(pin) {
     const [listas, catalogo, equivs, cfg] = await Promise.all([pedir('listas_gasto'), pedir('catalogo'), pedir('equivalencias'), pedir('configuracion').catch(() => null)]);
     // Acceso (2026-10-09): minutos de bloqueo y equipos sin PIN que fijó el ERP. seguridad.js los consulta. Ver acceso.js.
     if (cfg && cfg.ok && cfg.datos && typeof sumetecAplicarAcceso === 'function') { try { sumetecAplicarAcceso('compras', cfg.datos.ACCESO); } catch (_) { } }
+    if (cfg && cfg.ok && cfg.datos && cfg.datos.COMPRAS && typeof cfg.datos.COMPRAS === 'object') { try { localStorage.setItem(CLAVE_AJUSTES_COMPRAS, JSON.stringify(cfg.datos.COMPRAS)); } catch (_) { } }
     const previa = _leerListasCompras_();
     const out = { ts: Date.now(), proveedores: previa.proveedores, productos: previa.productos, formas: previa.formas || [] };
     if(Array.isArray(listas)) out.formas=[...new Set(listas.filter(f=>String(f.CLASE||'').toUpperCase()==='FORMA').map(f=>String(f.NOMBRE||'').trim()).filter(Boolean))];
@@ -1042,7 +1067,7 @@ function activarComprasDireccion() {
       _comprasEnviando = leer(COLAS.compras).length;
       estado();
       const pin = await pedirPinDireccion();
-      const n = await enviarComprasCampo(pin);
+      const n = await enviarComprasCampo(pin, true);
       _comprasUltimoError = '';
       _mostrarResultadoCompra_(n
         ? `${n} compra(s) siguen pendientes de enviar.`
@@ -1085,7 +1110,7 @@ function _escalarLadoCompra_(ancho, alto, maxLado) {
 }
 
 function _exportarConCalidadDecrecienteCompra_(canvas, calidadInicial) {
-  const TOPE_BYTES = FOTO_TOPE_KB_COMPRA * 1024;
+  const TOPE_BYTES = (typeof _ajusteCompras_ === 'function' ? _ajusteCompras_('foto_tope_kb', FOTO_TOPE_KB_COMPRA) : FOTO_TOPE_KB_COMPRA) * 1024;
   const PISO_CALIDAD = 0.45;
   return new Promise((resolve, reject) => {
     const intentar = (q) => {

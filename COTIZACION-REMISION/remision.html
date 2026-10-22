@@ -63,6 +63,25 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color
 /* Fondo oscuro detrás del menú "Más" -- SOLO se activa en pantallas chicas
    (ver @media abajo). En desktop queda display:none siempre. */
 #menuMasBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:499}
+/* Calculadora normal + de negocio (2026-10-14) */
+.calc-tabs{display:flex;gap:6px;margin-bottom:12px}
+.calc-tab{flex:1;padding:9px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.calc-tab.sel{background:var(--green);border-color:var(--green);color:#fff}
+.calc-hist{min-height:18px;text-align:right;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.calc-pant{display:block;text-align:right;font-size:32px;font-weight:800;padding:6px 4px 10px;font-variant-numeric:tabular-nums;overflow-x:auto;white-space:nowrap}
+.calc-teclas{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.calc-teclas button{min-height:52px;border:1.5px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);font:inherit;font-size:20px;font-weight:700;cursor:pointer;touch-action:manipulation}
+.calc-teclas button:active{transform:scale(.97)}
+.calc-teclas .calc-fn{color:var(--muted)}
+.calc-teclas .calc-op{color:var(--green)}
+.calc-teclas .calc-igual{background:var(--green);border-color:var(--green);color:#fff}
+.calc-teclas .calc-cero{grid-column:span 2}
+.calc-bloque{padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--border)}
+.calc-bloque-t{font-weight:700;font-size:13px;margin-bottom:6px}
+.calc-fila{display:flex;gap:8px}
+.calc-fila .fg{flex:1;min-width:0;margin-bottom:6px}
+.calc-out{font-size:12.5px;color:var(--muted)}
+.calc-out strong{color:var(--text)}
 .menu-mas-grp button{display:block;width:100%;text-align:left;padding:14px 16px;border:none;background:none;font-family:inherit;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;min-height:54px}
 .menu-mas-grp button:hover{background:var(--bg)}
 .menu-mas-grp button+button{border-top:1px solid var(--border)}
@@ -652,6 +671,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color
 <script src="./vendor/jspdf.plugin.autotable.min.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js';document.head.appendChild(s);"></script>
 <!-- Funciones puras de cálculo/formato/texto (esc, escAttr, fmt, n2l, words, _calcTot).
      Debe cargar ANTES del <script> principal. Cacheado por sw.js para uso offline. -->
+<link rel="stylesheet" href="./portal_pedidos.css">
 <script src="./calculos.js"></script>
 <script src="./sync_audit.js"></script>
 <script src="./comercial_cliente.js"></script>
@@ -739,6 +759,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <div class="tb-div" id="tbDiv1"></div>
   <button class="btn btn-o" id="btnHist" onclick="verHist()">📋 Historial</button>
   <button class="btn btn-o" id="btnCobros" onclick="verCobros()" style="color:#ff8c69;border-color:rgba(255,140,105,.35)">💰 Cobros</button>
+  <button class="btn btn-o" id="btnPedidosPortal" type="button" onclick="SumetecPortalPedidos.abrir()">Pedidos<span id="portalPedidosContador"></span></button>
   <div class="tb-more" id="tbMasWrap">
     <button class="btn btn-o" id="btnMas" onclick="_toggleMenuMas()">☰ Más</button>
   </div>
@@ -765,9 +786,11 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 <div id="menuMas" class="menu-mas">
   <div class="menu-mas-grp">
   <div class="menu-mas-h">Negocio</div>
+  <button type="button" onclick="SumetecPortalPedidos.abrir()">Pedidos de clientes<span id="portalPedidosContadorMenu"></span></button>
   <button onclick="_cerrarMenuMas();verNegocio()">📊 Resumen del negocio</button>
   <button onclick="_cerrarMenuMas();abrirCostosSubieron()" title="Productos cuyo costo real subió y su precio no">📈 Costos que subieron</button>
   <button onclick="_cerrarMenuMas();abrirSimulador()" title="Simula margen/utilidad con un precio nuevo, sin tocar el catálogo real">💲 Simulador de precio</button>
+  <button onclick="_cerrarMenuMas();abrirCalculadora()" title="Calculadora normal y de negocio (las mismas fórmulas que la del ERP)">🧮 Calculadora</button>
   </div>
   <div class="menu-mas-grp">
   <div class="menu-mas-h">Caja de este celular</div>
@@ -1106,7 +1129,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   </div>
   <div style="display:flex;gap:9px;margin-top:4px">
     <button class="btn" style="flex:1;justify-content:center;padding:11px;background:var(--bg);color:var(--muted)" onclick="closeOv('ovCancelar')">Regresar</button>
-    <button class="btn" style="flex:1;justify-content:center;padding:11px;background:#c0392b;color:#fff;font-weight:700" onclick="confirmarCancelacion()">🚫 Confirmar cancelación</button>
+    <button id="btnConfirmarCancelacion" class="btn" style="flex:1;justify-content:center;padding:11px;background:#c0392b;color:#fff;font-weight:700" onclick="confirmarCancelacion()">🚫 Confirmar cancelación</button>
   </div>
 </div></div>
 
@@ -1231,17 +1254,56 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 
   <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
     <div style="font-weight:700;font-size:13px;margin-bottom:4px">🧮 Calculadora: ¿qué precio le pongo?</div>
-    <div class="info-box" style="margin-bottom:10px">Toma el costo proveedor de arriba, le mete el IVA de compra, y calcula el precio de venta según cuánto quieras ganarle.</div>
-    <div class="fg"><label>IVA de compra (%)</label><input id="calc_iva" aria-label="IVA %" type="number" min="0" max="100" step="0.5" value="16" inputmode="decimal" oninput="_actualizarCalcPrecio()"></div>
-    <div class="fg">
-      <label>Cuánto quiero ganarle — <span id="calcMargenVal">40%</span></label>
-      <input id="calc_margen" type="range" min="0" max="70" value="40" step="1" style="width:100%;accent-color:var(--green)" oninput="_actualizarCalcPrecio()">
-    </div>
+    <div class="info-box" style="margin-bottom:10px">Igual que la de Costos del ERP: toma el costo proveedor de arriba (antes de IVA) y propone tu precio SIN IVA de venta, como se guarda en el ERP.</div>
+    <div class="fg"><label>IVA de la compra (%)</label><input id="calc_iva" aria-label="IVA de la compra %" type="number" min="0" max="100" step="0.5" value="16" inputmode="decimal" oninput="_actualizarCalcPrecio()"></div>
+    <div class="fg"><label>¿El IVA de la compra entra en tu costo?</label><select id="calc_base" onchange="_actualizarCalcPrecio()"><option value="sin">No, lo recupero: usar costo antes de IVA</option><option value="con">Sí, no lo recupero: usar costo con IVA</option></select></div>
+    <div class="fg"><label>¿Cómo quieres calcular tu ganancia?</label><select id="calc_formula" onchange="_actualizarCalcPrecio()"><option value="utilidad">Sumar un % a lo que costó</option><option value="margen">Que la ganancia sea un % del precio</option></select></div>
+    <div class="fg"><label>Porcentaje de ganancia (%)</label><input id="calc_margen" aria-label="Porcentaje de ganancia" type="number" min="0" max="99.99" step="0.01" value="30" inputmode="decimal" oninput="_actualizarCalcPrecio()"></div>
+    <div class="fg"><label>IVA de venta para ver el total al cliente</label><select id="calc_iva_venta" onchange="_actualizarCalcPrecio()"></select></div>
     <div id="calcResultado" style="margin-top:6px"></div>
+    <button class="btn btn-o" style="width:100%;justify-content:center;padding:10px;margin-top:8px" onclick="_usarReglaAutomatica()" id="calcReglaBtn">Usar la regla automática del ERP</button>
     <button class="btn btn-o" style="width:100%;justify-content:center;padding:10px;margin-top:8px" onclick="_usarPrecioCalculado()">↑ Usar este precio arriba</button>
   </div>
 
   <button class="btn btn-p" style="width:100%;justify-content:center;padding:12px;margin-top:14px" onclick="closeOv('ovSimulador')">Cerrar</button>
+</div></div>
+<!-- 2026-10-14 (pedido de Miguel): calculadora normal + de negocio, igual que la del ERP (base.html, erp-comun.js).
+     No guarda nada ni toca remisiones: es una hoja en blanco. Fórmulas en calculos.js. -->
+<div class="ov" id="ovCalculadora"><div class="modal" style="max-width:380px"><div class="modal-hd"><div class="modal-title">🧮 Calculadora</div><button class="mx" onclick="closeOv('ovCalculadora')">✕</button></div>
+  <div class="calc-tabs" role="tablist">
+    <button type="button" class="calc-tab sel" data-calc-tab="normal" role="tab" aria-selected="true" onclick="_calcTab('normal')">Normal</button>
+    <button type="button" class="calc-tab" data-calc-tab="negocio" role="tab" aria-selected="false" onclick="_calcTab('negocio')">De negocio</button>
+  </div>
+  <div data-calc-panel="normal">
+    <div id="calcHist" class="calc-hist" aria-live="polite"></div>
+    <output id="calcPant" class="calc-pant">0</output>
+    <div class="calc-teclas">
+      <button type="button" data-k="C" class="calc-fn">C</button><button type="button" data-k="⌫" class="calc-fn" aria-label="Borrar">⌫</button><button type="button" data-k="%" class="calc-fn">%</button><button type="button" data-k="÷" class="calc-op">÷</button>
+      <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k="×" class="calc-op">×</button>
+      <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k="−" class="calc-op">−</button>
+      <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k="+" class="calc-op">+</button>
+      <button type="button" data-k="0" class="calc-cero">0</button><button type="button" data-k=".">.</button><button type="button" data-k="=" class="calc-igual">=</button>
+    </div>
+  </div>
+  <div data-calc-panel="negocio" hidden>
+    <div class="calc-bloque">
+      <div class="calc-bloque-t">Costo → precio (o precio → margen real)</div>
+      <div class="calc-fila"><div class="fg"><label for="ngCosto">Costo</label><input id="ngCosto" type="number" step="0.01" inputmode="decimal"></div><div class="fg"><label for="ngMargen">Margen deseado %</label><input id="ngMargen" type="number" step="0.1" inputmode="decimal"></div></div>
+      <div class="calc-out">Precio sugerido: <strong id="ngPrecioOut">—</strong></div>
+      <div class="calc-fila"><div class="fg"><label for="ngPrecioReal">…o precio real</label><input id="ngPrecioReal" type="number" step="0.01" inputmode="decimal"></div><div class="calc-out" style="align-self:end">Margen real: <strong id="ngMargenOut">—</strong></div></div>
+    </div>
+    <div class="calc-bloque">
+      <div class="calc-bloque-t">Precio con / sin IVA</div>
+      <div class="calc-fila"><div class="fg"><label for="ivaMonto">Monto</label><input id="ivaMonto" type="number" step="0.01" inputmode="decimal"></div><div class="fg"><label for="ivaTasaCalc">Tasa</label><select id="ivaTasaCalc"></select></div><div class="fg"><label for="ivaDir">Es</label><select id="ivaDir"><option value="sin">Sin IVA</option><option value="con">Con IVA</option></select></div></div>
+      <div class="calc-out" id="ivaOut">—</div>
+    </div>
+    <div class="calc-bloque" style="border:none">
+      <div class="calc-bloque-t">Utilidad y margen de una línea</div>
+      <div class="calc-fila"><div class="fg"><label for="ulCant">Cantidad</label><input id="ulCant" type="number" step="1" value="1" inputmode="decimal"></div><div class="fg"><label for="ulCosto">Costo unit.</label><input id="ulCosto" type="number" step="0.01" inputmode="decimal"></div><div class="fg"><label for="ulPrecio">Precio unit.</label><input id="ulPrecio" type="number" step="0.01" inputmode="decimal"></div></div>
+      <div class="calc-out" id="ulOut">—</div>
+    </div>
+    <div style="font-size:10.5px;color:var(--muted);line-height:1.45">Margen = (precio − costo) ÷ precio, la misma convención del ERP. El margen deseado arranca con la meta de Datos del negocio.</div>
+  </div>
 </div></div>
 <div class="ov" id="ovEmpresa"><div class="modal"><div class="modal-hd"><div class="modal-title">🏢 Datos de Mi Empresa</div><button class="mx" onclick="closeOv('ovEmpresa')">✕</button></div>
   <div class="info-box">Estos datos aparecen en el pie de cada cotización y se guardan en tu navegador.</div>
@@ -1631,6 +1693,8 @@ function _marcarPagoSync(uuid){
 function _encolarCancelacion(rem,motivo){
   const cola=leerSeguro('cola_cancel',[]);
   const idx=cola.findIndex(e=>String(e.id)===String(rem.id));
+  // 2026-10-20: ya no viaja una prueba de código. El servidor busca el permiso que el dueño aprobó para ESTA remisión
+  // (vale 24 h); sin él no cancela, aunque alguien se brinque la pantalla con el token del teléfono.
   const entrada={id:rem.id,folio:rem.folio,
     motivo:motivo||rem.motivoCancelacion||'',
     fechaCancelacion:rem.fechaCancelacion||'',
@@ -1668,7 +1732,7 @@ async function procesarColaCancel(){
           if(r){ r.sincronizado=true; persistirRemisiones(); }
           if(typeof guardarEventoSync==='function')guardarEventoSync({folio:item.folio,operacion:'CANCELACION_GUARDADA',resultado:'OK',detalle:''});
           ok++;
-        } else { _bumpTry('cola_cancel',e=>String(e.id)===String(item.id),sumetecMotivoRespuesta(d,res.ok?'respuesta sin ok del servidor':'el servidor contestó HTTP '+res.status),true); }
+        } else { _bumpTry('cola_cancel',e=>String(e.id)===String(item.id),sumetecMotivoRespuesta(d,res.ok?'respuesta sin ok del servidor':'el servidor contestó HTTP '+res.status),!(d&&d.aprobacionPendiente),!!(d&&d.aprobacionRechazada)); }
       }catch(e){ _bumpTry('cola_cancel',e=>String(e.id)===String(item.id),'sin respuesta del servidor',false); }
     }
     if(ok>0)_estado('✅ '+ok+' cancelación(es) sincronizada(s)');
@@ -1922,6 +1986,7 @@ async function heartbeat(){
       actualizarPanelConexion();
     }
     if(tokenRechazado||cuotaSospecha) return; // colas/cobros/catálogo fallarían igual -- no insistir
+    globalThis.SumetecPortalPedidos?.actualizarContador();
     // 2026-09-10 (auditoría Cotizador): hora REAL de la última publicación del ERP, no de
     // cuándo el celular recibió respuesta -- '' si el ERP nunca ha publicado (ver ping en
     // apps_script.js). Se guarda en cada heartbeat, no solo cuando cambia catVer, porque
@@ -2100,7 +2165,7 @@ async function _enviarConBuzon_(url,documento){
   // Una celda de Sheets no puede guardar este documento; la ruta habitual sí.
   if(JSON.stringify(limpio).length>45000)return directo();
   const emular=d=>({ok:true,status:200,json:async()=>d});
-  const recibido=await post({tipo:'buzon_recibir',documento:limpio});
+  const recibido=await post({tipo:'buzon_recibir',documento:limpio,procesar:true});   // un viaje: el servidor lo aplica en la misma llamada si puede
   if(recibido?.codigo==='BUZON_DOCUMENTO_GRANDE')return directo();
   if(!recibido?.ok&&(
     recibido?.codigo==='BUZON_NO_ACTIVO'||
@@ -2114,6 +2179,7 @@ async function _enviarConBuzon_(url,documento){
   _estado('📥 Documento recibido; esperando aplicación en el servidor');
   const aplicado=await post({tipo:'buzon_procesar',id:recibido.id,...(reintentarCaja?{reintentarCaja:true}:{})});
   if(aplicado?.ok&&(aplicado.estado==='APLICADO'||aplicado.estado==='RECHAZADO'))return emular(aplicado.resultado);
+  if(aplicado?.ok&&aplicado.estado==='DETENIDO')return emular({ok:false,buzonPendiente:true,buzonDetenido:true,error:'El servidor no pudo aplicar este documento tras varios intentos ('+(aplicado.error||'sin detalle')+'). No se perdió: avisa al dueño.'});
   return emular({ok:false,buzonPendiente:true,error:'Documento recibido; reintenta hasta confirmar su aplicación'});
 }
 async function bajarCobros(){
@@ -2302,13 +2368,13 @@ const EMPRESA_DEFAULT = {
 // Después de editar, vuelve a subir remision.html a GitHub (ver el portal de documentación → Cotizador → Configuración).
 //
 // Asesores / vendedores (campo "Asesor" de remisión y cotización):
-const OPCIONES_ASESOR          = ['Miguel Tejeda','Jose Gutierrez','Equipo SUMETEC'];
+let OPCIONES_ASESOR          = ['Miguel Tejeda','Jose Gutierrez','Equipo SUMETEC'];
 // MC-05: hasta DOS teléfonos por asesor, impresos en el PDF en una línea aparte
 // debajo del asesor (igual que el patrón tel/tel2 de la empresa). El nombre de
 // aquí debe coincidir EXACTO con OPCIONES_ASESOR (es la llave del lookup).
 // Miguel: llena aquí los números reales (o edítalos en Identidad/Ecosistema del
 // ERP y vuelve a subir este archivo) -- vacío no imprime nada.
-const OPCIONES_ASESOR_TEL = {
+let OPCIONES_ASESOR_TEL = {
   'Miguel Tejeda':   {tel:'', tel2:''},
   'Jose Gutierrez':  {tel:'', tel2:''},
   'Equipo SUMETEC':  {tel:'', tel2:''}
@@ -2323,9 +2389,9 @@ function _mostrarTelAsesor(selectId, destinoId){
 }
 // Condiciones de pago de la REMISIÓN (ya es una venta entregada).
 // La primera opción es '' (vacía) = SIN crédito → no aparece nada en el PDF.
-const OPCIONES_PAGO_REMISION   = ['','Crédito a 7 días','Crédito a 15 días','Crédito a 30 días'];
+let OPCIONES_PAGO_REMISION   = ['','Crédito a 7 días','Crédito a 15 días','Crédito a 30 días'];
 // Condiciones de pago de la COTIZACIÓN (aún no se sabe → "Pendiente" por defecto):
-const OPCIONES_PAGO_COTIZACION = ['Pendiente','Crédito a 7 días','Crédito a 15 días','Crédito a 30 días','Pago de contado','Transferencia bancaria'];
+let OPCIONES_PAGO_COTIZACION = ['Pendiente','Crédito a 7 días','Crédito a 15 días','Crédito a 30 días','Pago de contado','Transferencia bancaria'];
 // Menú COTIZADOR 2026-07-14: OPCIONES_PAGO_COTIZACION trae valores que
 // OPCIONES_PAGO_REMISION no tiene ("Pendiente","Pago de contado",
 // "Transferencia bancaria") -- asignarlos tal cual al <select> de remisión
@@ -2337,7 +2403,7 @@ function _mapearDPagoARemision(dPagoCot){
 // Método de pago (CÓMO pagó el cliente — en cobros y abonos):
 const OPCIONES_METODO_PAGO     = ['Efectivo','Transferencia','Cheque','Tarjeta'];
 // Lugar de entrega (solo cotización):
-const OPCIONES_LUGAR_ENTREGA   = ['Almacén del cliente','Nuestras instalaciones','Punto acordado'];
+let OPCIONES_LUGAR_ENTREGA   = ['Almacén del cliente','Nuestras instalaciones','Punto acordado'];
 
 // Llena un <select> con opciones desde un arreglo, conservando el valor actual si existe.
 function _llenarSelect(id,opciones,placeholder){
@@ -2402,12 +2468,9 @@ const URL_DRIVE     = URL_SERVIDOR;  // misma URL para Drive y folios
 // Sirve para que nadie haga esos cambios "sin querer". NO es seguridad de alto
 // nivel — solo evita accidentes.
 //
-// Re-auditoría 2026-09-25 (N-08, pedido de Miguel): el código YA NO está escrito
-// aquí (este archivo es público en GitHub Pages). Es el MISMO código de seguridad
-// de campo que usan Gastos y Dirección: se cambia en el ERP (Administración →
-// Ecosistema → Sincronizar todo) y llega a este celular solo como huella SHA-256
-// dentro de la configuración publicada (gs_cfg → SEGURIDAD.hash_codigo).
-const SAL_CODIGO_CAMPO = 'sumetec-campo|';
+// 2026-10-20: ya no hay código de seguridad que teclear (F2-COD-R: se sacaba de su huella pública). Las acciones
+// delicadas piden PERMISO AL DUEÑO, que lo aprueba desde su teléfono con su huella (acceso.js →
+// sumetecPedirPermisoDueno). Aquí solo se dice a qué servidor y con qué token pedirlo (se leen al momento).
 
 // ╚══════════════════════════════════════════════════════════════════════════════╝
 // ║                    FIN CONFIGURACIÓN — REMISIONES                           ║
@@ -2416,6 +2479,7 @@ const SAL_CODIGO_CAMPO = 'sumetec-campo|';
 // Token de seguridad — leído de localStorage para no quedar en código fuente
 // Configurar en el botón 🔑 Token de la barra
 let API_TOKEN=''; // B5: sólo en memoria; localStorage conserva la versión cifrada.
+if(typeof sumetecRegistrarServidor==='function') sumetecRegistrarServidor('cotizador',()=>({url:getScriptUrl(),token:API_TOKEN}));
 let _cotAccesoAutorizado = false;
 const _COT_HUELLA_VALIDADA = 'sumetec_cotizador_token_validado';
 
@@ -2551,6 +2615,41 @@ function _aplicarConfiguracionPublicada(datos){
     FORMAS_PAGO_PUBLICADAS=datos.FORMAS_PAGO;
     _aplicarFormasPagoPublicadas();
   }
+  if(typeof _aplicarAjustesCotizador==='function'){ try{ _aplicarAjustesCotizador(datos.COTIZADOR); }catch(_){ } }
+}
+// 2026-10-14 (Ecosistema → Cotizador → Ajustes): asesores, condiciones de pago, lugares de entrega, leyenda del
+// PDF, días de «producto dormido» y la hora del corte por turno. Lo que no llega o no sirve conserva el valor de
+// fábrica escrito arriba (bloque CONFIGURACIÓN — REMISIONES).
+function _aplicarAjustesCotizador(c){
+  if(!c||typeof c!=='object')return;
+  const textos=v=>Array.isArray(v)&&v.length&&v.every(x=>typeof x==='string'&&x.trim())?v.map(x=>x.trim()):null;
+  if(Array.isArray(c.asesores)&&c.asesores.length&&c.asesores.every(a=>a&&typeof a.nombre==='string'&&a.nombre.trim())){
+    OPCIONES_ASESOR=c.asesores.map(a=>a.nombre.trim());
+    OPCIONES_ASESOR_TEL={};
+    c.asesores.forEach(a=>{OPCIONES_ASESOR_TEL[a.nombre.trim()]={tel:String(a.tel||''),tel2:String(a.tel2||'')};});
+  }
+  const rem=textos(c.condiciones_pago_remision); if(rem) OPCIONES_PAGO_REMISION=['',...rem.filter(x=>x)];
+  const cot=textos(c.condiciones_pago_cotizacion); if(cot) OPCIONES_PAGO_COTIZACION=cot;
+  const lug=textos(c.lugares_entrega); if(lug) OPCIONES_LUGAR_ENTREGA=lug;
+  if(typeof c.leyenda_pdf==='string'&&c.leyenda_pdf.trim()) _LEYENDA_DEFAULT=c.leyenda_pdf.trim();
+  const plantilla=v=>typeof v==='string'&&v.trim()?v:null;
+  if(plantilla(c.mensaje_remision)) PLANTILLA_MENSAJE_REMISION=c.mensaje_remision;
+  if(plantilla(c.mensaje_cotizacion)) PLANTILLA_MENSAJE_COTIZACION=c.mensaje_cotizacion;
+  if(plantilla(c.asunto_remision)) PLANTILLA_ASUNTO_REMISION=c.asunto_remision;
+  if(plantilla(c.asunto_cotizacion)) PLANTILLA_ASUNTO_COTIZACION=c.asunto_cotizacion;
+  if(Number.isInteger(c.dias_producto_dormido)&&c.dias_producto_dormido>0) DORMIDO_DIAS=c.dias_producto_dormido;
+  if(typeof c.factor_precio_sugerido==='number'&&c.factor_precio_sugerido>0&&typeof FACTOR_PRECIO_SUGERIDO!=='undefined') FACTOR_PRECIO_SUGERIDO=c.factor_precio_sugerido;
+  if(typeof c.margen_objetivo==='number'&&c.margen_objetivo>=0&&c.margen_objetivo<1&&typeof MARGEN_OBJETIVO_ERP!=='undefined') MARGEN_OBJETIVO_ERP=c.margen_objetivo;
+  if(Number.isInteger(c.hora_corte_turno)&&c.hora_corte_turno>0&&c.hora_corte_turno<24){
+    const h=c.hora_corte_turno, h12=h>12?(h-12)+' pm':h===12?'12 pm':h+' am';
+    _CORTE_TURNOS.manana={lbl:'Mañana (hasta '+h12+')',ini:0,fin:h};
+    _CORTE_TURNOS.tarde={lbl:'Tarde ('+h12+' en adelante)',ini:h,fin:24};
+  }
+  _llenarSelect('d_asesor',OPCIONES_ASESOR); _mostrarTelAsesor('d_asesor','d_asesor_tel');
+  _llenarSelect('cot_d_asesor',OPCIONES_ASESOR); _mostrarTelAsesor('cot_d_asesor','cot_d_asesor_tel');
+  _llenarSelect('d_pago',OPCIONES_PAGO_REMISION);
+  _llenarSelect('cot_d_pago',OPCIONES_PAGO_COTIZACION);
+  _llenarDatalist('cot_lugarOpts',OPCIONES_LUGAR_ENTREGA);
 }
 
 // URL del script de Drive/Folios — se guarda en localStorage con clave 'drive_url'.
@@ -2570,7 +2669,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(!localStorage.getItem('gs_url')) localStorage.setItem('gs_url',URL_CATALOGOS);
   if(!localStorage.getItem('drive_url')) localStorage.setItem('drive_url',URL_DRIVE);
   applyLogoH(empresa.logoH||150);
-  renderFooter();loadGSCache();loadDraft();cargarFolioRemoto();
+  renderFooter();loadGSCache();loadDraft();cargarFolioRemoto();_calentarGPS_();
   if(!items.length)addRow();
   renderTable();calcTotals();
   remActualId=null;
@@ -2650,7 +2749,80 @@ function incrementarFolio(){
 
 // ── Google Drive / Sheets ─────────────────────────────────────
 // Carga el siguiente folio desde Apps Script al abrir la página
+// ── Folio apartado (2026-10-13) ──────────────────────────────────────────────
+// Medido: al registrar, el vendedor esperaba ~4 s («Obteniendo folio…»). Ahora el folio se aparta en segundo
+// plano al abrir la pantalla y se GUARDA en este teléfono: si entra y sale sin vender, la próxima vez usa el
+// mismo (no se salta ningún número). El servidor entrega cada número una sola vez (reservarFolioRem, con candado),
+// así que dos teléfonos nunca apartan el mismo.
+const CLAVE_FOLIO_APARTADO='r_folio_apartado';
+// V1 (2026-10-19): colchón de hasta 3 folios. Así una venta tras otra no espera al candado de Google: se usa
+// el primero de la lista y se repone en segundo plano. Riesgo aceptado por Miguel: si se pierde el teléfono,
+// quedan hasta 3 huecos de folio, y entre teléfonos los números no siguen el orden de la hora.
+const FOLIOS_COLCHON=3;
+function _foliosApartados_(){
+  try{
+    const o=JSON.parse(localStorage.getItem(CLAVE_FOLIO_APARTADO)||'null');
+    const lista=o&&Array.isArray(o.folios)?o.folios:(o&&o.folio?[o.folio]:[]);   // formato viejo: un solo folio
+    return lista.filter(f=>/^REM-\d{4,}$/.test(String(f||'')));
+  }catch(_){return [];}
+}
+function _guardarFoliosApartados_(lista){
+  try{
+    if(lista.length)localStorage.setItem(CLAVE_FOLIO_APARTADO,JSON.stringify({folios:lista,ts:Date.now()}));
+    else localStorage.removeItem(CLAVE_FOLIO_APARTADO);
+    return true;
+  }catch(_){return false;}
+}
+function folioApartado(){return _foliosApartados_()[0]||null;}
+// Lo entrega y lo quita de la lista en el mismo paso: un folio apartado se usa UNA vez (si la app se cierra
+// justo después, se pierde ese número; nunca se repite). Luego repone el colchón sin que nadie espere.
+function tomarFolioApartado(){
+  const lista=_foliosApartados_();
+  const f=lista.shift()||null;
+  if(f&&!_guardarFoliosApartados_(lista))return null;
+  if(f)setTimeout(()=>{apartarFolio();},0);
+  return f;
+}
+let _apartandoFolio=null;   // la petición en camino: quien llegue después la espera en vez de pedir otra
+function apartarFolio(maxMs){
+  if(_apartandoFolio)return _apartandoFolio;
+  const faltan=FOLIOS_COLCHON-_foliosApartados_().length;
+  const url=getScriptUrl();
+  if(faltan<=0||!isOnline||!url)return Promise.resolve(folioApartado());
+  _apartandoFolio=(async()=>{
+    try{
+      const ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),maxMs||15000);
+      const r=await fetch(url+'?tipo=reservar_folio&n='+faltan,{signal:ctrl.signal,cache:'no-store'});
+      clearTimeout(t);
+      const d=await r.json();
+      const nuevos=(d&&Array.isArray(d.folios)?d.folios:[d&&d.folio]).filter(f=>/^REM-\d{4,}$/.test(String(f||'')));
+      if(nuevos.length){
+        const lista=_foliosApartados_();
+        nuevos.forEach(f=>{if(lista.indexOf(f)<0)lista.push(f);});
+        _guardarFoliosApartados_(lista);
+      }
+    }catch(_){/* sin señal: al registrar se usa folio temporal como siempre */}
+    finally{_apartandoFolio=null;}
+    return folioApartado();
+  })();
+  return _apartandoFolio;
+}
+function _mostrarFolioApartado_(folio){
+  if(!folio)return;
+  const el=document.getElementById('folioBadge');
+  if(el){el.innerText=folio;syncFolio(folio);}
+  const m=folio.match(/(\d+)$/);
+  if(m)localStorage.setItem('r_fn',String(parseInt(m[1])-1));
+}
 function cargarFolioRemoto(){
+  const url=getScriptUrl();if(!url)return;
+  // El folio que se muestra es el que este teléfono ya tiene apartado (o el que aparta ahora).
+  const yaApartado=folioApartado();
+  if(yaApartado){_mostrarFolioApartado_(yaApartado);apartarFolio();return;}   // y repone el colchón por detrás
+  if(isOnline){apartarFolio().then(f=>{if(f)_mostrarFolioApartado_(f);else _cargarFolioSoloLectura_();});return;}
+  _cargarFolioSoloLectura_();
+}
+function _cargarFolioSoloLectura_(){
   const url=getScriptUrl();if(!url)return;
   fetch(url,{
     method:'POST',
@@ -2765,9 +2937,24 @@ function _obtenerGPS(){
 // 2026-09-28 (velocidad): ubicación sin frenar el guardado. Si hay una lectura de
 // hace menos de 10 min se usa al instante; si no, se espera como máximo `maxMs`.
 // La lectura lenta sigue corriendo y deja _gpsUltimo listo para la siguiente vez.
+let _gpsEnCamino=null;   // V1: una sola lectura a la vez; quien llega después espera esa
+function _gpsLectura_(){
+  if(!_gpsEnCamino)_gpsEnCamino=_obtenerGPS().finally(()=>{_gpsEnCamino=null;});
+  return _gpsEnCamino;
+}
 function _gpsRapido(maxMs){
   if(_gpsUltimo&&Date.now()-_gpsUltimo.ts<600000) return Promise.resolve({lat:_gpsUltimo.lat,lng:_gpsUltimo.lng});
-  return Promise.race([_obtenerGPS(),new Promise(r=>setTimeout(()=>r(null),maxMs))]);
+  return Promise.race([_gpsLectura_(),new Promise(r=>setTimeout(()=>r(null),maxMs))]);
+}
+// V1 (2026-10-19): la ubicación se pide al ABRIR la remisión, no al tocar REGISTRAR, para que al registrar ya
+// esté lista (antes podía frenar hasta 3 s). Solo si el permiso ya está dado: abrir la pantalla nunca pregunta.
+function _calentarGPS_(){
+  try{
+    if(!navigator.geolocation||!navigator.permissions||!navigator.permissions.query)return;
+    navigator.permissions.query({name:'geolocation'}).then(st=>{
+      if(st&&st.state==='granted'&&!(_gpsUltimo&&Date.now()-_gpsUltimo.ts<600000))_gpsLectura_();
+    }).catch(()=>{});
+  }catch(_){}
 }
 
 // Guarda el PDF generado en Drive y registra la remisión en Sheets.
@@ -2827,7 +3014,7 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
   _correoPendienteEnvio=false; // se consume una sola vez -- nunca se arrastra a la siguiente descarga
   // Asunto y cuerpo salen de la identidad del negocio (empresa.nombre/slogan),
   // nunca quemados en apps_script.js -- el servidor los usa tal cual si vienen.
-  const correoAsunto=correoEnviar?('Tu remisión '+folio+' — '+(empresa.nombre||'SUMETEC')):'';
+  const correoAsunto=correoEnviar?_asuntoCorreo(datosCliente.nombre||cliente,folio,total,'remision'):'';
   const correoCuerpo=correoEnviar?_mensajeAgradecimiento(datosCliente.nombre||cliente,folio,total):'';
   const entry={tipo:'remision',
     id:remActiva?remActiva.id:'',
@@ -3216,7 +3403,7 @@ function _precioAnteriorCliente(clave){
 // este código se vendió, según el HISTORIAL LOCAL de este celular (r_rems).
 // No es la vista global de flops (eso vive en el panel del ERP) -- es solo la
 // señal en el momento de vender, con lo que este dispositivo ya tiene a mano.
-const DORMIDO_DIAS=90;
+let DORMIDO_DIAS=90; // el ERP lo puede cambiar (Ecosistema → Cotizador)
 function _diasSinVenderse(clave){
   const cv=String(clave||'').toLowerCase();if(!cv)return null;
   let masReciente=null;
@@ -3239,6 +3426,7 @@ function _ppSel(idx){
   it.clave=p.clave;it.desc=p.desc;it.precio=p.precio||'';it.iva=ivaGlobal;
   if(p.costo!=null)it.costo=+p.costo||0; // F5: costo (cuando el ERP lo exporte) → margen
   if(p.costoIva!=null)it.costoIva=+p.costoIva||0; // costo CON IVA → margen si la venta es al 0%
+  if(p.costoUtil!=null)it.costoUtil=+p.costoUtil||0; // 2026-10-14: costo con que el ERP mide la utilidad (manda si viene)
   // F5: ¿le diste antes otro precio a este cliente por este producto?
   const ant=_precioAnteriorCliente(p.clave);
   it._precioAnt=(ant && Math.abs(ant.precio-(+it.precio||0))>0.009)?ant.precio:null;
@@ -3535,14 +3723,26 @@ function _correoValido(v){ return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((v||'').trim
 // MC-03: texto ÚNICO para correo y WhatsApp -- sale de la identidad del negocio
 // (empresa.nombre/slogan, inyectada desde identidad-negocio/empresa.json), nunca
 // quemado por separado en cada canal.
+// 2026-10-14: el texto y el asunto se editan en el ERP (Ecosistema → Cotizador → Ajustes) y llegan en COTIZADOR.
+// Estos son los de fábrica: dicen exactamente lo de antes, pero sin nombre de cliente ya no queda «Hola ,».
+// Variables y [segmentos opcionales]: ver calculos.js::rellenarPlantilla.
+let PLANTILLA_MENSAJE_REMISION='Hola[ {cliente}], gracias por tu compra en {empresa}.\nTe compartimos tu remisión {folio} por un total de {total} MXN.\n\n[{slogan}\n]{empresa}';
+let PLANTILLA_MENSAJE_COTIZACION='Hola[ {cliente}], gracias por tu interés en {empresa}.\nTe compartimos tu cotización {folio} por un total de {total} MXN[, vigente hasta {vigencia}].\n\n[{slogan}\n]{empresa}';
+let PLANTILLA_ASUNTO_REMISION='Tu remisión {folio} — {empresa}';
+let PLANTILLA_ASUNTO_COTIZACION='Tu cotización {folio} — {empresa}';
+function _valoresMensaje(cliente,folio,total,vigencia){
+  // «CLIENTE» es el relleno del PDF/archivo cuando no hay nombre: en el saludo cuenta como sin nombre.
+  const nom=String(cliente||'').trim();
+  return {cliente:/^cliente$/i.test(nom)?'':nom,folio:folio||'',total:fmt(total),vigencia:vigencia||'',
+          empresa:empresa.nombre||'SUMETEC',slogan:empresa.slogan||''};
+}
 function _mensajeAgradecimiento(cliente,folio,total,tipo,vigencia){
-  const nombreEmp=empresa.nombre||'SUMETEC';
-  if(tipo==='cotizacion') return 'Hola '+(cliente||'')+', gracias por tu interés en '+nombreEmp+'.\n'+
-    'Te compartimos tu cotización '+folio+' por un total de '+fmt(total)+' MXN'+(vigencia?', vigente hasta '+vigencia:'')+'.\n\n'+
-    (empresa.slogan?empresa.slogan+'\n':'')+nombreEmp;
-  return 'Hola '+(cliente||'')+', gracias por tu compra en '+nombreEmp+'.\n'+
-    'Te compartimos tu remisión '+folio+' por un total de '+fmt(total)+' MXN.\n\n'+
-    (empresa.slogan?empresa.slogan+'\n':'')+nombreEmp;
+  return rellenarPlantilla(tipo==='cotizacion'?PLANTILLA_MENSAJE_COTIZACION:PLANTILLA_MENSAJE_REMISION,
+    _valoresMensaje(cliente,folio,total,vigencia));
+}
+function _asuntoCorreo(cliente,folio,total,tipo){
+  return rellenarPlantilla(tipo==='cotizacion'?PLANTILLA_ASUNTO_COTIZACION:PLANTILLA_ASUNTO_REMISION,
+    _valoresMensaje(cliente,folio,total,''));
 }
 // MC-03: abre el menú Compartir del celular con el PDF + el mismo mensaje de
 // agradecimiento -- Miguel elige el chat (sin API de WhatsApp Business, de paga
@@ -3753,29 +3953,21 @@ async function registrarRemision(gpsParam){
 
   // ── Nueva remisión — folio desde el servidor ──
   const url=getScriptUrl();
-  let folio=null;
-  if(isOnline&&url){
-    try{
-      _estado('🔢 Obteniendo folio…',8000);
-      const ctrl=new AbortController();
-      // 2026-09-11 (mismo hallazgo que heartbeat(), Miguel: "sí tengo internet"):
-      // 5s era muy corto. Esta llamada NO se repite sola cada 10s como el
-      // heartbeat -- si tarda, es la ÚNICA oportunidad antes de degradar la
-      // venta a folio temporal -- así que aquí sí vale la pena esperar hasta
-      // los ~15s que a veces tarda Apps Script, en vez de rendirse a los 5.
-      const t=setTimeout(()=>ctrl.abort(),15000); // máx 15s, si tarda más → offline
-      const r=await fetch(url+'?tipo=reservar_folio',{signal:ctrl.signal,cache:'no-store'});
-      clearTimeout(t);
-      const d=await r.json();
-      if(!d||!d.folio) throw new Error('sin folio');
-      folio=d.folio;
+  // Folio apartado al abrir la pantalla: registrar ya no espera a Google.
+  let folio=tomarFolioApartado();
+  if(!folio&&isOnline&&url){
+    // Sin folio en el colchón: se espera la reserva que ya va en camino (o se pide una), máx 15 s
+    // (2026-09-11: con 5 s se rendía antes de lo que a veces tarda Apps Script).
+    _estado('🔢 Obteniendo folio…',8000);
+    await apartarFolio(15000);
+    folio=tomarFolioApartado();
+    if(folio){
       // Sincronizar contador local
       try{const m=folio.match(/(\d+)$/);if(m)localStorage.setItem('r_fn',String(parseInt(m[1])));}catch(_){}
-    }catch(e){
+    }else{
       // CRÍTICO: la señal estaba "en línea" pero falló (datos intermitentes en campo).
       // NUNCA tirar la remisión — caemos al flujo offline con folio temporal y se
       // sincroniza sola al recuperar señal. El servidor le asigna el folio REM- definitivo.
-      folio=null;
       setOnlineState(false); // la conexión realmente no es confiable ahora mismo
     }
   }
@@ -3836,7 +4028,9 @@ async function registrarRemision(gpsParam){
 async function sincronizarRemision(rem){
   if(!rem)return;
   _encolarRemision(rem); // durable antes de enviar
-  return procesarColaRemisiones(); // una sola ruta y una sola guardia de envío
+  // V2 (2026-10-19): el envío sale en la siguiente vuelta, no en esta. registrarTodo aplica el cobro justo después
+  // de registrar (sin esperar nada en medio), así que para entonces ya está en cola y viaja dentro de la remisión.
+  return new Promise(listo=>setTimeout(()=>listo(procesarColaRemisiones()),0)); // una sola ruta y una sola guardia de envío
 }
 
 // Aplica el folio definitivo que asignó el servidor a una remisión creada offline.
@@ -3924,6 +4118,12 @@ function _encolarRemision(rem){
     items:_itemsERP(rem),subtotal:_tot.subtotal,descMonto:_tot.descMonto,descPct:+(rem.data&&rem.data.descPct)||0,ivaMonto:_tot.ivaMonto,ivaPct:_tot.ivaPct}; // #15
   entrada.operationId=idx>=0 && Number(cola[idx].rev||0)===entrada.rev && cola[idx].operationId ? cola[idx].operationId :
     (globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
+  // V2 (2026-10-19): `_v2op` marca las operaciones armadas por esta versión, las únicas que llevan cobros adentro
+  // (ver _remisionConCobros_). La misma operación conserva la lista de cobros que ya se fijó en su primer envío.
+  if(idx>=0&&cola[idx].operationId===entrada.operationId){
+    if(cola[idx]._v2op)entrada._v2op=cola[idx]._v2op;
+    if(Array.isArray(cola[idx]._cobrosFijos))entrada._cobrosFijos=cola[idx]._cobrosFijos;
+  } else entrada._v2op=entrada.operationId;
   if(idx>=0){
     entrada._try=cola[idx]._try||0;
     if(Number(cola[idx].rev||0)===entrada.rev){entrada._conflict=!!cola[idx]._conflict;entrada._lastError=cola[idx]._lastError||'';entrada._srv=cola[idx]._srv||0;entrada._detenido=!!cola[idx]._detenido||undefined;}
@@ -3948,6 +4148,49 @@ function _prepararColaRemisionesRevision(){
   return cola;
 }
 
+// V2 del plan de velocidad (2026-10-19): una venta = un envío. Los cobros de esta remisión que esperan en cola viajan
+// DENTRO del mismo documento y el servidor los aplica en el mismo turno (antes: un viaje y un turno de candado más).
+// La lista se fija en el primer envío y ya no cambia: el buzón reconoce el documento por su operationId y rechaza el
+// mismo ID con otro contenido. Un cobro que llegue después sale solo, como siempre. Las operaciones de antes de esta
+// versión (sin `_v2op`) se mandan igual que antes, sin cobros, para no cambiar un documento que ya pudo llegar.
+const COBROS_POR_ENVIO=5;
+function _docRemisionConCobros_(item){
+  const doc={tipo:'remision',...item,_retryAt:undefined};
+  delete doc._cobrosFijos;
+  if(!item._v2op||item._v2op!==item.operationId)return doc;
+  const cola=leerSeguro('cola_remisiones',[]);
+  const entrada=cola.find(e=>String(e.id)===String(item.id)&&e.operationId===item.operationId);
+  let cobros=entrada&&Array.isArray(entrada._cobrosFijos)?entrada._cobrosFijos:null;
+  if(!cobros){
+    cobros=leerSeguro('cola_offline',[])
+      .filter(p=>String(p.id)===String(item.id)&&p.pago&&p.pago.uuid&&!p._detenido&&!p._conflict)
+      .slice(0,COBROS_POR_ENVIO)
+      .map(p=>({saldo:p.saldo,estado:p.estado,pago:p.pago,device:p.device}));
+    if(entrada){entrada._cobrosFijos=cobros;guardarSeguro('cola_remisiones',JSON.stringify(cola));}
+  }
+  if(cobros.length)doc.cobros=cobros;
+  return doc;
+}
+// Respuesta del servidor a los cobros que viajaron con la remisión: cada uno se resuelve igual que si hubiera ido solo.
+// El que no quedó sigue en su cola y procesarCola lo manda aparte (mismo UUID: el servidor nunca lo duplica).
+function _resolverCobrosDeRemision_(rem,resultados){
+  if(!Array.isArray(resultados)||!resultados.length)return 0;
+  let resueltos=0;
+  for(const c of resultados){
+    const enCola=leerSeguro('cola_offline',[]).find(p=>p.pago&&String(p.pago.uuid)===String(c&&c.uuid));
+    if(!enCola)continue;
+    if(_resolverRespuestaPago(rem,enCola.pago,c.resultado))resueltos++;
+  }
+  if(resueltos){actualizarBadgePendientes();_estado('✅ '+resueltos+' cobro(s) guardado(s) junto con la remisión');}
+  return resueltos;
+}
+// Cobros que esperan a su remisión: mientras ella siga en cola (y vaya a llevarlos adentro), no salen solos.
+function _remisionesQueLlevanCobros_(){
+  return new Set(leerSeguro('cola_remisiones',[])
+    .filter(e=>e._v2op&&e._v2op===e.operationId&&!e._conflict&&!e._detenido)
+    .map(e=>String(e.id)));
+}
+
 async function procesarColaRemisiones(){
   if(!isOnline||_procRemEnCurso)return;
   const url=getScriptUrl();if(!url)return;
@@ -3962,7 +4205,7 @@ async function procesarColaRemisiones(){
     for(const item of ordenada){
       if(item._conflict||item._detenido||!sumetecPuedeReintentar(item))continue;
       try{
-        const res=await _escrituraOrdenada(()=>_enviarConBuzon_(url,{tipo:'remision',...item,_retryAt:undefined}));
+        const res=await _escrituraOrdenada(()=>_enviarConBuzon_(url,_docRemisionConCobros_(item)));
         if(res.ok){
           const d=await res.json();
           if(d&&d.ok){
@@ -3972,6 +4215,7 @@ async function procesarColaRemisiones(){
             if(r){
               if(d.folio)_aplicarFolioDefinitivo(r,d.folio);
               if(d.revision!=null)r.serverRevision=Number(d.revision)||0;
+              _resolverCobrosDeRemision_(r,d.cobros);   // V2: los cobros que viajaron adentro
               // 2026-09-10 (M-01): solo se da por sincronizada la versión que de verdad
               // se envió. Si la remisión se editó mientras el POST viajaba, lo que llegó
               // al servidor es la versión vieja -- NO se marca como sincronizada y la
@@ -4003,6 +4247,8 @@ async function procesarColaRemisiones(){
     }
     if(ok>0){
       _estado('✅ '+ok+' remisión(es) sincronizada(s)');
+      // V2: un cobro que no viajó adentro (servidor viejo, llegó después o no quedó) ya puede salir solo.
+      if(leerSeguro('cola_offline',[]).length)setTimeout(procesarCola,0);
       procesarColaPDF();
       // Recargar cobros INMEDIATAMENTE después de sincronizar (para que se vea en tiempo real)
       // BUG FIX (2026-08-06): la función se llama bajarCobros(), no cargarCobros()
@@ -4399,23 +4645,100 @@ function _actualizarSimulador(){
   box.innerHTML=html;
 }
 
-// Calculadora dentro del simulador: costo proveedor -> + IVA de compra -> precio
-// de venta según el margen deseado (mismo margen=(precio-costo)/precio que usa
-// simulaEscenarioPrecio, para que "Usar este precio arriba" cuadre con lo que
-// ya muestra el simulador).
+// Calculadora dentro del simulador (2026-10-14): MISMA fórmula que Costos del ERP, vía calculos.js::precioPropuesto
+// (base sin/con IVA de compra, «sumar % al costo» o «% del precio», precio SIN IVA de venta + total al cliente).
+// Factor de la «regla automática» y meta de margen: los publica el ERP en COTIZADOR (Datos del negocio).
+let FACTOR_PRECIO_SUGERIDO=1.70, MARGEN_OBJETIVO_ERP=0.30;
+function _llenarIvaVentaCalc(){
+  const sel=document.getElementById('calc_iva_venta'); if(!sel||sel.options.length)return;
+  const tasas=(IVA_TASAS_HABILITADAS&&IVA_TASAS_HABILITADAS.length)?IVA_TASAS_HABILITADAS:[0,8,16];
+  sel.innerHTML=tasas.map(t=>'<option value="'+(t/100)+'">'+t+'%</option>').join('');
+  const def=(ivaGlobal!=null&&tasas.includes(+ivaGlobal))?+ivaGlobal:tasas[0];
+  sel.value=String(def/100);
+}
 function _actualizarCalcPrecio(){
+  _llenarIvaVentaCalc();
   const costo=+(document.getElementById('sim_costo')?.value)||0;
-  const iva=+(document.getElementById('calc_iva')?.value)||0;
-  const margen=+(document.getElementById('calc_margen')?.value)||0;
-  const lbl=document.getElementById('calcMargenVal'); if(lbl)lbl.textContent=margen+'%';
+  const ivaCompra=(+(document.getElementById('calc_iva')?.value)||0)/100;
+  const r=precioPropuesto({costoSinIva:costo,costoConIva:costo*(1+ivaCompra),
+    base:document.getElementById('calc_base')?.value||'sin',formula:document.getElementById('calc_formula')?.value||'utilidad',
+    porcentaje:document.getElementById('calc_margen')?.value,ivaVenta:document.getElementById('calc_iva_venta')?.value});
   const box=document.getElementById('calcResultado'); if(!box)return;
-  if(!(costo>0)){ box.innerHTML='<div style="font-size:12.5px;color:var(--muted)">Escribe el costo proveedor arriba para calcular.</div>'; return; }
-  const costoConIva=costo*(1+iva/100);
-  const precioSugerido=margen<100?costoConIva/(1-margen/100):costoConIva;
-  box.innerHTML=
-    `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">Costo con IVA</span><span style="font-weight:700">${fmt(costoConIva)}</span></div>`+
-    `<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--muted)">Precio sugerido</span><span style="font-weight:800;color:var(--green)">${fmt(precioSugerido)}</span></div>`;
-  box.dataset.precio=precioSugerido.toFixed(2);
+  const regla=precioReglaAutomatica(costo*(1+ivaCompra),FACTOR_PRECIO_SUGERIDO);
+  const btnRegla=document.getElementById('calcReglaBtn');
+  if(btnRegla){ btnRegla.textContent='Usar la regla automática del ERP'+(regla?': '+fmt(regla)+' (costo con IVA × '+FACTOR_PRECIO_SUGERIDO+')':''); btnRegla.dataset.precio=regla?regla.toFixed(4):''; }
+  if(!(costo>0)){ box.innerHTML='<div style="font-size:12.5px;color:var(--muted)">Escribe el costo proveedor arriba para calcular.</div>'; delete box.dataset.precio; return; }
+  if(!r.valido){ box.innerHTML='<div style="font-size:12.5px;color:#c0392b">Escribe un porcentaje de 0 a 99.99.</div>'; delete box.dataset.precio; return; }
+  const fila=(l,v,est)=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">${l}</span><span style="${est||'font-weight:700'}">${v}</span></div>`;
+  box.innerHTML=fila('Costo usado',fmt(r.costo))
+    +fila('Precio propuesto SIN IVA',fmt(r.precio),'font-weight:800;color:var(--green)')
+    +fila('Ganancia por pieza',fmt(r.ganancia))
+    +fila('Margen',r.margenPct.toFixed(1)+'%',r.margenPct<MARGEN_OBJETIVO_ERP*100?'font-weight:700;color:#b45309':'font-weight:700')
+    +fila('IVA del cliente',fmt(r.ivaCliente))
+    +fila('Total al cliente',fmt(r.totalCliente),'font-weight:800');
+  box.dataset.precio=r.precio.toFixed(2);
+}
+function _usarReglaAutomatica(){
+  const b=document.getElementById('calcReglaBtn'), v=b&&b.dataset.precio;
+  if(!v){toast('Escribe el costo proveedor primero','warn');return;}
+  const inp=document.getElementById('sim_precioNuevo');
+  if(inp){inp.value=(+v).toFixed(2);_actualizarSimulador();toast('Precio de la regla automática copiado al simulador ✓','ok');}
+}
+// ── Calculadora normal + de negocio (2026-10-14). Lógica en calculos.js (calcOperar, precioPorMargen, ...). ──
+let _calc={acum:null,op:null,nuevo:true};
+function _calcFmt(n){ return Number.isFinite(n)?Number(n.toFixed(6)).toLocaleString('es-MX',{maximumFractionDigits:6}):'Error'; }
+function _calcNum(t){ return parseFloat(String(t||'0').replace(/,/g,''))||0; }
+function _calcTecla(k){
+  const pant=document.getElementById('calcPant'), hist=document.getElementById('calcHist'); if(!pant)return;
+  let v=pant.textContent;
+  if(v==='Error'&&k!=='C'){ _calc={acum:null,op:null,nuevo:true}; v='0'; hist.textContent=''; }
+  if(k==='C'){ _calc={acum:null,op:null,nuevo:true}; v='0'; hist.textContent=''; }
+  else if(k==='⌫'){ v=_calc.nuevo?v:(v.length>1?v.slice(0,-1):'0'); }
+  else if(k==='%'){ v=_calcFmt(_calcNum(v)/100); _calc.nuevo=true; }
+  else if(['+','−','×','÷'].includes(k)){
+    const actual=_calcNum(v);
+    if(_calc.op&&!_calc.nuevo){ _calc.acum=calcOperar(_calc.acum,_calc.op,actual); v=_calcFmt(_calc.acum); } else _calc.acum=actual;
+    _calc.op=k; _calc.nuevo=true; hist.textContent=_calcFmt(_calc.acum)+' '+k;
+  } else if(k==='='){
+    if(_calc.op!=null){ const actual=_calcNum(v); hist.textContent=_calcFmt(_calc.acum)+' '+_calc.op+' '+_calcFmt(actual)+' =';
+      _calc.acum=calcOperar(_calc.acum,_calc.op,actual); v=_calcFmt(_calc.acum); _calc.op=null; _calc.nuevo=true; }
+  } else if(k==='.'){ if(_calc.nuevo){ v='0.'; _calc.nuevo=false; } else if(!v.includes('.')) v+='.'; }
+  else { if(_calc.nuevo||v==='0'){ v=k; _calc.nuevo=false; } else if(v.replace(/[^0-9]/g,'').length<15) v+=k; }
+  pant.textContent=v;
+}
+function _calcTab(t){
+  document.querySelectorAll('#ovCalculadora .calc-tab').forEach(b=>{ const s=b.dataset.calcTab===t; b.classList.toggle('sel',s); b.setAttribute('aria-selected',String(s)); });
+  document.querySelectorAll('#ovCalculadora [data-calc-panel]').forEach(p=>{ p.hidden=p.dataset.calcPanel!==t; });
+  if(t==='negocio'){ const m=document.getElementById('ngMargen'); if(m&&!m.value){ m.value=(MARGEN_OBJETIVO_ERP*100).toFixed(1); _calcNegocio(); } }
+}
+function _calcNegocio(){
+  const g=id=>document.getElementById(id), costo=g('ngCosto').value;
+  const p=precioPorMargen(costo,g('ngMargen').value); g('ngPrecioOut').textContent=p==null?'—':fmt(p);
+  const m=margenDePrecio(costo===''?NaN:costo,g('ngPrecioReal').value); g('ngMargenOut').textContent=m==null?'—':m.toFixed(1)+'%';
+  const iv=g('ivaMonto').value===''?null:ivaConSin(g('ivaMonto').value,g('ivaTasaCalc').value,g('ivaDir').value);
+  g('ivaOut').textContent=!iv?'—':(g('ivaDir').value==='sin'?'IVA: '+fmt(iv.iva)+' · Con IVA: '+fmt(iv.conIva):'IVA: '+fmt(iv.iva)+' · Sin IVA: '+fmt(iv.sinIva));
+  const u=utilidadLineaCalc(g('ulCant').value,g('ulCosto').value===''?NaN:g('ulCosto').value,g('ulPrecio').value);
+  g('ulOut').textContent=u?'Utilidad: '+fmt(u.utilidad)+' · Margen: '+u.margenPct.toFixed(1)+'%':'—';
+}
+function abrirCalculadora(){
+  const ov=document.getElementById('ovCalculadora'); if(!ov)return;
+  if(!ov.dataset.listo){
+    ov.dataset.listo='1';
+    ov.querySelectorAll('.calc-teclas button').forEach(b=>b.addEventListener('click',()=>_calcTecla(b.dataset.k)));
+    const sel=document.getElementById('ivaTasaCalc'), tasas=(IVA_TASAS_HABILITADAS&&IVA_TASAS_HABILITADAS.length)?IVA_TASAS_HABILITADAS:[0,8,16];
+    sel.innerHTML=tasas.map(t=>'<option value="'+(t/100)+'">'+t+'%</option>').join('');
+    sel.value=String((tasas.includes(16)?16:tasas[tasas.length-1])/100);
+    ['ngCosto','ngMargen','ngPrecioReal','ivaMonto','ivaTasaCalc','ivaDir','ulCant','ulCosto','ulPrecio'].forEach(id=>{ const el=document.getElementById(id); el.addEventListener('input',_calcNegocio); el.addEventListener('change',_calcNegocio); });
+    // Teclado de computadora: solo en la pestaña Normal y sin un campo enfocado.
+    const MAPA={'*':'×','x':'×','X':'×','/':'÷','-':'−','Backspace':'⌫','Enter':'=','=':'=','Escape':'C',',':'.'};
+    document.addEventListener('keydown',e=>{
+      if(!ov.classList.contains('open')||document.querySelector('#ovCalculadora [data-calc-panel="normal"]').hidden)return;
+      if(e.target&&/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
+      const k=MAPA[e.key]||(/^[0-9.+%]$/.test(e.key)?e.key:null); if(!k)return;
+      e.preventDefault(); _calcTecla(k);
+    });
+  }
+  ov.classList.add('open');
 }
 function _usarPrecioCalculado(){
   const box=document.getElementById('calcResultado');
@@ -4451,7 +4774,7 @@ function cierreDelDia(){
       // viejos sin hora quedan fuera del turno, no del total del día).
       if(p.hora){
         const hh=parseInt(String(p.hora).split(':')[0],10);
-        if(!isNaN(hh)){ if(hh<14)cobradoManana+=(+p.monto||0); else cobradoTarde+=(+p.monto||0); }
+        if(!isNaN(hh)){ if(hh<_CORTE_TURNOS.manana.fin)cobradoManana+=(+p.monto||0); else cobradoTarde+=(+p.monto||0); }
       }
     });
   });
@@ -4519,7 +4842,7 @@ function _descargarCierreDiaCSV(){ _descargarCSV(_cierreDiaCSVRows,'cierre_'+_ci
 // verdad se cuenta a mano) ni el detalle pago por pago para cuadrar el cajón.
 // El cálculo vive en calculos.js::corteDeCaja (probado); aquí solo es pantalla.
 let _corteTurno='dia';           // 'manana' | 'tarde' | 'dia'
-const _CORTE_TURNOS={manana:{lbl:'Mañana (hasta 14 h)',ini:0,fin:14},
+let _CORTE_TURNOS={manana:{lbl:'Mañana (hasta 14 h)',ini:0,fin:14},
                      tarde :{lbl:'Tarde (14 h en adelante)',ini:14,fin:24},
                      dia   :{lbl:'Día completo',ini:0,fin:24}};
 function abrirCorteCaja(turno){
@@ -5382,7 +5705,7 @@ function reenviarPDFHistorial(id){
 // sobrescribe en Drive. Sirve para cualquier estado (pendiente/abono/pagado).
 function modificarRem(id){
   // 🔒 Pide el código ANTES de abrir la remisión para modificar (si hay protección activada).
-  _verificarPinBorrado('modificar esta remisión').then(ok=>{ if(ok) _modificarRemConfirmado(id); });
+  _verificarPinBorrado('modificar esta remisión','modificar_remision',id,_detallePermisoRem(id)).then(ok=>{ if(ok) _modificarRemConfirmado(id); });
 }
 function _modificarRemConfirmado(id){
   const r=remisiones.find(x=>String(x.id)===String(id));
@@ -5430,46 +5753,28 @@ function _salirModoEdicion(){
 }
 
 // ── 🔒 CÓDIGO DE BORRADO ──────────────────────────────────────────────────────
-// Pide un código antes de eliminar una remisión, para que nadie borre una venta
-// "sin querer". El código es el de seguridad de campo que publica el ERP (solo su
-// huella, ver SAL_CODIGO_CAMPO arriba). NO es seguridad de alto nivel — solo
-// evita borrados accidentales, como pediste.
-// Diálogo construido al vuelo (sin tocar el HTML). Resuelve con el texto o null si cancela.
-function _pedirPinUI(titulo,subtitulo){
-  // Estándar v3 (2026-10): mismo teclado de pantalla completa que el PIN (sumetecTecladoPin, acceso.js).
-  // Misma promesa que antes: el texto escrito o null si cancela.
-  return new Promise(resolve=>{
-    const dlg=document.createElement('dialog');
-    sumetecTecladoPin(dlg,{modo:'codigo',nombre:'Cotizador',texto:subtitulo||'',inputId:'_pinInp',max:12});
-    dlg.addEventListener('close',()=>{
-      const inp=dlg.querySelector('input'), v=dlg.returnValue==='ok'?inp.value.trim():null;
-      inp.value=''; dlg.remove(); resolve(v);
-    },{once:true});
-    document.body.appendChild(dlg); dlg.showModal(); dlg.querySelector('.sumetec-tecla').focus();
-  });
-}
-async function _huellaCodigo(c){
-  const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(SAL_CODIGO_CAMPO+c));
-  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
-}
-function _huellaCodigoPublicada(){
-  try{ const c=JSON.parse(localStorage.getItem('gs_cfg')||'null');
-       return (c&&c.SEGURIDAD&&c.SEGURIDAD.hash_codigo)||''; }catch(_){ return ''; }
-}
-// Devuelve true si la acción puede continuar. `accion` es el texto que se muestra
-// ("eliminar esta remisión", etc.). Sin huella publicada no deja pasar (igual que
-// Gastos): el candado no puede quedar abierto solo porque falta sincronizar.
-async function _verificarPinBorrado(accion){
-  const h=_huellaCodigoPublicada();
-  if(!h){
-    toast('Aún no hay código de seguridad en este celular: en el ERP entra a Administración → Ecosistema, guarda y pulsa Sincronizar todo; luego abre el Cotizador con señal.','err',10000);
+// Devuelve true si la acción puede continuar. `accion` es el texto que se muestra ("eliminar esta remisión", etc.),
+// `clave` la acción en Ecosistema, `docId` qué se toca (el permiso vale solo para eso) y `detalle` lo que ve el dueño.
+// 2026-10-14: el ERP decide por acción (Ecosistema → Cotizador → Permisos) si pide permiso, pasa sin pedirlo o no se
+// permite. 2026-10-20: «pide» ya no es un código: el dueño aprueba desde su teléfono con su huella. Sin nada
+// publicado, pide permiso como siempre. Cancelar y eliminar los vuelve a revisar el servidor.
+async function _verificarPinBorrado(accion,clave,docId,detalle){
+  const modo=(clave&&typeof sumetecPermiso==='function')?sumetecPermiso('cotizador',clave,'codigo'):'codigo';
+  if(modo==='libre') return true;
+  if(modo==='bloqueado'){
+    toast('No está permitido '+(accion||'hacer esto')+' en el Cotizador (se cambia en el ERP: Ecosistema → Cotizador → Permisos).','err',9000);
     return false;
   }
-  const ing=await _pedirPinUI('🔒 Código requerido','Ingresa el código para '+(accion||'continuar'));
-  if(ing===null) return false;                 // canceló
-  if(await _huellaCodigo(ing)===h) return true; // correcto
-  toast('Código incorrecto — acción cancelada','err');
-  return false;
+  if(typeof sumetecPedirPermisoDueno!=='function'){ toast('Actualiza la app para pedir permiso al dueño.','err',8000); return false; }
+  return sumetecPedirPermisoDueno({app:'cotizador',accion:clave||'accion',documento:docId?String(docId):'',
+    detalle:(accion?accion.charAt(0).toUpperCase()+accion.slice(1):'')+(detalle?' · '+detalle:''),
+    nombre:'Cotizador',avisar:m=>toast(m,'err',9000)});
+}
+// Texto corto para el dueño: folio y cliente de la remisión.
+function _detallePermisoRem(id,folio){
+  const r=remisiones.find(x=>String(x.id)===String(id))||(typeof _histServidor!=='undefined'?_histServidor.find(x=>x.folio===folio||String(x.id)===String(id)):null);
+  if(!r) return folio||'';
+  return [r.folio||folio||'',r.cliente||'',r.total!=null?fmt(r.total):''].filter(Boolean).join(' · ');
 }
 
 function delRem(id){
@@ -5481,7 +5786,7 @@ function delRem(id){
     return;
   }
   // 🔒 Pide el código ANTES de borrar (si hay protección activada). Sin confirm() — Chrome lo bloquea.
-  _verificarPinBorrado('eliminar esta remisión').then(ok=>{ if(ok) _delRemConfirmado(id); });
+  _verificarPinBorrado('eliminar esta remisión','eliminar_remision',id,_detallePermisoRem(id)).then(ok=>{ if(ok) _delRemConfirmado(id); });
 }
 function _delRemConfirmado(id){
   const r=remisiones.find(x=>String(x.id)===String(id));
@@ -5876,6 +6181,7 @@ function _limpiarFormulario(){
   const fb=document.getElementById('folioBadge');
   if(fb){fb.innerText=folioLocal;syncFolio(folioLocal);}
   cargarFolioRemoto(); // actualiza con el valor real del servidor
+  _calentarGPS_();     // V1: ubicación lista antes de REGISTRAR
   localStorage.removeItem('r_draft');
   addRow();calcTotals();
   _actualizarChkCorreo();
@@ -6237,7 +6543,7 @@ async function conectarGS(){
       st.innerHTML='<span style="color:#C0392B">⚠️ El ERP todavía no ha publicado catálogo (0 productos) — se conserva el que ya tenías</span>';
       return;
     }
-    PRODUCTOS=jP.map(p=>({clave:p.CODIGO||'',desc:p.DESCRIPCION||'',precio:+p.COSTO_CLIENTE||0,costo:+(p['COSTO PROVEEDOR']||p.COSTO_PROVEEDOR||p.COSTO||0),costoIva:+(p.COSTO_PROVEEDOR_IVA||0),iva:ivaGlobal})).filter(p=>p.clave);
+    PRODUCTOS=jP.map(p=>({clave:p.CODIGO||'',desc:p.DESCRIPCION||'',precio:+p.COSTO_CLIENTE||0,costo:+(p['COSTO PROVEEDOR']||p.COSTO_PROVEEDOR||p.COSTO||0),costoIva:+(p.COSTO_PROVEEDOR_IVA||0),costoUtil:+(p.COSTO_UTILIDAD||0),iva:ivaGlobal})).filter(p=>p.clave);
     CLIENTES=jC.map(c=>({nombre:c.NOMBRE||'',rfc:c.RFC||'',dir:c.DIRECCION||'',cp:c.CP||'',tel:c.TEL||'',email:c.CORREO||'',contacto:c.CONTACTO||''})).filter(c=>c.nombre);
     localStorage.setItem('gs_url',url);
     // Un solo campo en pantalla → la misma URL sirve para catálogo/clientes y para Drive/folios
@@ -6475,7 +6781,7 @@ async function refrescarCatalogo(silencioso,catVer){
       localStorage.setItem('gs_hp',JSON.stringify([...HISTORIAL_PRECIOS]));
     }
     if(!catalogoVacio){
-      PRODUCTOS=jP.map(p=>({clave:p.CODIGO||'',desc:p.DESCRIPCION||'',precio:+p.COSTO_CLIENTE||0,costo:+(p['COSTO PROVEEDOR']||p.COSTO_PROVEEDOR||p.COSTO||0),costoIva:+(p.COSTO_PROVEEDOR_IVA||0),iva:ivaGlobal})).filter(p=>p.clave);
+      PRODUCTOS=jP.map(p=>({clave:p.CODIGO||'',desc:p.DESCRIPCION||'',precio:+p.COSTO_CLIENTE||0,costo:+(p['COSTO PROVEEDOR']||p.COSTO_PROVEEDOR||p.COSTO||0),costoIva:+(p.COSTO_PROVEEDOR_IVA||0),costoUtil:+(p.COSTO_UTILIDAD||0),iva:ivaGlobal})).filter(p=>p.clave);
       // Mezclar con Productos Maestro: agrega solo los que NO están en el ERP (el ERP manda en precio)
       if(Array.isArray(jPM)&&jPM.length){
         const porClave=new Map(PRODUCTOS.map(p=>[p.clave.toLowerCase(),p]));
@@ -7971,7 +8277,7 @@ let _cancelarId=null,_cancelarFolio=null;
 function abrirCancelacion(id, folioFallback){
   const previa=remisiones.find(x=>String(x.id)===String(id))||_histServidor.find(x=>x.folio===folioFallback||String(x.id)===String(id));
   if(_esRemisionSoloConsulta(previa)){toast('Remisión de solo consulta (viene de Drive) — cancélala desde el ERP o el dispositivo original.','warn');return;}
-  _verificarPinBorrado('cancelar esta remisión').then(ok=>{ if(ok) _abrirCancelacionConfirmada(id,folioFallback); });
+  _verificarPinBorrado('cancelar esta remisión','cancelar_remision',(previa&&previa.id)||id,_detallePermisoRem(id,folioFallback)).then(ok=>{ if(ok) _abrirCancelacionConfirmada(id,folioFallback); });
 }
 function _abrirCancelacionConfirmada(id, folioFallback){
   // Buscar en locales primero; si no, buscar en historial del servidor
@@ -7986,6 +8292,10 @@ function _abrirCancelacionConfirmada(id, folioFallback){
   const info=document.getElementById('cancelarInfo');
   if(info)info.innerHTML='<strong>'+esc(r.folio)+'</strong> — '+esc(r.cliente)+'<br><span style="color:#c0392b">Total: '+fmt(r.total)+' MXN</span>'; // V-01: escapar nombre del cliente
   const m=document.getElementById('cancelarMotivo');if(m)m.value='';
+  // Con cobros del celular, el mismo recuadro los anula primero (cada anulación revierte su Caja) y luego cancela.
+  const _cc=cobrosParaCancelar(r), _btn=document.getElementById('btnConfirmarCancelacion');
+  if(_cc.anulables.length&&info)info.innerHTML+='<br><span style="color:#92400e">Tiene cobros por '+fmt(_cc.anulables.reduce((s,p)=>s+(Number(p.monto)||0),0))+' MXN: al confirmar se <strong>anulan primero</strong> (no se borran; quedan en el historial) y luego se cancela.</span>';
+  if(_btn)_btn.textContent=_cc.anulables.length?'🚫 Anular cobros y cancelar':'🚫 Confirmar cancelación';
   document.getElementById('ovCancelar').classList.add('open');
 }
 async function confirmarCancelacion(){
@@ -8002,11 +8312,16 @@ async function confirmarCancelacion(){
   // F3N-04 (regla del 28: anular = revertir en toda la secuencia): una remisión con cobros no se
   // cancela a secas -- el dinero seguiría vivo en Pagos y en la Caja de la nube. Se anulan primero
   // los cobros (cada anulación revierte su Caja con acuse) y después se cancela.
-  const _cobrado=cobradoDeRemision(r);
-  if(_cobrado>0.004){
-    toast('🚫 '+r.folio+' ya tiene cobros por '+fmt(_cobrado)+' MXN. Anula primero esos cobros (cada uno revierte su Caja) y luego cancela la remisión.','warn',9000);
+  const _cc=cobrosParaCancelar(r);
+  if(_cc.noAnulable>0.004){
+    toast('🚫 '+r.folio+' tiene cobros por '+fmt(_cc.noAnulable)+' MXN que no se pueden anular desde este celular (vienen del ERP o de otro dispositivo). Anúlalos allá primero y luego cancela la remisión.','warn',9000);
     closeOv('ovCancelar');_cancelarId=null;_cancelarFolio=null;
     return;
+  }
+  // Los cobros del celular se ANULAN (no se borran) antes de cancelar; el permiso del dueño ya se pidió al abrir.
+  for(const _p of _cc.anulables){
+    const _an=_anularPagoNucleo_(r,_p,'Anulado al cancelar '+r.folio+': '+motivo);
+    enviarPagoConCola(r,_an);
   }
   const ahora=new Date();
   r.estado='cancelada';r.motivoCancelacion=motivo;r.sincronizado=false;
@@ -8032,6 +8347,8 @@ async function confirmarCancelacion(){
       body:JSON.stringify({tipo:'cancelar_remision',token:API_TOKEN,id:r.id,folio:r.folio,motivo,fechaCancelacion:r.fechaCancelacion,device:_deviceLabel_()})
     }).then(res=>res.json()).then(d=>{
       if(d&&d.ok){r.sincronizado=true;persistirRemisiones();_dequeueCancelacion(r.id);actualizarBadgePendientes();}
+      // El servidor la rechazó (cobros vivos de otro celular, sin permiso del dueño, acción bloqueada): sigue pendiente y el motivo se ve.
+      else if(d&&d.error&&(d.cobrosVivos||d.aprobacionPendiente||d.aprobacionRechazada||d.codigoRequerido||d.bloqueada||d.sinCodigoPublicado))toast('⚠️ '+d.error,'warn',9000);
       if(typeof guardarEventoSync==='function')guardarEventoSync({folio:r.folio,operacion:'CANCELACION_GUARDADA',resultado:(d&&d.ok)?'OK':'ERROR',detalle:(d&&d.error)||''});
     }).catch(()=>{if(typeof guardarEventoSync==='function')guardarEventoSync({folio:r.folio,operacion:'CANCELACION_GUARDADA',resultado:'ERROR',detalle:'sin conexión'});});
   }
@@ -8073,7 +8390,7 @@ function _obsLineasPagos(r){
   return lineas.join('\n');
 }
 // Leyenda por defecto de la empresa (aparece siempre como base del obs).
-const _LEYENDA_DEFAULT='Los precios están sujetos a cambio sin previo aviso.\nDisponibilidad sujeta a existencia.';
+let _LEYENDA_DEFAULT='Los precios están sujetos a cambio sin previo aviso.\nDisponibilidad sujeta a existencia.';
 function updateObsBalance(r){
   const ta=document.getElementById('obs');
   if(!ta)return;
@@ -8206,8 +8523,12 @@ function irAPagos(){
 let _anularUUID=null;
 // BUG FIX (2026-08-06): era la única acción de dinero sin PIN (cancelar/
 // editar/borrar remisión sí lo piden) -- ahora pide el mismo código.
+function _detallePermisoPago(uuid){
+  const r=remisiones.find(x=>x.id===remActualId), p=r&&(r.pagos||[]).find(x=>x.uuid===uuid);
+  return [r&&r.folio||'',r&&r.cliente||'',p?('pago '+fmt(p.monto)):''].filter(Boolean).join(' · ');
+}
 function abrirAnulacion(uuid){
-  _verificarPinBorrado('anular este pago').then(ok=>{ if(ok) _abrirAnulacionConfirmada(uuid); });
+  _verificarPinBorrado('anular este pago','anular_pago',uuid,_detallePermisoPago(uuid)).then(ok=>{ if(ok) _abrirAnulacionConfirmada(uuid); });
 }
 function _abrirAnulacionConfirmada(uuid){
   const r=remisiones.find(x=>x.id===remActualId);
@@ -8222,6 +8543,22 @@ function _abrirAnulacionConfirmada(uuid){
   if(ra)ra.value='';
   document.getElementById('ovAnular').classList.add('open');
 }
+// Anula un cobro: agrega el renglón de anulación y recalcula saldo y estado desde cero. Lo usan la
+// anulación a mano y la cancelación de una remisión con cobros. Devuelve el renglón de anulación.
+function _anularPagoNucleo_(r,p,razon){
+  const fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const uuid=uuidPago();
+  const anulacion={uuid,tipo:'anulacion',pago_ref:p.uuid,monto_ref:p.monto,razon,fecha,device:_deviceLabel_()};
+  r.pagos.push(anulacion);
+  // Recalcular saldo desde cero
+  const anulados=new Set(r.pagos.filter(x=>x.tipo==='anulacion').map(x=>x.pago_ref));
+  const sumPagos=r.pagos
+    .filter(x=>x.tipo!=='anulacion'&&!anulados.has(x.uuid))
+    .reduce((acc,x)=>acc+(x.monto||0),0);
+  r.saldo=Math.round((r.total-sumPagos)*100)/100;
+  r.estado=r.saldo<=0.001?'pagado':sumPagos>0?'abono':'pendiente';
+  return anulacion;
+}
 function confirmarAnulacion(){
   const razon=document.getElementById('anularRazon')?.value?.trim();
   if(!razon){toast('Escribe la razón de la anulación','err');return;}
@@ -8230,16 +8567,7 @@ function confirmarAnulacion(){
   const p=r.pagos.find(x=>x.uuid===_anularUUID);
   if(!p){toast('Pago no encontrado','err');return;}
   if(p.tipo==='ajuste_erp'){toast('Este renglón resume lo cobrado en el ERP — anúlalo allá, no aquí.','warn');return;}
-  const fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const uuid=uuidPago();
-  r.pagos.push({uuid,tipo:'anulacion',pago_ref:_anularUUID,monto_ref:p.monto,razon,fecha,device:_deviceLabel_()});
-  // Recalcular saldo desde cero
-  const anulados=new Set(r.pagos.filter(x=>x.tipo==='anulacion').map(x=>x.pago_ref));
-  const sumPagos=r.pagos
-    .filter(x=>x.tipo!=='anulacion'&&!anulados.has(x.uuid))
-    .reduce((acc,x)=>acc+(x.monto||0),0);
-  r.saldo=Math.round((r.total-sumPagos)*100)/100;
-  r.estado=r.saldo<=0.001?'pagado':sumPagos>0?'abono':'pendiente';
+  _anularPagoNucleo_(r,p,razon);
   if(r.estado!=='pagado'){
     const wm=document.getElementById('wmPagado');
     if(wm)wm.style.display='none';
@@ -8379,8 +8707,10 @@ async function procesarCola(){
   _procPagosEnCurso=true;
   try{
     let enviados=0;
+    const esperanRemision=_remisionesQueLlevanCobros_();   // V2: estos viajan dentro de su remisión
     for(const item of [...cola]){
       if(item._detenido||!sumetecPuedeReintentar(item))continue;
+      if(esperanRemision.has(String(item.id)))continue;
       try{
         const res=await _escrituraOrdenada(()=>_enviarConBuzon_(url,
           {tipo:'actualizar_remision',id:item.id||'',folio:item.folio,saldo:item.saldo,estado:item.estado,pago:item.pago,device:item.device}));
@@ -9757,6 +10087,7 @@ function _ejecutarVolverRem(){
 }
 
 function _cotReset(){
+  globalThis.SumetecPortalPedidos?.restaurar(null);
   _cotItems=[];_cotId=0;
   _resetIvaCot();
   ['cot_c_nombre','cot_c_razon','cot_c_rfc','cot_c_dir','cot_c_cp','cot_c_tel','cot_c_contacto','cot_c_email',
@@ -10001,7 +10332,8 @@ document.addEventListener('click',()=>{
 
 // ── Snapshot / draft cotizaciones (equivalente a snap()/restore() de remisiones) ─────
 function snapCot(){
-  return{comercial:globalThis.ComercialCliente?.referencia(document.getElementById('cot_c_nombre')?.value)||null,
+  return{portalPedidoId:globalThis.SumetecPortalPedidos?.referencia()||null,
+    comercial:globalThis.ComercialCliente?.referencia(document.getElementById('cot_c_nombre')?.value)||null,
     folio:    document.getElementById('cot_folioBadge')?.innerText.trim()||'',
     c_nombre: document.getElementById('cot_c_nombre')?.value||'',
     c_rfc:    document.getElementById('cot_c_rfc')?.value||'',
@@ -10023,6 +10355,7 @@ function snapCot(){
 }
 function restoreCotDraft(d){
   if(!d)return;
+  globalThis.SumetecPortalPedidos?.restaurar(d.portalPedidoId);
   if(globalThis.ComercialCliente)ComercialCliente.restaurar(d.comercial);
   const sv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v??'';};
   const fb=document.getElementById('cot_folioBadge');
@@ -10068,6 +10401,7 @@ function _cotPpSel(idx){
   it.clave=p.clave;it.desc=p.desc;it.precio=p.precio;it.iva=_ivaGlobalCot;
   if(p.costo!=null)it.costo=+p.costo||0; // #9: costo del proveedor → margen
   if(p.costoIva!=null)it.costoIva=+p.costoIva||0; // costo CON IVA → margen si la venta es al 0%
+  if(p.costoUtil!=null)it.costoUtil=+p.costoUtil||0; // 2026-10-14: costo con que el ERP mide la utilidad (manda si viene)
   if(!it.qty||+it.qty===0)it.qty=1;
   pp.classList.remove('open');renderTableCot();calcTotalsCot();
 }
@@ -10207,8 +10541,9 @@ async function _generarCotizacion(){
     if(!doc){toast('Error generando PDF','err');if(btn){btn.disabled=false;btn.textContent='✅ Generar cotización';}return;}
 
     // ── Calcular total para Drive (misma fórmula centralizada en _calcTot) ──
-    const {sub,iva:ivaT}=_calcTot(data.items,dp,false);
-    const tot=sub-sub*(dp/100)+ivaT;
+    // CT1 (2026-10-21): antes se restaba el descuento SIN redondear por renglón y el total de Drive
+    // podía diferir 1 centavo del de pantalla/PDF; el total es siempre el de _calcTot.
+    const {tot}=_calcTot(data.items,dp,false);
     const total=tot.toFixed(2);
 
     // ── Capturar productos nuevos (F7: los que no están en el catálogo) ──
@@ -10220,7 +10555,9 @@ async function _generarCotizacion(){
     const gps=await _gpsRapido(3000).catch(()=>null);
     const entry={id,folio,cliente:nombre,fecha:fechaTxt,total,filename,pdf:b64,data,
                  lat:gps?.lat||'',lng:gps?.lng||'',ts:Date.now()};
+    data.portalPedidoId=globalThis.SumetecPortalPedidos?.referencia()||null;
     _cotEncolar(entry);
+    globalThis.SumetecPortalPedidos?.cotizacionPreparada(entry);
 
     // Guardar los datos para la descarga (que ahora es un paso aparte, a elección del usuario)
     _cotUltimaData=data; _cotUltimoFilename=filename; _cotUltimaEntry=entry;
@@ -10343,7 +10680,7 @@ function _descargarCotDesdeConfirmacion(){
     // Se re-sube (misma cotización, mismo id) con la orden de correo: el servidor la manda al guardar el PDF.
     const hist=leerSeguro('_cot_historial',[]).find(c=>c.id===ent.id);
     const folio=(hist&&hist.folio)||ent.folio;
-    const asunto='Tu cotización '+folio+' — '+(empresa.nombre||'SUMETEC');
+    const asunto=_asuntoCorreo(data.c_nombre||ent.cliente,folio,ent.total,'cotizacion');
     const cuerpo=_mensajeAgradecimiento(data.c_nombre||ent.cliente,folio,ent.total,'cotizacion',data.vigencia);
     _cotEncolar({...ent,folio,correo:{enviar:true,email,asunto,cuerpo}});
     if(isOnline) setTimeout(_procesarColaCotR,300); else _estado('📵 Correo en cola — se envía al volver la señal',4000);
@@ -10804,7 +11141,7 @@ function _cotEstadoBadge(entry){
   // Abrir cotización desde historial para MODIFICAR -- local si existe,
   // si no la trae de Drive (2026-07-14, ver _resolverDatosCotizacion).
   function _cotAbrirDesdeHistorial(id,folio){
-    _verificarPinBorrado('abrir esta cotización').then(ok=>{ if(ok) _cotAbrirDesdeHistorialConfirmado(id,folio); });
+    _verificarPinBorrado('abrir esta cotización','abrir_cotizacion',id,folio).then(ok=>{ if(ok) _cotAbrirDesdeHistorialConfirmado(id,folio); });
   }
   async function _cotAbrirDesdeHistorialConfirmado(id,folio){
     const r=await _resolverDatosCotizacion(id,folio);
@@ -10832,7 +11169,7 @@ function _cotEstadoBadge(entry){
   // del catálogo actual. No auto-guarda: el usuario revisa y registra como
   // cualquier remisión nueva.
   function _convertirARemision(id,folio){
-    _verificarPinBorrado('convertir esta cotización en remisión').then(ok=>{ if(ok) _convertirARemisionConfirmado(id,folio); });
+    _verificarPinBorrado('convertir esta cotización en remisión','convertir_cotizacion',id,folio).then(ok=>{ if(ok) _convertirARemisionConfirmado(id,folio); });
   }
   async function _convertirARemisionConfirmado(id,folio){
     const r=await _resolverDatosCotizacion(id,folio);
@@ -10862,7 +11199,7 @@ function _cotEstadoBadge(entry){
   // Nota: la cotización en el servidor (hoja "Cotizaciones") es un registro permanente
   // y NO se borra desde aquí; esto solo limpia la lista local de este dispositivo.
   function _cotBorrarDelHistorial(id){
-    _verificarPinBorrado('quitar esta cotización del historial').then(ok=>{
+    _verificarPinBorrado('quitar esta cotización del historial','quitar_cotizacion',id,'').then(ok=>{
       if(!ok)return;
       let hist=leerSeguro('_cot_historial',[]);
       let cola=leerSeguro('cola_cot_r',[]);
@@ -11016,5 +11353,6 @@ document.addEventListener('DOMContentLoaded',()=>{ setTimeout(_actualizarBadgeCo
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',iniciar);else iniciar();
 })();
 </script>
+<script src="./portal_pedidos.js" defer></script>
 </body>
 </html>

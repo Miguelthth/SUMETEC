@@ -193,3 +193,13 @@ function reiniciarVinculo(sinPreguntar) {
   document.body.classList.add('sin-sesion');
   document.querySelector('#vincular').showModal();
 }
+
+// D1 (2026-10-21): sin señal el navegador contesta con su texto técnico («Failed to fetch», «Load failed»,
+// «NetworkError…»). A la pantalla va un aviso claro; los mensajes del servidor y del propio código pasan igual.
+function textoErrorRed(err) {
+  const m = String((err && err.message) || err || '');
+  if (/failed to fetch|load failed|networkerror|network request failed|fetch failed/i.test(m)) {
+    return 'No hay señal en este momento. Revisa tu conexión e intenta de nuevo.';
+  }
+  return m;
+}

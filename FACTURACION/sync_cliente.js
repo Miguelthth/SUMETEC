@@ -85,6 +85,8 @@
       }
       // navigator.locks permite que pestañas del mismo origen y credencial compartan la descarga.
       if(almacen.ultimo && Date.now()-almacen.ultimo<5000 && !ses.invalido){ses.activo=almacen.activo;ses.ultimo=almacen.ultimo;return almacen.versiones;}
+      // F7-LOCAL: la hora del último «sin cambios» vive en memoria; vale mientras el almacén guardado sea el mismo.
+      if(ses.sinCambiosTs && Date.now()-ses.sinCambiosTs<5000 && !ses.invalido && ses.sinCambiosHuella===almacen.integridadActivo){ses.activo=almacen.activo;return ses.sinCambiosR;}
       let temas=ses.temas || TEMAS[app] || [];let paginas=0;
       while(paginas++<1000){
         if(escribiendo)throw new Error('SYNC_CAPTURA_PRIORITARIA');
@@ -122,6 +124,14 @@
         if(r.ok!==true)throw new Error(r.codigo || r.error || 'SYNC_NO_AUTORIZADO');
         if(r.sinCambios===true){
           if(r.mas || r.eventos.length || almacen.etapa)throw new Error('SYNC_VACIO_INVALIDO');
+          // F7-LOCAL (auditoría 2026-10-14, B2): nada cambió desde los cursores guardados, así que el almacén ya validado
+          // (su huella se comprobó al leerlo) sigue siendo el vigente: no se clona, no se reconstruye ni se reescribe
+          // completo en cada sondeo. Solo se recuerda en memoria cuándo se consultó.
+          if(temas.every(t=>trabajo.temas[t])){
+            rapidoAutorizado=r.siguienteSegundos===15;
+            ses.activo=almacen.activo;ses.ultimo=Date.now();ses.invalido=false;
+            ses.sinCambiosTs=ses.ultimo;ses.sinCambiosR=r;ses.sinCambiosHuella=almacen.integridadActivo;return r;
+          }
           r.epochs=Object.fromEntries(Object.entries(trabajo.temas).map(([t,v])=>[t,v.epoch]));
           r.hasta=Object.fromEntries(Object.entries(trabajo.temas).map(([t,v])=>[t,v.cursor]));r.horizonte={...r.hasta};
         }
@@ -180,7 +190,11 @@
     const app=appActual(),tipos=TEMAS[app] || [],lectura=tipos.includes(d.tipo) && !d.mes && !d.folio && !d.fecha;
     if(d.tipo==='ping' || lectura){
       if(d.tipo==='ping'){const k=await hash(String(input)+'\n'+d.token+'\n'+app),ses=sesiones.get(k);if(ses && ses.acuse && Date.now()-ses.acuseTs<5000)return new root.Response(JSON.stringify(ses.acuse),{status:200,headers:{'Content-Type':'application/json'}});}
-      const r=await consultar(String(input),d.token,app);
+      // F7-SOND (auditoría 2026-10-19): si el diario no puede contestar (tema pendiente, una escritura en vuelo, red),
+      // el ping o la lectura siguen por el camino de siempre. Antes se rechazaban: la app marcaba «servidor lento»,
+      // se saltaba los reintentos de sus colas y dejaba de bajar los cobros de los demás teléfonos.
+      let r=null;
+      try{r=await consultar(String(input),d.token,app);}catch(_){r=null;}
       if(r){
         if(d.tipo==='ping')return new root.Response(JSON.stringify(r),{status:200,headers:{'Content-Type':'application/json'}});
         const key=await hash(String(input)+'\n'+d.token+'\n'+app),ses=sesiones.get(key),t=ses && ses.activo && (!ses.temas || ses.temas.includes(d.tipo)) && ses.activo.temas[d.tipo];

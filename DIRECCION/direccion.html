@@ -76,9 +76,11 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
        data-vista de siempre (la lógica de navegación no cambia). -->
   <nav class="sm-nav" aria-label="Secciones">
     <button type="button" data-vista="resumen" class="btn-nav"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Resumen</span></button>
+    <button type="button" data-vista="panel" class="btn-nav"><i class="bi bi-grid-1x2" aria-hidden="true"></i><span>Panel</span></button>
     <button type="button" data-vista="caja" class="btn-nav"><i class="bi bi-cash-stack" aria-hidden="true"></i><span>Caja</span></button>
     <button type="button" data-vista="corte" class="btn-nav"><i class="bi bi-calculator" aria-hidden="true"></i><span>Corte</span></button>
     <button type="button" data-vista="inventario" class="btn-nav"><i class="bi bi-box-seam" aria-hidden="true"></i><span>Inventario</span></button>
+    <button type="button" data-vista="permisos" class="btn-nav"><i class="bi bi-lock" aria-hidden="true"></i><span>Permisos</span></button>
   </nav>
 
   <div id="toast" class="toast" role="status"></div>
@@ -144,6 +146,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <script src="inventario.js"></script>
   <script src="sync_cliente.js"></script>
 <script src="acceso.js"></script>
+<script src="aprobaciones.js"></script>
   <script src="app.js"></script>
   <div id="sumetecActualizacion" role="status" aria-live="assertive"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje" aria-hidden="true">⚙</span><strong id="sumetecActualizacionTitulo">Actualización disponible</strong><p id="sumetecActualizacionMensaje"></p><button id="sumetecActualizarBoton" type="button" hidden>Actualizar</button></div></div>
   <script src="actualizacion.js"></script>

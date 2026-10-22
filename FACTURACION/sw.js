@@ -11,7 +11,7 @@
 // iframe sandbox, no un documento de nivel superior que un Service Worker
 // pueda controlar (mismo motivo por el que el ícono de instalación tampoco
 // funciona ahí -- ver FACTURACION-threat-model.md).
-const CACHE = 'sumetec-fact-9d86aa3ed3';
+const CACHE = 'sumetec-fact-2dc2b4a913';
 const CACHE_ASSETS = 'sumetec-fact-assets-dc762dec23';
 const PREFIJO = 'sumetec-fact-';
 

@@ -105,6 +105,7 @@ function sumetecRecordarPin(app, pin) {
   if (!pin) return;
   _sumetecPinSesion[_sumetecAppAcceso(app)] = pin;
   if (sumetecEquipoSinPin(app)) localStorage.setItem(`sumetec_sinpin_${app}`, pin);
+  _sumetecHuellaTrasPin(app, pin);
 }
 function sumetecOlvidarPinGuardado(app) {
   localStorage.removeItem(`sumetec_sinpin_${_sumetecAppAcceso(app)}`);
@@ -117,7 +118,11 @@ function sumetecAplicarAcceso(app, acceso) {
   if (acceso && typeof acceso === 'object' && !Array.isArray(acceso)) {
     localStorage.setItem(SUMETEC_CLAVE_ACCESO, JSON.stringify({
       bloqueo_minutos: (acceso.bloqueo_minutos && typeof acceso.bloqueo_minutos === 'object') ? acceso.bloqueo_minutos : {},
-      equipos_sin_pin: Array.isArray(acceso.equipos_sin_pin) ? acceso.equipos_sin_pin.map(String) : [] }));
+      equipos_sin_pin: Array.isArray(acceso.equipos_sin_pin) ? acceso.equipos_sin_pin.map(String) : [],
+      permisos: (acceso.permisos && typeof acceso.permisos === 'object' && !Array.isArray(acceso.permisos)) ? acceso.permisos : {},
+      aprobadores: Array.isArray(acceso.aprobadores) ? acceso.aprobadores.map(String) : [],
+      saltar_hasta: (acceso.saltar_hasta && typeof acceso.saltar_hasta === 'object' && !Array.isArray(acceso.saltar_hasta)) ? acceso.saltar_hasta : {},
+      hash_codigo: typeof acceso.hash_codigo === 'string' ? acceso.hash_codigo : '' }));
   }
   const sinPin = sumetecEquipoSinPin(app);
   if (!sinPin) localStorage.removeItem(`sumetec_sinpin_${app}`);
@@ -144,13 +149,358 @@ function sumetecVigilarInactividad(app, nombre) {
       const pin = await sumetecPedirPinToken(nombre, false, mensaje);
       if (pin === null) { mensaje = 'Escribe tu PIN para seguir.'; continue; }
       try { await sumetecAbrirTokenCifrado(app, pin); sumetecRecordarPin(app, pin); break; }
-      catch (e) { mensaje = e.message || 'PIN incorrecto'; }
+      catch (e) { sumetecHuellaPinFallo(app, pin); mensaje = e.message || 'PIN incorrecto'; }
     }
     estado.ultima = Date.now(); estado.bloqueada = false;
     return true;
   };
   setInterval(estado.revisar, 15000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') estado.revisar(); });
+}
+
+// ═══ Permisos por acción (Ecosistema → pestaña de cada app → Permisos, 2026-10-14) ═══
+// El dueño decide en el ERP, con su PIN maestro, si cada acción delicada pide su permiso ('codigo': el nombre se
+// conservó para no romper configuraciones guardadas; desde el 2026-10-20 significa «permiso del dueño con su huella»),
+// pasa sin pedirlo ('libre') o no se permite en esta app ('bloqueado'). Llega dentro de ACCESO. Sin dato publicado,
+// cada llamada usa `porDefecto`: lo que la app hacía antes.
+const SUMETEC_MODOS_PERMISO = ['codigo', 'libre', 'bloqueado'];
+function sumetecPermiso(app, accion, porDefecto) {
+  const c = sumetecAccesoGuardado(), clave = _sumetecAppAcceso(app), p = c && c.permisos ? c.permisos[clave] : null;
+  // «Saltar en pruebas» (ERP → Ecosistema → Permisos, 2026-10-21): mientras no llegue la hora en que vence (la fija el
+  // ERP a 24 h), la acción se comporta como 'libre' sin perder el modo guardado. El reloj de este teléfono decide cuándo
+  // vence, así que se apaga sola aunque no se vuelva a sincronizar.
+  const hasta = c && c.saltar_hasta && typeof c.saltar_hasta === 'object' && c.saltar_hasta[clave] ? c.saltar_hasta[clave][accion] : 0;
+  if (typeof hasta === 'number' && hasta > Date.now()) return 'libre';
+  const v = p && typeof p === 'object' ? p[accion] : undefined;
+  return SUMETEC_MODOS_PERMISO.includes(v) ? v : porDefecto;
+}
+function sumetecHashCodigoPublicado() {
+  const c = sumetecAccesoGuardado();
+  return (c && typeof c.hash_codigo === 'string') ? c.hash_codigo : '';
+}
+// Pide el código de seguridad con el mismo teclado de las apps y lo compara con la huella publicada.
+// `hash` opcional: la app que ya tenía su propia copia de la huella la pasa. Devuelve true si es correcto.
+function sumetecPedirCodigoAccion(nombre, texto, hash) {
+  return new Promise(resolve => {
+    const h = hash || sumetecHashCodigoPublicado();
+    const avisar = m => { if (typeof alert === 'function') alert(m); };
+    if (!h) { avisar('Aún no hay código de seguridad en este teléfono: en el ERP entra a Administración → Ecosistema y sincroniza; luego abre la app con señal.'); resolve(false); return; }
+    const dlg = document.createElement('dialog');
+    sumetecTecladoPin(dlg, { modo: 'codigo', nombre, texto: texto || 'Escribe el código de seguridad.' });
+    const form = dlg.querySelector('form'), input = dlg.querySelector('input'), error = dlg.querySelector('.sumetec-pin-error');
+    form.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      if ((await sumetecHuellaAcceso('sumetec-campo|' + input.value.trim())) === h) { dlg.close('ok'); return; }
+      error.textContent = 'Código incorrecto, intenta de nuevo.'; input.value = '';
+    });
+    dlg.addEventListener('close', () => { const ok = dlg.returnValue === 'ok'; input.value = ''; dlg.remove(); resolve(ok); }, { once: true });
+    document.body.appendChild(dlg); dlg.showModal(); const t = dlg.querySelector('.sumetec-tecla'); if (t) t.focus();
+  });
+}
+// Punto único para las acciones delicadas: true si puede seguir.
+// 2026-10-20: el modo 'codigo' ya no pide teclear un código (se adivinaba desde su huella pública, F2-COD-R): pide
+// PERMISO AL DUEÑO, que lo aprueba desde su teléfono con su huella o Face ID (sumetecPedirPermisoDueno).
+// op: { nombre, documento, detalle, avisar(m), respaldo() } — `documento` = qué se toca (el permiso vale solo para
+// eso); `respaldo` = cómo confirma el propio dueño en un teléfono sin huella (su PIN).
+async function sumetecAutorizarAccion(app, accion, porDefecto, op = {}) {
+  const modo = sumetecPermiso(app, accion, porDefecto);
+  if (modo === 'libre') return true;
+  if (modo === 'bloqueado') {
+    const m = 'Esta acción no está permitida en esta app (se cambia en el ERP: Ecosistema → ' + (op.nombre || app) + ' → Permisos).';
+    if (typeof op.avisar === 'function') op.avisar(m); else if (typeof alert === 'function') alert(m);
+    return false;
+  }
+  return sumetecPedirPermisoDueno(Object.assign({}, op, { app, accion }));
+}
+
+// ═══ Huella o Face ID (2026-10-20) ═══
+// Lo que use el teléfono para desbloquearse (huella, cara o el patrón del propio teléfono), vía WebAuthn con
+// «verificación del usuario» obligatoria. Sirve para dos cosas:
+//  1) ABRIR la app sin teclear el PIN: tras un PIN correcto se ofrece una vez activarla; el PIN queda cifrado con una
+//     llave que el navegador guarda sin dejarla copiar (IndexedDB, no extraíble), y solo se usa después de que el
+//     sensor reconoce a la persona. El PIN sigue sirviendo siempre (respaldo).
+//  2) CONFIRMAR que es el dueño quien aprueba un permiso desde SU teléfono (Dirección).
+// Lo que NO hace: el servidor no puede comprobar la huella (Apps Script no verifica esas firmas). La huella prueba que
+// quien tiene el teléfono en la mano es su dueño; el servidor confía en el teléfono APROBADOR vinculado.
+const SUMETEC_APP_NOMBRE = {Cotizador:'cotizador', Remisiones:'cotizador', Gastos:'gastos', 'Facturación':'fact', 'Logística':'logistica', 'Dirección':'direccion', Compras:'compras'};
+let _sumetecPinDeHuella = null, _sumetecHuellaOfrecida = {};
+const _sumetecB64 = b => btoa(String.fromCharCode(...new Uint8Array(b)));
+const _sumetecDeB64 = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+function _sumetecEsApple() {
+  return typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+}
+function _sumetecClaveHuella(app) { return `sumetec_huella_${_sumetecAppAcceso(app)}`; }
+function _sumetecRegistroHuella(app) {
+  try { const r = JSON.parse(localStorage.getItem(_sumetecClaveHuella(app)) || 'null'); return r && r.id ? r : null; } catch (_) { return null; }
+}
+function sumetecHuellaActiva(app) { return !!_sumetecRegistroHuella(app); }
+// ¿El teléfono tiene sensor y la app corre donde el navegador lo deja usar? (Facturación dentro de Google: no.)
+async function sumetecHuellaPosible() {
+  try {
+    if (typeof window === 'undefined' || !window.isSecureContext || window.top !== window.self) return false;
+    if (!window.PublicKeyCredential || !navigator.credentials || !globalThis.indexedDB || !crypto.subtle) return false;
+    return !!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
+  } catch (_) { return false; }
+}
+function _sumetecIdb(modo, hacer) {
+  return new Promise((ok, mal) => {
+    const abrir = indexedDB.open('sumetec-huella', 1);
+    abrir.onupgradeneeded = () => abrir.result.createObjectStore('llaves');
+    abrir.onerror = () => mal(abrir.error);
+    abrir.onsuccess = () => {
+      const db = abrir.result, tx = db.transaction('llaves', modo), req = hacer(tx.objectStore('llaves'));
+      tx.oncomplete = () => { db.close(); ok(req ? req.result : undefined); };
+      tx.onerror = tx.onabort = () => { db.close(); mal(tx.error); };
+    };
+  });
+}
+// Pide al sensor que reconozca a la persona. true solo si el teléfono confirma que la verificó (bandera UV).
+async function _sumetecSensor(registro) {
+  try {
+    const cred = await navigator.credentials.get({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)), timeout: 60000, userVerification: 'required',
+      allowCredentials: [{ type: 'public-key', id: _sumetecDeB64(registro.id), transports: ['internal', 'hybrid'] }] } });
+    const datos = cred && cred.response && cred.response.authenticatorData ? new Uint8Array(cred.response.authenticatorData) : null;
+    return !!(datos && datos.length > 32 && (datos[32] & 0x04));
+  } catch (_) { return false; }
+}
+async function _sumetecEnvolverPin(app, pin) {
+  const llave = await _sumetecIdb('readonly', st => st.get(app));
+  if (!llave) throw Error('sin llave');
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const c = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, llave, new TextEncoder().encode(pin));
+  return { iv: _sumetecB64(iv), c: _sumetecB64(c) };
+}
+// Activa la huella para esta app con el PIN que se acaba de comprobar. Llamar desde un toque (iPhone lo exige).
+async function sumetecActivarHuella(app, nombre, pin) {
+  _sumetecAppAcceso(app);
+  if (!pin || !(await sumetecHuellaPosible())) return false;
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      rp: { name: 'SUMETEC' }, challenge: crypto.getRandomValues(new Uint8Array(32)), timeout: 60000,
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'sumetec-' + app, displayName: (nombre || app) + ' · SUMETEC' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+      attestation: 'none' } });
+    if (!cred) return false;
+    const llave = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    await _sumetecIdb('readwrite', st => st.put(llave, app));
+    const sobre = await _sumetecEnvolverPin(app, pin);
+    localStorage.setItem(_sumetecClaveHuella(app), JSON.stringify({ id: _sumetecB64(cred.rawId), iv: sobre.iv, c: sobre.c, desde: Date.now() }));
+    localStorage.removeItem(_sumetecClaveHuella(app) + '_no');
+    return true;
+  } catch (_) { return false; }
+}
+function sumetecOlvidarHuella(app) {
+  localStorage.removeItem(_sumetecClaveHuella(app));
+  try { _sumetecIdb('readwrite', st => st.delete(app)).catch(() => {}); } catch (_) {}
+}
+// Sensor → PIN guardado de esta app, o null (canceló, no la reconoció, o ya no hay registro).
+async function sumetecPinConHuella(app) {
+  const reg = _sumetecRegistroHuella(app);
+  if (!reg || !(await _sumetecSensor(reg))) return null;
+  try {
+    const llave = await _sumetecIdb('readonly', st => st.get(app));
+    if (!llave) { sumetecOlvidarHuella(app); return null; }
+    const plano = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: _sumetecDeB64(reg.iv) }, llave, _sumetecDeB64(reg.c));
+    return (_sumetecPinDeHuella = new TextDecoder().decode(plano));
+  } catch (_) { sumetecOlvidarHuella(app); return null; }
+}
+// El PIN que dio la huella ya no abre (se cambió al volver a vincular): se apaga y se vuelve a ofrecer con el nuevo.
+function sumetecHuellaPinFallo(app, pin) {
+  if (pin && pin === _sumetecPinDeHuella) { _sumetecPinDeHuella = null; sumetecOlvidarHuella(app); }
+}
+// Confirmar con el sensor (sin sacar el PIN). Sin huella activa: `respaldo()` (el PIN de la app) si se da.
+async function sumetecConfirmarConHuella(app, respaldo) {
+  const reg = _sumetecRegistroHuella(app);
+  if (reg && await _sumetecSensor(reg)) return true;
+  return typeof respaldo === 'function' ? !!(await respaldo()) : false;
+}
+// Tras un PIN correcto: si la huella ya está, se actualiza el PIN guardado; si no, se ofrece una vez por sesión.
+function _sumetecHuellaTrasPin(app, pin) {
+  if (sumetecHuellaActiva(app)) {
+    _sumetecEnvolverPin(app, pin).then(s => {
+      const reg = _sumetecRegistroHuella(app);
+      if (reg) localStorage.setItem(_sumetecClaveHuella(app), JSON.stringify(Object.assign(reg, s)));
+    }).catch(() => {});
+    return;
+  }
+  if (_sumetecHuellaOfrecida[app] || localStorage.getItem(_sumetecClaveHuella(app) + '_no') || typeof document === 'undefined') return;
+  _sumetecHuellaOfrecida[app] = true;
+  sumetecHuellaPosible().then(si => { if (si) setTimeout(() => sumetecOfrecerHuella(app, pin), 400); });
+}
+function sumetecOfrecerHuella(app, pin) {
+  const nombre = Object.keys(SUMETEC_APP_NOMBRE).find(n => SUMETEC_APP_NOMBRE[n] === app && n !== 'Remisiones') || app;
+  const dlg = _sumetecDialogoSimple('◉', '¿Abrir ' + nombre + ' con tu huella o Face ID?',
+    'La próxima vez entras sin escribir el PIN: solo pones el dedo o la cara. El PIN sigue sirviendo por si acaso.',
+    [['si', 'Sí, usar huella o Face ID'], ['no', 'Ahora no']]);
+  const si = dlg.querySelector('[data-r="si"]');
+  si.onclick = async () => {   // el toque abre el sensor (iPhone lo exige)
+    si.disabled = true;
+    const ok = await sumetecActivarHuella(app, nombre, pin);
+    dlg.close(ok ? 'listo' : 'fallo');
+    if (!ok && typeof alert === 'function') alert('No se pudo activar la huella en este teléfono. Puedes seguir con tu PIN.');
+  };
+  dlg.querySelector('[data-r="no"]').onclick = () => { localStorage.setItem(_sumetecClaveHuella(app) + '_no', '1'); dlg.close('no'); };
+}
+function _sumetecDialogoSimple(icono, titulo, texto, botones) {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'sumetec-permiso';
+  dlg.innerHTML = '<div class="sumetec-permiso-icono" aria-hidden="true"></div><h2></h2><p class="sumetec-permiso-texto"></p><p class="sumetec-permiso-estado" role="status"></p><div class="sumetec-permiso-botones"></div>';
+  dlg.querySelector('.sumetec-permiso-icono').textContent = icono;
+  dlg.querySelector('h2').textContent = titulo;
+  dlg.querySelector('.sumetec-permiso-texto').textContent = texto;
+  const caja = dlg.querySelector('.sumetec-permiso-botones');
+  botones.forEach(([r, t], i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.r = r; b.textContent = t; b.className = i ? 'secundario' : 'principal';
+    caja.appendChild(b);
+  });
+  dlg.addEventListener('close', () => setTimeout(() => dlg.remove(), 0), { once: true });
+  document.body.appendChild(dlg); dlg.showModal();
+  return dlg;
+}
+
+// ═══ Permiso del dueño (2026-10-20) ═══
+// Una acción delicada (modo 'codigo' en Ecosistema) ya no se desbloquea con un código: el teléfono pide permiso y el
+// dueño lo aprueba desde SU teléfono (Dirección → Permisos) con su huella o Face ID. El permiso vale para ESA acción
+// y ESE documento durante 24 h. Las acciones que revisa el servidor (cancelar/eliminar remisión) las vuelve a revisar
+// allá: aunque alguien se brinque esta pantalla, sin permiso aprobado no pasan.
+// Cada app dice a qué servidor y con qué token pedirlo: sumetecRegistrarServidor('cotizador', () => ({url, token}))
+// (la función puede ser async: Dirección y Compras sacan el token con su PIN o huella).
+const _sumetecServidores = {};
+function sumetecRegistrarServidor(app, obtener) { _sumetecServidores[_sumetecAppAcceso(app)] = obtener; }
+async function _sumetecPostPermiso(app, cuerpo) {
+  // Facturación habla con el servidor fiscal, que no guarda permisos: ahí no se registra y se avisa.
+  if (!_sumetecServidores[app]) return { ok: false, error: 'Esta app no puede pedir permiso al dueño: hazlo desde el ERP o pide que esta acción quede «Sin permiso» (Ecosistema → Permisos).' };
+  let s = null;
+  try { s = await _sumetecServidores[app](); } catch (_) { s = null; }
+  if (!s || !s.url || !s.token) return { ok: false, error: 'Este teléfono aún no está vinculado al servidor (o canceló el PIN).' };
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return { sinRed: true };
+  const x = await sumetecPostJsonSeguro(s.url, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(Object.assign({ token: s.token }, cuerpo)) });
+  return x.sinRed ? { sinRed: true } : (x.r || { ok: false });
+}
+// ¿Este teléfono es del dueño? Lo marca el ERP (ACCESO.aprobadores); sin lista publicada, solo Dirección.
+function sumetecSoyAprobador(app) {
+  const c = sumetecAccesoGuardado(), lista = c && Array.isArray(c.aprobadores) ? c.aprobadores : [];
+  const id = localStorage.getItem(`sumetec_${_sumetecAppAcceso(app)}_dispositivo`) || '';
+  return lista.length ? (!!id && lista.includes(id)) : app === 'direccion';
+}
+function _sumetecDocumentoPermiso(app, op) {
+  if (op.documento) return String(op.documento).slice(0, 120);
+  // Sin documento concreto: el permiso vale para este teléfono y este día.
+  const id = localStorage.getItem(`sumetec_${app}_dispositivo`) || 'equipo';
+  return ('dia-' + new Date().toISOString().slice(0, 10) + '-' + id).slice(0, 120);
+}
+async function sumetecPedirPermisoDueno(op = {}) {
+  const app = _sumetecAppAcceso(op.app), nombre = op.nombre || 'SUMETEC';
+  const avisar = m => { if (typeof op.avisar === 'function') op.avisar(m); else if (typeof alert === 'function') alert(m); };
+  const base = { app, accion: String(op.accion || ''), documento: _sumetecDocumentoPermiso(app, op), detalle: String(op.detalle || '').slice(0, 300) };
+  // En el teléfono del dueño, su propia huella (o su PIN) basta. 2026-10-21: como el servidor de Google también revisa
+  // estas acciones, el permiso queda registrado ahí a su nombre (si hay señal) para que no tenga que aprobarse a sí mismo
+  // en Dirección → Permisos. Sin señal pasa igual en el teléfono; el servidor lo revisará cuando se envíe.
+  if (sumetecSoyAprobador(app)) {
+    const ok = await sumetecConfirmarConHuella(app, op.respaldo);
+    if (ok) {
+      let hecho = false;
+      try { hecho = await _sumetecAprobarPropio(app, base); } catch (_) {}
+      if (!hecho) _sumetecPropiasGuardar(_sumetecPropiasLeer().concat([{ app, base }]));   // sin señal: se registra al volver
+    }
+    return ok;
+  }
+  const r = await _sumetecPostPermiso(app, Object.assign({ tipo: 'solicitar_aprobacion' }, base));
+  if (r.sinRed) { avisar('Se necesita señal para pedir permiso al dueño. Intenta cuando haya internet.'); return false; }
+  if (!r.ok || !r.aprobacion) { avisar(r.error || 'No se pudo pedir el permiso al dueño.'); return false; }
+  if (r.aprobacion.estado === 'APROBADA') return true;
+  return _sumetecEsperarPermiso(app, base, r.aprobacion, nombre);
+}
+// Devuelve true si la aprobación del dueño quedó registrada en el servidor (o ya lo estaba); false si no hubo señal o falló.
+async function _sumetecAprobarPropio(app, base) {
+  let r = await _sumetecPostPermiso(app, Object.assign({ tipo: 'solicitar_aprobacion' }, base));
+  if (r && r.ok && r.aprobacion && (r.aprobacion.estado === 'RECHAZADA' || r.aprobacion.estado === 'VENCIDA')) {
+    r = await _sumetecPostPermiso(app, Object.assign({ tipo: 'solicitar_aprobacion', nueva: true }, base));
+  }
+  if (!r || r.sinRed || !r.ok || !r.aprobacion) return false;
+  if (r.aprobacion.estado === 'APROBADA') return true;
+  if (r.aprobacion.estado !== 'PENDIENTE') return false;
+  const x = await _sumetecPostPermiso(app, { tipo: 'resolver_aprobacion', id: r.aprobacion.id, decision: 'APROBADA' });
+  return !!(x && x.ok);
+}
+// Aprobaciones propias del dueño que no se pudieron registrar por falta de señal: se reintentan solas.
+const SUMETEC_CLAVE_APROB_PROPIAS = 'sumetec_aprobaciones_propias_pendientes';
+function _sumetecPropiasLeer() {
+  try { const v = JSON.parse(localStorage.getItem(SUMETEC_CLAVE_APROB_PROPIAS) || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; }
+}
+function _sumetecPropiasGuardar(lista) {
+  try { localStorage.setItem(SUMETEC_CLAVE_APROB_PROPIAS, JSON.stringify(lista.slice(-50))); } catch (_) {}
+}
+let _sumetecPropiasVaciando = false;
+async function sumetecVaciarAprobacionesPropias() {
+  if (_sumetecPropiasVaciando) return;
+  const lista = _sumetecPropiasLeer();
+  if (!lista.length) return;
+  _sumetecPropiasVaciando = true;
+  try {
+    const quedan = [];
+    for (const it of lista) {
+      let hecho = false;
+      try { hecho = await _sumetecAprobarPropio(it.app, it.base); } catch (_) {}
+      if (!hecho) quedan.push(it);
+    }
+    _sumetecPropiasGuardar(quedan);
+  } finally { _sumetecPropiasVaciando = false; }
+}
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('online', () => { sumetecVaciarAprobacionesPropias(); });
+  setInterval(() => { sumetecVaciarAprobacionesPropias(); }, 15000);
+}
+const _SUMETEC_TEXTO_ACCION = a => String(a || '').replace(/_/g, ' ');
+function _sumetecEsperarPermiso(app, base, aprobacion, nombre) {
+  return new Promise(resolve => {
+    const dlg = _sumetecDialogoSimple('🔐', 'Esperando permiso del dueño',
+      'Se le avisó para que autorice «' + _SUMETEC_TEXTO_ACCION(base.accion) + '»' + (base.detalle ? ' (' + base.detalle + ')' : '') +
+      '. Lo aprueba desde su teléfono con su huella. Puedes esperar aquí o cerrar: si lo aprueba después, vuelve a intentarlo y pasará directo.',
+      [['otra', 'Pedir otra vez'], ['cerrar', 'Cerrar']]);
+    const estado = dlg.querySelector('.sumetec-permiso-estado'), otra = dlg.querySelector('[data-r="otra"]');
+    let actual = aprobacion, terminado = false, reloj = null;
+    const pintar = () => {
+      const e = actual && actual.estado;
+      estado.textContent = e === 'RECHAZADA' ? '✖ El dueño no lo autorizó.' : e === 'VENCIDA' ? 'El permiso anterior venció; pide otro.' : '⏳ Esperando… (se revisa solo cada pocos segundos)';
+      estado.dataset.estado = e || '';
+      otra.hidden = !(e === 'RECHAZADA' || e === 'VENCIDA');
+    };
+    const fin = ok => { if (terminado) return; terminado = true; clearInterval(reloj); if (dlg.open) dlg.close(ok ? 'ok' : 'no'); resolve(ok); };
+    const revisar = async () => {
+      if (terminado || (typeof document !== 'undefined' && document.hidden)) return;
+      const r = await _sumetecPostPermiso(app, Object.assign({ tipo: 'estado_aprobacion' }, base));
+      if (terminado || !r || !r.ok) return;
+      actual = r.aprobacion || actual;
+      if (actual && actual.estado === 'APROBADA') { fin(true); return; }
+      pintar();
+    };
+    otra.onclick = async () => {
+      otra.disabled = true;
+      const r = await _sumetecPostPermiso(app, Object.assign({ tipo: 'solicitar_aprobacion', nueva: true }, base));
+      otra.disabled = false;
+      if (r && r.ok && r.aprobacion) { actual = r.aprobacion; if (actual.estado === 'APROBADA') { fin(true); return; } }
+      pintar();
+    };
+    dlg.querySelector('[data-r="cerrar"]').onclick = () => fin(false);
+    dlg.addEventListener('cancel', () => fin(false));
+    pintar();
+    reloj = setInterval(revisar, 4000);
+  });
+}
+
+// ═══ Lado del dueño: lista y decisión (lo usa Dirección → Permisos) ═══
+async function sumetecPermisosPendientes(app) {
+  return _sumetecPostPermiso(app, { tipo: 'aprobaciones_pendientes' });
+}
+// Confirma con la huella (o el PIN de respaldo) y manda la decisión. Devuelve la respuesta del servidor.
+async function sumetecResolverPermiso(app, id, aprobar, respaldo) {
+  if (aprobar && !(await sumetecConfirmarConHuella(app, respaldo))) return { ok: false, cancelado: true, error: 'No se confirmó con la huella.' };
+  return _sumetecPostPermiso(app, { tipo: 'resolver_aprobacion', id, decision: aprobar ? 'APROBADA' : 'RECHAZADA' });
 }
 
 let _sumetecPinPromesa = null;
@@ -166,6 +516,9 @@ const SUMETEC_APP_TOKEN = {Cotizador:'cotizador', Remisiones:'cotizador', Gastos
 function sumetecTecladoPin(dlg, op = {}) {
   const modo = op.modo || 'desbloquear', crear = modo === 'crear', codigo = modo === 'codigo';
   const nombre = op.nombre || 'SUMETEC', min = op.min || (codigo ? 1 : 4), max = op.max || 12;
+  // Huella o Face ID (2026-10-20): al desbloquear, si este teléfono ya la activó para esta app.
+  const appHuella = modo === 'desbloquear' ? (op.app || SUMETEC_APP_NOMBRE[nombre] || '') : '';
+  const conHuella = !!appHuella && sumetecHuellaActiva(appHuella);
   const quieto = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (dlg._sumetecObs) dlg._sumetecObs.disconnect();
   if (dlg._sumetecTeclas) dlg.removeEventListener('keydown', dlg._sumetecTeclas);
@@ -184,6 +537,7 @@ function sumetecTecladoPin(dlg, op = {}) {
     + '<div class="sumetec-pin-cuerpo"><div class="sumetec-pin-pasos" aria-hidden="true"><i></i><i></i></div><div class="sumetec-pin-eyebrow"></div><h2></h2><p class="sumetec-pin-texto"' + id('id', op.textoId) + '></p>'
     + campo(0, codigo ? 'Código' : 'PIN') + campo(1, 'Confirmar PIN')
     + '<div class="sumetec-pin-puntos" aria-hidden="true"></div><small class="sumetec-pin-error" role="alert"' + id('id', op.errorId) + '></small></div>'
+    + (conHuella ? '<button type="button" class="sumetec-pin-huella"><span aria-hidden="true">◉</span> Usar huella o Face ID</button>' : '')
     + '<div class="sumetec-pin-teclas">' + teclas + '</div>'
     + '<button class="sumetec-pin-guardar" value="ok" type="submit"></button><button type="button" class="sumetec-pin-enlace"></button></form>'
     + '<div class="sumetec-pin-aviso" hidden><div class="sumetec-pin-aviso-icono" aria-hidden="true">?</div><h2>¿Olvidaste tu PIN?</h2>'
@@ -287,6 +641,22 @@ function sumetecTecladoPin(dlg, op = {}) {
   ins[0].addEventListener('input', pintar);
   textos(); pintar();
   if (op.mensaje) error.textContent = op.mensaje;
+  const botonHuella = q('.sumetec-pin-huella');
+  if (botonHuella) {
+    // El sensor del teléfono confirma a la persona; con eso se saca el PIN guardado y el teclado se cierra como si lo
+    // hubiera escrito. Si falla o se cancela, el PIN sigue a la mano.
+    const usar = async auto => {
+      if (botonHuella.disabled) return;
+      botonHuella.disabled = true;
+      const pin = await sumetecPinConHuella(appHuella);
+      botonHuella.disabled = false;
+      if (pin) { ins[0].value = pin; if (dlg.open) dlg.close('ok'); return; }
+      if (!auto && dlg.open) error.textContent = 'No se pudo con la huella. Escribe tu PIN.';
+    };
+    botonHuella.onclick = () => usar(false);
+    // Android lo permite sin tocar nada; en iPhone el sensor solo abre con un toque (botón).
+    if (!op.mensaje && !_sumetecEsApple()) setTimeout(() => { if (dlg.open) usar(true); }, 250);
+  }
   return dlg;
 }
 
@@ -323,7 +693,7 @@ async function sumetecRestaurarTokenApp(app,nombre,claveLegada) {
       const pin=await sumetecPedirPinToken(nombre,false,mensaje);
       if (pin===null) return '';
       try { const t=await sumetecAbrirTokenCifrado(app,pin); sumetecRecordarPin(app,pin); return t; }
-      catch (e) { const quedan=2-intento; mensaje=(e.message||'PIN incorrecto')+(quedan>0?' · te quedan '+quedan+' intento'+(quedan===1?'':'s'):''); }
+      catch (e) { sumetecHuellaPinFallo(app,pin); const quedan=2-intento; mensaje=(e.message||'PIN incorrecto')+(quedan>0?' · te quedan '+quedan+' intento'+(quedan===1?'':'s'):''); }
     }
     return '';
   }

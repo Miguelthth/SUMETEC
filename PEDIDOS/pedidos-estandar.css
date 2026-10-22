@@ -1,0 +1,68 @@
+/* Pedidos adopta el estándar v3 y sus fuentes, fondo, superficies y medidas móviles. */
+html[data-app=pedidos]{--app:#76b82a;--app-tinta:#102335;--navy:var(--sm-navy);--ink:var(--sm-ink);--muted:var(--sm-muted);--line:var(--sm-border-soft);--background:var(--sm-bg);--paper:var(--sm-surface);--radius:var(--sm-r-md)}
+html{scroll-padding-top:16px}
+body{font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;color:var(--sm-ink);background-color:var(--sm-bg);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+h1,h2,h3,.brand{font-family:"IBM Plex Sans",system-ui,sans-serif;letter-spacing:-.02em}
+h1{font-size:30px;line-height:1.18}
+h1 span{color:var(--app-texto)}
+h2{font-size:20px}
+.masthead{border-bottom:2px solid var(--app)}
+.masthead-inner{max-width:900px;padding:16px;gap:12px}
+.brand{font-size:24px;gap:12px}
+.brand-app-icon{display:block;width:48px;height:48px;border-radius:11px;object-fit:cover;box-shadow:0 2px 12px #0002;flex:none}
+.brand small,.header-label{color:var(--app-claro)}
+.page{max-width:900px;padding:0 16px}
+.intro{padding:28px 0 22px;gap:20px}
+.intro>div>p:last-child{font-size:15px;line-height:1.6}
+.intro-note{min-width:180px;max-width:240px;font-size:14px;padding-left:15px}
+.intro-note strong{font-weight:600}
+.note-rule{background:var(--app);width:3px}
+.eyebrow{color:var(--app-texto)}
+.workspace-grid{grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
+.selection,.cart{background:var(--sm-surface);border:1px solid var(--sm-border-soft);border-radius:var(--sm-r-md);padding:16px;box-shadow:var(--sm-shadow-sereno)}
+.cart{border-top:3px solid var(--app);top:16px;scroll-margin-top:16px}
+.selection:focus-within,.cart:focus-within{border-color:var(--app-borde);box-shadow:var(--sm-shadow-sereno),0 0 0 3px var(--app-suave)}
+.views{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:3px;border:1px solid var(--sm-border-soft);border-radius:10px;background:var(--sm-surface-2)}
+.views button{min-height:44px;padding:8px 5px;border:0;border-radius:7px;font-size:12px;white-space:normal;line-height:1.3}
+.views button[aria-pressed=true]{background:var(--sm-surface);color:var(--sm-navy);box-shadow:0 1px 3px #082b4624,inset 0 0 0 1px var(--app)}
+.section-heading{margin-top:20px;gap:8px}
+.section-heading h2{font-size:19px}
+.text-button{min-height:44px;min-width:44px;padding:9px 6px;color:var(--app-texto)}
+.button{min-height:44px;min-width:44px;border-radius:var(--sm-r-sm);font-weight:600}
+.button.primary{background:var(--app);color:var(--app-tinta)}
+.button.primary:hover:not(:disabled){background:color-mix(in srgb,var(--app) 86%,#fff)}
+.button.add{background:var(--app-suave);border-color:var(--app-borde);color:var(--sm-navy)}
+.button.add:hover:not(:disabled){background:color-mix(in srgb,var(--app) 25%,#fff)}
+input,textarea,select,.quantity,.note-field textarea{font-size:16px;min-height:44px;border-radius:var(--sm-r-sm);background:var(--sm-surface-2);border-color:var(--sm-border-soft)}
+input[type=number]{appearance:textfield;-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input:focus,textarea:focus,select:focus{outline:3px solid var(--app-suave);border-color:var(--app);box-shadow:0 0 0 1px var(--app)}
+button:focus-visible,a:focus-visible{outline:3px solid var(--app);outline-offset:3px}
+.product-code,.receipt .receipt-folio{font-family:"IBM Plex Mono",monospace}
+.product{gap:12px}
+.product-details{min-width:0}
+.product h3{font-size:15px;line-height:1.4}
+.product-action .button{white-space:nowrap;font-size:13px;padding:9px 8px}
+.product-unit,.previous-quantity{font-size:12px;line-height:1.5}
+.previous-quantity{color:var(--app-texto)}
+.notice{border-color:var(--app-borde);border-left:3px solid var(--app);background:color-mix(in srgb,var(--sm-surface) 92%,var(--app));border-radius:var(--sm-r-sm);margin-bottom:16px}
+.count{background:var(--sm-navy);border-bottom:2px solid var(--app)}
+.pending,.receipt{border-top-color:var(--app)}
+.receipt-check{background:var(--app-suave);color:var(--sm-navy)}
+dialog{border-top-color:var(--app);border-radius:var(--sm-r-md);padding:20px;width:min(600px,calc(100% - 32px));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overscroll-behavior:contain;box-shadow:var(--sm-shadow-sereno),0 20px 80px #08223840}
+dialog::backdrop{background:#082238a3;backdrop-filter:blur(3px)}
+.mobile-cart{background:linear-gradient(170deg,#03305a,#04223c);border-top:2px solid var(--app);padding-bottom:calc(12px + env(safe-area-inset-bottom));padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right))}
+.mobile-cart strong{color:var(--app-claro)}
+footer{line-height:1.6;padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+.pedidos-actualizacion{position:fixed;z-index:30;left:16px;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));max-width:580px;margin:auto;background:var(--sm-surface);color:var(--sm-ink);border:1px solid var(--app-borde);border-top:3px solid var(--app);border-radius:14px;box-shadow:0 12px 35px #08223840;padding:16px;font-size:14px}
+.pedidos-actualizacion button,.pedidos-instalar{min-height:44px;padding:10px 16px;border:1px solid var(--app-borde);background:var(--app);color:var(--app-tinta);border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+.pedidos-actualizacion p{margin:0 0 10px}.pedidos-instalar{margin:8px 0}
+@media(max-width:760px){
+  .masthead-inner{padding:14px 16px}.brand{font-size:22px}.brand small{font-size:9px}.header-label{font-size:9px;letter-spacing:1px}
+  .page{padding:0 16px}.intro{padding-top:24px}.intro-note{max-width:none;margin-top:18px;min-width:0}
+  h1{font-size:25px}.workspace-grid{display:block}.selection{margin-bottom:16px}.cart{padding:16px}.views{gap:3px}.views button{font-size:12px}
+  .product{gap:10px;align-items:start}.product-action .quantity,.product-action .button{width:72px;min-width:72px;min-height:44px}.product h3{font-size:15px}.product-unit{font-size:11px}
+  .product-action{flex:none}.product-details{flex:1}.cart-description{font-size:14px}.mobile-cart{min-height:64px}
+  footer{padding-bottom:calc(104px + env(safe-area-inset-bottom))}.section-heading h2{font-size:18px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
