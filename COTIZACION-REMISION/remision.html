@@ -6402,7 +6402,7 @@ async function _tgGuardar(){
   }
   const pin=await sumetecPedirPinToken('Remisiones',true);
   if(pin===null){sumetecEntrando(btn,false);return;}
-  try{await sumetecGuardarTokenCifrado('cotizador',v,pin);localStorage.removeItem('api_token');}
+  try{await sumetecGuardarTokenCifrado('cotizador',v,pin);sumetecRecordarPin('cotizador',pin);localStorage.removeItem('api_token');}
   catch(e){mostrarError(e.message);sumetecEntrando(btn,false);return;}
   // Copiar también al campo del modal de token (consistencia)
   const inp2=document.getElementById('api_token_input');if(inp2)inp2.value=v;

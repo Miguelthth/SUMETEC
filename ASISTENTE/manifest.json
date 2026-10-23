@@ -4,7 +4,7 @@
   "short_name": "Asistente",
   "description": "Instrucciones, conversaciones y borradores de tu asistente comercial SUMETEC.",
   "lang": "es-MX",
-  "start_url": "./index.html",
+  "start_url": "./asistente.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f3f6f8",

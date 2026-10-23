@@ -4,7 +4,7 @@
   "short_name": "Pedidos",
   "description": "Tu pedido con las mismas medidas. SUMETEC confirma precio y existencia.",
   "lang": "es-MX",
-  "start_url": "./index.html",
+  "start_url": "./pedidos.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#eef2f6",

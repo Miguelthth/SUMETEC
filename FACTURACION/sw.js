@@ -11,7 +11,7 @@
 // iframe sandbox, no un documento de nivel superior que un Service Worker
 // pueda controlar (mismo motivo por el que el ícono de instalación tampoco
 // funciona ahí -- ver FACTURACION-threat-model.md).
-const CACHE = 'sumetec-fact-2dc2b4a913';
+const CACHE = 'sumetec-fact-b045d84868';
 const CACHE_ASSETS = 'sumetec-fact-assets-dc762dec23';
 const PREFIJO = 'sumetec-fact-';
 
@@ -126,13 +126,17 @@ self.addEventListener('fetch', e => {
   if (url.includes('script.google.com')) return;
 
   if (e.request.mode === 'navigate') {
+    // La dirección corta usa index de la misma versión aceptada, también sin red.
+    const carpeta = new URL('./', self.location.href);
+    const entrada = new URL(url).pathname === carpeta.pathname
+      ? new URL('index.html', carpeta).href : e.request;
     // B9-bis (a, F5N-01): el HTML sale de la caché ACTIVA, igual que sus scripts. Antes iba
     // red primero y además guardaba esa respuesta en la caché vigente: tras publicar, la app
     // abría HTML nuevo con JS viejo (y lo dejaba mezclado en la caché). La versión nueva llega
     // por el aviso "Actualizar", no por la red a media sesión. Solo si la caché no lo tiene
     // (primera instalación) se pide a la red.
     e.respondWith(
-      abrirServida().then(c => c.match(e.request, { ignoreSearch: true }))
+      abrirServida().then(c => c.match(entrada, { ignoreSearch: true }))
         .then(hit => hit || fetch(e.request).then(r => {
           if (r.ok) {
             const clone = r.clone();

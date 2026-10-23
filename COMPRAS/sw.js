@@ -3,7 +3,7 @@
 // verdad. Dos cachés (mismo criterio que Dirección, punto 7 del checklist
 // pwa-actualizacion-sin-cache): el shell de código cambia seguido; las
 // fuentes del tema (~220 KB) casi nunca cambian.
-const CACHE = 'sumetec-compras-118378db8e';
+const CACHE = 'sumetec-compras-f1ef0818fd';
 const CACHE_ASSETS = 'sumetec-compras-assets-089af8bd65';
 const PREFIJO = 'sumetec-compras-';
 
@@ -118,13 +118,17 @@ self.addEventListener('fetch', e => {
   if (url.includes('script.google.com')) return;
 
   if (e.request.mode === 'navigate') {
+    // La dirección corta usa index de la misma versión aceptada, también sin red.
+    const carpeta = new URL('./', self.location.href);
+    const entrada = new URL(url).pathname === carpeta.pathname
+      ? new URL('index.html', carpeta).href : e.request;
     // B9-bis (a, F5N-01): el HTML sale de la caché ACTIVA, igual que sus scripts. Antes iba
     // red primero y además guardaba esa respuesta en la caché vigente: tras publicar, la app
     // abría HTML nuevo con JS viejo (y lo dejaba mezclado en la caché). La versión nueva llega
     // por el aviso "Actualizar", no por la red a media sesión. Solo si la caché no lo tiene
     // (primera instalación) se pide a la red.
     e.respondWith(
-      abrirServida().then(c => c.match(e.request, { ignoreSearch: true }))
+      abrirServida().then(c => c.match(entrada, { ignoreSearch: true }))
         .then(hit => hit || fetch(e.request).then(r => {
           if (r.ok) {
             const clone = r.clone();

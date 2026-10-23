@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es-MX" data-app="pedidos">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#76B82A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Pedidos">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Prepara tu pedido SUMETEC con tus especificaciones y cantidades. Te confirmamos precio y existencia.">
+  <title>Tu pedido · SUMETEC</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="logos/sumetec-pedidos-192.png" type="image/png">
+  <link rel="apple-touch-icon" sizes="180x180" href="logos/sumetec-pedidos-180.png">
+  <link rel="stylesheet" href="sumetec-tema.css">
+  <link rel="stylesheet" href="estilos.css">
+  <link rel="stylesheet" href="sumetec-v3.css">
+  <link rel="stylesheet" href="pedidos-estandar.css">
+  <script src="version.js" defer></script>
+  <script src="config.js" defer></script>
+  <script src="portal.js" defer></script>
+  <script src="sumetec-atras.js" defer></script>
+  <script src="pwa.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Ir a mis productos</a>
+  <header class="masthead">
+    <div class="masthead-inner"><div class="brand" aria-label="SUMETEC Pedidos"><img class="brand-app-icon" src="logos/sumetec-pedidos-192.png" alt="" width="48" height="48"><span>SUMETEC<small>PEDIDOS · CLIENTES</small></span></div><span class="header-label">TU PEDIDO</span></div>
+  </header>
+  <main id="main" class="page">
+    <section id="setup" class="setup" aria-labelledby="setup-title">
+      <p class="eyebrow">SUMETEC · PEDIDOS</p><h1 id="setup-title">Abriendo tu espacio…</h1><p id="setup-message">Un momento mientras preparamos tus productos.</p>
+      <p class="quiet">Tu enlace es personal. Compártelo sólo con quien pueda pedir a nombre de tu negocio.</p>
+    </section>
+    <div id="workspace" hidden>
+      <div id="demo-banner" class="demo-banner" hidden>DEMOSTRACIÓN LOCAL · Productos inventados. No se envían pedidos reales.</div>
+      <section class="intro" aria-labelledby="welcome-title">
+        <div><p id="customer" class="eyebrow">Tu espacio de pedidos</p><h1 id="welcome-title">Las mismas medidas.<br><span>Sin volver a explicarlas.</span></h1><p>Recuerda lo que llevaste, agrega cantidades y envíanos tu pedido.</p></div>
+        <div class="intro-note"><span class="note-rule" aria-hidden="true"></span><strong>Nosotros te confirmamos precio y existencia.</strong><span>Armar tu pedido no genera un cobro.</span></div>
+      </section>
+      <div id="notice" class="notice" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="workspace-grid">
+        <section class="selection" aria-labelledby="section-title">
+          <nav class="views" aria-label="Productos para tu pedido">
+            <button type="button" data-view="ultimo" aria-pressed="true">Última compra</button><button type="button" data-view="frecuentes" aria-pressed="false">Más frecuentes</button><button type="button" data-view="catalogo" aria-pressed="false">Todo el catálogo</button>
+          </nav>
+          <div class="section-heading"><div><h2 id="section-title">Tu última compra</h2><p id="history-date" class="quiet"></p></div><button id="reload-data" class="text-button" type="button">Actualizar</button></div>
+          <div class="search-wrap"><label for="search">Buscar por código, medida o descripción</label><input id="search" type="search" placeholder="Ej. tornillo lámina negro" autocomplete="off" maxlength="150"><span class="search-symbol" aria-hidden="true">⌕</span></div>
+          <p id="result-count" class="result-count" aria-live="polite"></p>
+          <div id="products" class="products"></div><p id="empty-products" class="empty-state" hidden></p>
+        </section>
+        <aside id="cart" class="cart" aria-labelledby="cart-title">
+          <div class="cart-heading"><div><p class="eyebrow">PARA SUMETEC</p><h2 id="cart-title" tabindex="-1">Tu pedido</h2></div><span id="cart-count" class="count">0</span></div>
+          <p id="cart-empty" class="empty-cart">Agrega un producto de la lista.<br>Aquí puedes ajustar las cantidades.</p><ul id="cart-lines" class="cart-lines"></ul>
+          <div class="note-field"><label for="note">¿Algo que debamos saber? <span>Opcional</span></label><textarea id="note" rows="3" maxlength="1000" placeholder="Ej. necesito recoger el viernes"></textarea><span id="note-count" class="note-count">0/1000</span></div>
+          <button id="review" class="button primary wide" type="button" disabled>Revisar pedido</button><p class="cart-disclaimer">Solicitud sujeta a confirmación de SUMETEC.</p>
+          <section id="pending" class="pending" aria-labelledby="pending-title" hidden><h3 id="pending-title">Pedido en espera de confirmación</h3><p>Conservamos tus cantidades para evitar duplicados. Consulta si llegó o reintenta el mismo pedido.</p><button id="check-status" type="button" class="button secondary wide">Consultar si llegó</button><button id="retry-send" type="button" class="text-button wide">Reintentar el mismo pedido</button><button id="correct-order" type="button" class="text-button wide">Corregir pedido</button><p>Para corregirlo, comprobamos primero si ya llegó. Si SUMETEC ya lo recibió, te mostraremos su folio.</p></section>
+          <section id="receipt" class="receipt" tabindex="-1" aria-labelledby="receipt-title" hidden><span class="receipt-check" aria-hidden="true">✓</span><h3 id="receipt-title">Gracias. Ya lo recibimos.</h3><p id="receipt-folio" class="receipt-folio"></p><p id="receipt-status"></p><p>SUMETEC te confirma precio y existencia. Este folio es tu comprobante de solicitud.</p><button id="new-order" class="button secondary wide" type="button">Iniciar otro pedido</button></section>
+        </aside>
+      </div>
+      <button id="jump-cart" type="button" class="mobile-cart"><span id="cart-label">0 productos en tu pedido</span><strong>Ver pedido →</strong></button>
+    </div>
+    <footer><span>SUMETEC <span aria-hidden="true">/</span> Tijuana, B.C.</span><span>Tu enlace es personal. Guárdalo para la próxima.</span></footer>
+  </main>
+  <dialog id="review-dialog" aria-labelledby="review-title" aria-describedby="review-help"><div class="dialog-heading"><h2 id="review-title">Revisa tu pedido</h2><button id="close-review" type="button" class="close-button" aria-label="Cerrar revisión" autofocus>×</button></div><p id="review-help">Verifica medidas y cantidades. Te confirmamos precio y existencia después de recibirlo.</p><ul id="review-lines" class="review-lines"></ul><p class="eyebrow">TU NOTA</p><p id="review-note"></p><button id="confirm-send" class="button primary wide" type="button">Enviar solicitud a SUMETEC</button><p class="cart-disclaimer">No genera un cobro ni confirma existencias.</p></dialog>
+</body>
+</html>

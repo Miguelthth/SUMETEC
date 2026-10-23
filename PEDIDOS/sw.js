@@ -1,5 +1,5 @@
 // build_deploy.py actualiza estos hashes a partir del contenido del paquete.
-const CACHE = 'sumetec-pedidos-42114ff064';
+const CACHE = 'sumetec-pedidos-5416ca8af5';
 const CACHE_ASSETS = 'sumetec-pedidos-assets-683bfdff97';
 const PREFIJO = 'sumetec-pedidos-';
 const CACHE_CONTROL = 'sumetec-pedidos@aceptada';
@@ -86,9 +86,9 @@ self.addEventListener('fetch', e => {
   if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
   const ruta = url.pathname.slice(scope.pathname.length);
   if (e.request.mode === 'navigate') {
-    if (ruta && ruta !== 'index.html') return;
+    if (ruta && ruta !== 'pedidos.html') return;
     // El HTML siempre corresponde a sus scripts. Jamás guardamos la URL del cliente.
-    e.respondWith(abrirServida().then(c => c.match('./index.html')).then(hit => hit || fetch(e.request)));
+    e.respondWith(abrirServida().then(c => c.match('./pedidos.html')).then(hit => hit || fetch(e.request)));
     return;
   }
   if (ruta === 'release.json' && !url.search) {
@@ -96,6 +96,6 @@ self.addEventListener('fetch', e => {
     return;
   }
   // Fuera del shell y las fuentes conocidas, la petición sigue sólo por red.
-  if (!/^(?:index\.html|portal\.js|pwa\.js|config\.js|version\.js|estilos\.css|pedidos-estandar\.css|sumetec-tema\.css|sumetec-v3\.css|sumetec-atras\.js|manifest\.json|precache-manifest\.json|logos\/[a-zA-Z0-9_-]+\.(?:png|svg|ico)|fonts\/ibm-plex-(?:sans-variable|mono-400|mono-500|mono-600)\.woff2)$/.test(ruta) || url.search) return;
+  if (!/^(?:pedidos\.html|portal\.js|pwa\.js|config\.js|version\.js|estilos\.css|pedidos-estandar\.css|sumetec-tema\.css|sumetec-v3\.css|sumetec-atras\.js|manifest\.json|precache-manifest\.json|logos\/[a-zA-Z0-9_-]+\.(?:png|svg|ico)|fonts\/ibm-plex-(?:sans-variable|mono-400|mono-500|mono-600)\.woff2)$/.test(ruta) || url.search) return;
   e.respondWith(abrirServida().then(c => c.match(e.request)).then(hit => hit || caches.open(CACHE_ASSETS).then(c => c.match(e.request))).then(hit => hit || fetch(e.request)));
 });

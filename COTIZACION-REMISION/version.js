@@ -1,3 +1,3 @@
 // Generado por build_deploy.py -- no editar.
-const VERSION_DEPLOY = '2026-10-22T00:15:35Z';
-const VERSION_CODIGO = '6e14220e62';
+const VERSION_DEPLOY = '2026-10-23T08:58:04Z';
+const VERSION_CODIGO = 'e3c8592a3d';

@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SUMETEC · Compras</title>
+</head>
+<body>
+  <p>Abriendo Compras… <a id="abrir" href="./compras.html">Abrir la app</a></p>
+  <script>
+    const destino = './compras.html' + location.search + location.hash;
+    document.getElementById('abrir').href = destino;
+    location.replace(destino);
+  </script>
+</body>
+</html>

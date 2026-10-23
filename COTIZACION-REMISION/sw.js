@@ -1,4 +1,4 @@
-const CACHE = 'sumetec-rem-6e14220e62';
+const CACHE = 'sumetec-rem-e3c8592a3d';
 const PREFIJO = 'sumetec-rem-';
 
 // Versión ACEPTADA (2026-09-29, pedido de Miguel: «que no se actualice sola hasta que le dé
@@ -188,13 +188,17 @@ self.addEventListener('fetch', e => {
 
   // HTML principal: red primero, caché como fallback
   if (e.request.mode === 'navigate') {
+    // La dirección corta usa index de la misma versión aceptada, también sin red.
+    const carpeta = new URL('./', self.location.href);
+    const entrada = new URL(url).pathname === carpeta.pathname
+      ? new URL('index.html', carpeta).href : e.request;
     // B9-bis (a, F5N-01): el HTML sale de la caché ACTIVA, igual que sus scripts. Antes iba
     // red primero y además guardaba esa respuesta en la caché vigente: tras publicar, la app
     // abría HTML nuevo con JS viejo (y lo dejaba mezclado en la caché). La versión nueva llega
     // por el aviso "Actualizar", no por la red a media sesión. Solo si la caché no lo tiene
     // (primera instalación) se pide a la red.
     e.respondWith(
-      abrirServida().then(c => c.match(e.request, { ignoreSearch: true }))
+      abrirServida().then(c => c.match(entrada, { ignoreSearch: true }))
         .then(hit => hit || fetch(e.request).then(r => {
           if (r.ok) {
             const clone = r.clone();
