@@ -326,6 +326,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 <link rel="stylesheet" href="sumetec-v3.css">
 <!-- Atrás del teléfono cierra lo último que se abrió (2026-10) -->
 <script src="sumetec-atras.js" defer></script>
+<script src="sumetec-foto.js" defer></script>
 </head>
 <body>
 <header>
@@ -1545,9 +1546,12 @@ async function leerConstancia(inp){
   if(api.modo==='demo'){ est.textContent='La lectura con IA necesita la conexión real (modo prueba).'; return; }
   if(!navigator.onLine){ est.textContent='Sin conexión: captura a mano.'; return; }
   est.textContent='Leyendo constancia…';
+  // Ventana flotante: la constancia queda a la mano (con realce opcional) para comparar con lo que llenó la IA;
+  // se cierra al timbrar. «Leer con este filtro» vuelve a leerla con la versión realzada.
+  if(typeof SumetecFoto!=='undefined') SumetecFoto.mostrar(file,{titulo:'Constancia fiscal',alLeer:()=>leerConstancia(inp)});
   try{
     const b64 = await new Promise((ok,ko)=>{ const rd=new FileReader(); rd.onload=()=>ok(String(rd.result||'').split(',')[1]||''); rd.onerror=ko; rd.readAsDataURL(file); });
-    const resp = await _conTimeout(api.ocrConstancia(b64), 45000, 'leer la constancia');
+    const resp = await _conTimeout(api.ocrConstancia(typeof SumetecFoto!=='undefined' ? await SumetecFoto.fotoParaOcr(b64) : b64), 45000, 'leer la constancia');
     if(!resp || !resp.ok || !resp.campos || (resp.confianza!=null && resp.confianza<50)){
       est.textContent='⚠️ No se pudo leer con confianza' + (resp&&resp.error?` (${resp.error})`:'') + ': captura a mano.'; return;
     }
@@ -1643,6 +1647,7 @@ async function facturar(){
     else if(res.avisoRegistro)   toast('⚠️ '+res.avisoRegistro,'warn',9000);
     else if(api.modo==='demo')  toast('✅ Factura simulada generada (práctica, sin validez fiscal).','ok',4500);
     else                        toast('✅ Timbrada y registrada en tu hoja Facturas. UUID '+res.uuid+'.','ok',6000);
+    if(typeof SumetecFoto!=='undefined') SumetecFoto.cerrar(); // la factura ya salió: la constancia flotante se va
   }catch(e){
     const msg = String((e&&e.message)||e);
     if(msg.indexOf('TIMEOUT:')===0){

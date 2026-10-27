@@ -863,8 +863,8 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <img id="prLogo" style="height:44px;width:auto" alt="Logo">
   <div style="text-align:right">
     <div style="font-size:11px;font-weight:700;color:#023561;text-transform:uppercase;letter-spacing:.5px">Remisión</div>
-    <div style="font-size:15px;font-weight:800;color:#057448" id="prFolio">—</div>
-    <div style="font-size:10px;color:#6E6E73" id="prCliente">—</div>
+    <div style="font-size:15px;font-weight:800;color:#057448" id="prFolioImpresion">—</div>
+    <div style="font-size:10px;color:#6E6E73" id="prClienteImpresion">—</div>
   </div>
 </div>
 <div class="capture-layout" id="captureLayout">
@@ -7004,9 +7004,9 @@ function syncPrintHeader(){
   const ftLogo=document.getElementById('ftLogoImg');
   if(ftLogo&&logo&&logo.src&&logo.src.length>10){ftLogo.src=logo.src;ftLogo.style.display='block';};
   const folio=document.getElementById('folioBadge');
-  const pf=document.getElementById('prFolio');
+  const pf=document.getElementById('prFolioImpresion');
   if(folio&&pf)pf.textContent=folio.innerText.trim();
-  const cl=document.getElementById('prCliente');
+  const cl=document.getElementById('prClienteImpresion');
   const cn=document.getElementById('c_nombre');
   if(cl&&cn)cl.textContent=cn.value||'';
 }
@@ -10067,7 +10067,7 @@ function _activarModoRem(){
   const activos=_cotItems.filter(it=>it.clave||(+it.qty>0));
   if(activos.length>0){ document.getElementById('ovConfirmVolverRem').classList.add('open'); return; }
   _ejecutarVolverRem();}
-function _ejecutarVolverRem(){
+function _ejecutarVolverRem(nueva=false){
   document.getElementById('secCot').style.display='none';
   document.querySelector('.page').style.display='';
   // Restaurar botones de remisiones ('badgePendientes' ya no se toca -- ver nota en _activarModoCot)
@@ -10082,7 +10082,8 @@ function _ejecutarVolverRem(){
   document.getElementById('badgeCot').style.display='none';
   // Limpiar modo edición de cotización al volver a remisiones
   _salirModoEdicionCot();
-  nuevaRem();
+  // Cambiar de pestaña conserva la captura; convertir una cotización sí inicia otra remisión.
+  if(nueva)nuevaRem();
   _syncMobileChrome();
 }
 
@@ -11178,7 +11179,7 @@ function _cotEstadoBadge(entry){
       toast('ℹ️ Esta cotización ya se había marcado como Ganada antes','warn',5000);
     }
     closeOv('ovHistCot');
-    _ejecutarVolverRem(); // sale de modo Cotización y arma un folio de remisión nuevo y limpio
+    _ejecutarVolverRem(true); // la conversión inicia una remisión nueva, sin reutilizar la captura previa
     const dataRem={
       comercial:r.data.comercial||null,
       c_nombre:r.data.c_nombre||'', c_dir:r.data.c_dir||'', c_cp:r.data.c_cp||'', c_tel:r.data.c_tel||'',

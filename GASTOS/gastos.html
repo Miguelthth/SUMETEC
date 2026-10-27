@@ -261,6 +261,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 <link rel="stylesheet" href="sumetec-v3.css">
 <!-- Atrás del teléfono cierra lo último que se abrió (2026-10) -->
 <script src="sumetec-atras.js" defer></script>
+<script src="sumetec-foto.js" defer></script>
 </head>
 <body>
 
@@ -958,18 +959,20 @@ async function _pendFacArchivoElegido_() {
   if (!file || !id) return;
   if (!navigator.onLine) { _pendFacDecir_('Sin señal: inténtalo cuando haya conexión.'); return; }
   _pendFacDecir_('Leyendo la factura…');
+  if (typeof SumetecFoto !== 'undefined') SumetecFoto.mostrar(file, { titulo: 'Factura pendiente', alLeer: () => _pendFacArchivoElegido_() });
   try {
     let leido = await _leerQrDeArchivo_(file);
     let origen = 'QR';
     if (!leido) {
       origen = 'FOTO';
-      const r = await _pendFacPedir_({ tipo: 'ocr_ticket', foto: await PEND_FAC_APP.comprimir(file) });
+      const r = await _pendFacPedir_({ tipo: 'ocr_ticket', foto: typeof SumetecFoto !== 'undefined' ? await SumetecFoto.fotoParaOcr(await PEND_FAC_APP.comprimir(file)) : await PEND_FAC_APP.comprimir(file) });
       const uuid = String((r && r.campos && r.campos.uuid) || '').toUpperCase();
       if (_PEND_FAC_UUID_RE_.test(uuid)) leido = { uuid, rfcEmisor: String((r.campos && r.campos.rfcEmisor) || '') };
     }
     if (!leido) { _pendFacDecir_('No pude leer el UUID en esa foto. Acerca la cámara al folio fiscal o al código QR, o usa «Tengo factura».'); return; }
-    if (!confirm('UUID leído de la factura:\n\n' + leido.uuid + (leido.rfcEmisor ? '\nRFC emisor: ' + leido.rfcEmisor : '') + '\n\n¿Es la factura de este documento?')) { _pendFacDecir_(''); return; }
+    if (!confirm('UUID leído de la factura:\n\n' + leido.uuid + (leido.rfcEmisor ? '\nRFC emisor: ' + leido.rfcEmisor : '') + '\n\n¿Es la factura de este documento?')) { _pendFacDecir_(''); if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar(); return; }
     await _pendFacContestar_(id, { uuidCfdi: leido.uuid, rfcEmisor: leido.rfcEmisor || '', origen });
+    if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar();
     _pendFacDecir_('Enviado ✓ El ERP lo aplica al traer las facturas del celular.');
   } catch (e) {
     _pendFacDecir_('No se pudo enviar: ' + ((e && e.message) || 'error') + '.');
@@ -996,6 +999,7 @@ function renderGastos() {
   // estas dos variables de módulo sobrevivían al re-render.
   _gastoTocadoPorOcr = false;
   _gastoFotoComprimidaB64 = '';
+  if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar(); // el dato se guardó (o se abandonó): la foto flotante se va
   _cargarListasGasto_(); // best-effort, no bloquea el render del formulario
   const opcionesTipo = TIPOS_GASTO.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
   const opcionesForma = FORMAS_PAGO.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
@@ -1244,8 +1248,12 @@ function _onFotoGastoElegida_() {
   if (!file) {
     if (preview) { preview.style.display = 'none'; preview.src = ''; }
     if (btnOcr) btnOcr.style.display = 'none';
+    if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar();
     return;
   }
+  // Ventana flotante: la foto queda a la mano (con realce opcional) mientras se revisan los datos
+  // que llenó la IA; se cierra sola al guardar (renderGastos). «Leer con este filtro» reintenta la IA.
+  if (typeof SumetecFoto !== 'undefined') SumetecFoto.mostrar(file, { titulo: 'Ticket del gasto', alLeer: () => { const b = document.getElementById('gasBtnOcr'); if (!b || !b.disabled) _leerTicketConIA_(); } });
   if (preview) {
     preview.src = URL.createObjectURL(file);
     preview.style.display = 'block';
@@ -1289,7 +1297,7 @@ async function _leerTicketConIA_() {
     if (!_gastoFotoComprimidaB64) _gastoFotoComprimidaB64 = await _comprimirImagen_(file);
     const res = await fetch(url, {
       method: 'POST', headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ tipo: 'ocr_ticket', token: API_TOKEN, foto: _gastoFotoComprimidaB64 }),
+      body: JSON.stringify({ tipo: 'ocr_ticket', token: API_TOKEN, foto: typeof SumetecFoto !== 'undefined' ? await SumetecFoto.fotoParaOcr(_gastoFotoComprimidaB64) : _gastoFotoComprimidaB64 }),
     });
     const resp = await res.json();
     const r = _aplicarOcrAGasto_(resp);

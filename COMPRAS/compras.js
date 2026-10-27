@@ -1225,8 +1225,12 @@ function _onFotoCompraElegida_() {
   if (!file) {
     if (preview) { preview.style.display = 'none'; preview.src = ''; }
     if (btnOcr) btnOcr.style.display = 'none';
+    if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar();
     return;
   }
+  // Ventana flotante: la foto queda a la mano (con realce opcional) mientras se revisan los datos
+  // que llenó la IA; se cierra sola al guardar (_resetFotoCompra_). «Leer con este filtro» reintenta la IA.
+  if (typeof SumetecFoto !== 'undefined') SumetecFoto.mostrar(file, { titulo: 'Ticket de la compra', alLeer: () => { const b = document.getElementById('compraBtnOcr'); if (!b || !b.disabled) _leerTicketCompraConIA_(); } });
   if (preview) {
     if (file.type === 'application/pdf') { preview.style.display = 'none'; preview.src = ''; }
     else { preview.src = URL.createObjectURL(file); preview.style.display = 'block'; }
@@ -1255,6 +1259,7 @@ function _onFotoCompraElegida_() {
 function _resetFotoCompra_() {
   _compraTocadaPorOcr = false;
   _compraFotoComprimidaB64 = '';
+  if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar(); // el dato se guardó: la foto flotante se va
   const preview = document.getElementById('compraFotoPreview');
   const btnOcr = document.getElementById('compraBtnOcr');
   const estado = document.getElementById('compraOcrEstado');
@@ -1290,7 +1295,7 @@ async function _leerTicketCompraConIA_() {
     if (!_compraFotoComprimidaB64) _compraFotoComprimidaB64 = await _comprimirImagenCompra_(file);
     const res = await fetch(url, {
       method: 'POST', headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ tipo: 'ocr_ticket', token, foto: _compraFotoComprimidaB64 }),
+      body: JSON.stringify({ tipo: 'ocr_ticket', token, foto: typeof SumetecFoto !== 'undefined' ? await SumetecFoto.fotoParaOcr(_compraFotoComprimidaB64) : _compraFotoComprimidaB64 }),
     });
     const resp = await res.json();
     const r = _aplicarOcrACompra_(resp);
@@ -1510,18 +1515,20 @@ async function _pendFacArchivoElegido_() {
   if (!file || !id) return;
   if (!navigator.onLine) { _pendFacDecir_('Sin señal: inténtalo cuando haya conexión.'); return; }
   _pendFacDecir_('Leyendo la factura…');
+  if (typeof SumetecFoto !== 'undefined') SumetecFoto.mostrar(file, { titulo: 'Factura pendiente', alLeer: () => _pendFacArchivoElegido_() });
   try {
     let leido = await _leerQrDeArchivo_(file);
     let origen = 'QR';
     if (!leido) {
       origen = 'FOTO';
-      const r = await _pendFacPedir_({ tipo: 'ocr_ticket', foto: await PEND_FAC_APP.comprimir(file) });
+      const r = await _pendFacPedir_({ tipo: 'ocr_ticket', foto: typeof SumetecFoto !== 'undefined' ? await SumetecFoto.fotoParaOcr(await PEND_FAC_APP.comprimir(file)) : await PEND_FAC_APP.comprimir(file) });
       const uuid = String((r && r.campos && r.campos.uuid) || '').toUpperCase();
       if (_PEND_FAC_UUID_RE_.test(uuid)) leido = { uuid, rfcEmisor: String((r.campos && r.campos.rfcEmisor) || '') };
     }
     if (!leido) { _pendFacDecir_('No pude leer el UUID en esa foto. Acerca la cámara al folio fiscal o al código QR, o usa «Tengo factura».'); return; }
-    if (!confirm('UUID leído de la factura:\n\n' + leido.uuid + (leido.rfcEmisor ? '\nRFC emisor: ' + leido.rfcEmisor : '') + '\n\n¿Es la factura de este documento?')) { _pendFacDecir_(''); return; }
+    if (!confirm('UUID leído de la factura:\n\n' + leido.uuid + (leido.rfcEmisor ? '\nRFC emisor: ' + leido.rfcEmisor : '') + '\n\n¿Es la factura de este documento?')) { _pendFacDecir_(''); if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar(); return; }
     await _pendFacContestar_(id, { uuidCfdi: leido.uuid, rfcEmisor: leido.rfcEmisor || '', origen });
+    if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar();
     _pendFacDecir_('Enviado ✓ El ERP lo aplica al traer las facturas del celular.');
   } catch (e) {
     _pendFacDecir_('No se pudo enviar: ' + ((e && e.message) || 'error') + '.');

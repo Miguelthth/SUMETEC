@@ -37,3 +37,5 @@ fieldset{min-inline-size:0;border:1px solid var(--borde,#bbc8cc);border-radius:1
 .resumen-cifras strong{font-size:28px;line-height:1}
 .resumen-cifras span{font-size:13px;color:var(--sm-muted,#616f7f)}
 .detalle-resultados>summary{display:flex;align-items:center;min-height:44px;font-weight:700;cursor:pointer;margin:8px 0}
+.marcador-libre{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#023561;color:#fff;font:700 13px/1 system-ui,sans-serif;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.marcador-libre.destacado{background:#e5609f}
