@@ -1708,6 +1708,27 @@ function _dequeueCancelacion(id){
   const cola=leerSeguro('cola_cancel',[]);
   guardarSeguro('cola_cancel',JSON.stringify(cola.filter(e=>String(e.id)!==String(id))));
 }
+// H-CAN-1: si el servidor rechaza la cancelación porque la remisión tiene cobros vivos (dato de otro celular o del ERP), la
+// cancelación local NO se queda: se regresa la remisión a su estado anterior y sale de la cola, en vez de decir «Cancelada» y reintentar sin fin.
+function _revertirCancelacionRechazada(id,d){
+  const r=remisiones.find(x=>String(x.id)===String(id));
+  _dequeueCancelacion(id);
+  if(r&&r.estado==='cancelada'){
+    const previo=r._estadoAntesCancel||{};
+    r.estado=previo.estado&&previo.estado!=='cancelada'?previo.estado:((Number(r.saldo)||0)>0.004?'pendiente':'pagado');
+    r.sincronizado=previo.sincronizado!==undefined?previo.sincronizado:true;
+    // El servidor dice cuánto hay cobrado (quizá desde otro celular): el saldo local se alinea con eso.
+    if(d&&Number(d.cobrado)>0){const _sal=Math.max(0,Math.round(((Number(r.total)||0)-Number(d.cobrado))*100)/100);r.saldo=_sal;r.estado=_sal<=0.005?'pagado':'abono';}
+    delete r.motivoCancelacion;delete r.fechaCancelacion;delete r._estadoAntesCancel;
+    const i=_histServidor.findIndex(x=>x.folio===r.folio||String(x.id)===String(r.id));
+    if(i>=0)_histServidor[i].estado=r.estado;
+    persistirRemisiones();
+    if(typeof _renderHistCombinado==='function')_renderHistCombinado();
+    if(remActualId===r.id)renderPagos();
+  }
+  actualizarBadgePendientes();
+  toast('⚠️ '+((d&&d.error)||'La cancelación no se aplicó: hay cobros vigentes.'),'warn',9000);
+}
 function _cancelacionPendiente(id){
   try{ return leerSeguro('cola_cancel',[]).some(e=>String(e.id)===String(id)); }catch(_){ return false; }
 }
@@ -1732,7 +1753,8 @@ async function procesarColaCancel(){
           if(r){ r.sincronizado=true; persistirRemisiones(); }
           if(typeof guardarEventoSync==='function')guardarEventoSync({folio:item.folio,operacion:'CANCELACION_GUARDADA',resultado:'OK',detalle:''});
           ok++;
-        } else { _bumpTry('cola_cancel',e=>String(e.id)===String(item.id),sumetecMotivoRespuesta(d,res.ok?'respuesta sin ok del servidor':'el servidor contestó HTTP '+res.status),!(d&&d.aprobacionPendiente),!!(d&&d.aprobacionRechazada)); }
+        } else if(d&&d.cobrosVivos){ _revertirCancelacionRechazada(item.id,d); }
+        else { _bumpTry('cola_cancel',e=>String(e.id)===String(item.id),sumetecMotivoRespuesta(d,res.ok?'respuesta sin ok del servidor':'el servidor contestó HTTP '+res.status),!(d&&d.aprobacionPendiente),!!(d&&d.aprobacionRechazada)); }
       }catch(e){ _bumpTry('cola_cancel',e=>String(e.id)===String(item.id),'sin respuesta del servidor',false); }
     }
     if(ok>0)_estado('✅ '+ok+' cancelación(es) sincronizada(s)');
@@ -2669,7 +2691,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(!localStorage.getItem('gs_url')) localStorage.setItem('gs_url',URL_CATALOGOS);
   if(!localStorage.getItem('drive_url')) localStorage.setItem('drive_url',URL_DRIVE);
   applyLogoH(empresa.logoH||150);
-  renderFooter();loadGSCache();loadDraft();cargarFolioRemoto();_calentarGPS_();
+  renderFooter();loadGSCache();loadDraft();cargarFolioRemoto();_calentarGPS_();apartarFolioCot();
   if(!items.length)addRow();
   renderTable();calcTotals();
   remActualId=null;
@@ -3915,6 +3937,13 @@ async function registrarRemision(gpsParam){
   const existingIdx=remisiones.findIndex(r=>r.id===remActualId);
   if(existingIdx>=0){
     const ex=remisiones[existingIdx];
+    // H-MOD-1: bajar el total por debajo de lo ya cobrado se RECHAZA (igual que el ERP, EDITAR_LINEA_BLOQUEADA): no se toca la remisión,
+    // no sube la revisión y no se envía nada. Para devolver dinero se anula el cobro, no se encoge el documento.
+    const _cobradoEd=_sumaPagos(ex);
+    if(_cobradoEd>tot+0.005){
+      toast('🚫 '+ex.folio+': ya hay '+fmt(_cobradoEd)+' cobrados y el nuevo total sería '+fmt(tot)+'. No se puede bajar el total por debajo de lo cobrado: anula primero el cobro que sobra.','err',9000);
+      return {ok:false,folio:ex.folio,bloqueada:true};
+    }
     ex.data={...sn,folio:ex.folio};ex.total=tot;ex.cliente=sn.c_nombre||'Sin nombre';
     // Saldo según los pagos ACTUALES. Tanto en edición como fuera de ella se respetan
     // los abonos (FIX rojo #1): saldo = total − pagos. Editar productos reajusta el saldo
@@ -8197,6 +8226,7 @@ async function registrarTodo(){
     // pantalla de confirmación, saldo y PDF — y se comportaba como una operación
     // terminada; al cerrar la app se perdía. Ahora se detiene aquí y se ofrece la
     // salida explícita: descargar los datos para no perder la venta.
+    if(_resGuardado&&_resGuardado.bloqueada)return; // H-MOD-1: la edición se rechazó (total bajo lo cobrado); el aviso ya se mostró
     if(_resGuardado&&_resGuardado.ok===false){
       const _f=_resGuardado.folio||'la remisión';
       const _rescatar=await popupConfirmar(
@@ -8324,6 +8354,7 @@ async function confirmarCancelacion(){
     enviarPagoConCola(r,_an);
   }
   const ahora=new Date();
+  r._estadoAntesCancel={estado:r.estado,sincronizado:r.sincronizado};
   r.estado='cancelada';r.motivoCancelacion=motivo;r.sincronizado=false;
   r.fechaCancelacion=ahora.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+ahora.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
   // Actualizar caché del servidor para que la lista muestre "cancelada" de inmediato (sin esperar heartbeat)
@@ -8346,9 +8377,10 @@ async function confirmarCancelacion(){
     fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({tipo:'cancelar_remision',token:API_TOKEN,id:r.id,folio:r.folio,motivo,fechaCancelacion:r.fechaCancelacion,device:_deviceLabel_()})
     }).then(res=>res.json()).then(d=>{
-      if(d&&d.ok){r.sincronizado=true;persistirRemisiones();_dequeueCancelacion(r.id);actualizarBadgePendientes();}
+      if(d&&d.ok){r.sincronizado=true;delete r._estadoAntesCancel;persistirRemisiones();_dequeueCancelacion(r.id);actualizarBadgePendientes();}
+      else if(d&&d.cobrosVivos)_revertirCancelacionRechazada(r.id,d);
       // El servidor la rechazó (cobros vivos de otro celular, sin permiso del dueño, acción bloqueada): sigue pendiente y el motivo se ve.
-      else if(d&&d.error&&(d.cobrosVivos||d.aprobacionPendiente||d.aprobacionRechazada||d.codigoRequerido||d.bloqueada||d.sinCodigoPublicado))toast('⚠️ '+d.error,'warn',9000);
+      else if(d&&d.error&&(d.aprobacionPendiente||d.aprobacionRechazada||d.codigoRequerido||d.bloqueada||d.sinCodigoPublicado))toast('⚠️ '+d.error,'warn',9000);
       if(typeof guardarEventoSync==='function')guardarEventoSync({folio:r.folio,operacion:'CANCELACION_GUARDADA',resultado:(d&&d.ok)?'OK':'ERROR',detalle:(d&&d.error)||''});
     }).catch(()=>{if(typeof guardarEventoSync==='function')guardarEventoSync({folio:r.folio,operacion:'CANCELACION_GUARDADA',resultado:'ERROR',detalle:'sin conexión'});});
   }
@@ -8654,6 +8686,18 @@ function _resolverRespuestaPago(r,pago,d){
         r.estado = r.saldo<=0.005 ? 'pagado' : (_pg>0 ? 'abono' : 'pendiente');
       }
       persistirRemisiones();
+    }
+    if(d.cajaPendiente&&d.cajaMotivo==='CORTE_CERRADO'&&pago&&pago.tipo==='anulacion'&&!pago.confirma_corte&&!pago._corteSinConfirmar){
+      // El cobro ya quedó anulado en la cartera, pero ese día tiene el corte de Caja cerrado: anularlo en Caja lo MODIFICA.
+      // Se pide confirmar una sola vez; con el sí, el mismo UUID se reenvía con confirma_corte y el servidor ajusta el día original.
+      const _si=typeof confirm==='function'&&confirm('El día de este cobro ya tiene el corte de caja cerrado.\n\nAnular el cobro en Caja MODIFICARÁ ese corte (cambia su esperado, su diferencia y su huella).\n\n¿Confirmas el ajuste?');
+      const _cola=leerSeguro('cola_offline',[]);
+      _cola.forEach(q=>{if(q.pago&&q.pago.uuid===pago.uuid){if(_si)q.pago.confirma_corte=true;else q.pago._corteSinConfirmar=true;}});
+      guardarSeguro('cola_offline',JSON.stringify(_cola));
+      if(_si){_estado('Confirmado: se ajusta el corte de ese día…',6000);
+        // Este false hace que procesarCola anote un fallo y ponga espera; la confirmación debe salir YA, así que se limpia esa espera del cobro.
+        setTimeout(()=>{const _c=leerSeguro('cola_offline',[]);_c.forEach(q=>{if(q.pago&&q.pago.uuid===pago.uuid){delete q._detenido;delete q._retryAt;q._srv=0;q._try=0;}});guardarSeguro('cola_offline',JSON.stringify(_c));procesarCola();},400);return false;}
+      _estado('El cobro quedó anulado en la cartera; Caja sigue igual porque el corte está cerrado. Vuelve a anularlo para confirmar.',9000);return false;
     }
     if(d.cajaPendiente){
       if(typeof guardarEventoSync==='function')guardarEventoSync({folio:(r&&r.folio)||(pago&&pago.folio)||'',operacion:'CAJA_PENDIENTE',resultado:'ERROR',detalle:'El cobro quedó en cartera pero falta reflejarlo en caja.'});
@@ -9721,9 +9765,8 @@ async function popupPrompt(mensaje,valorDefault,titulo){
     <div class="logo-wrap"><img id="cot_logoImg" style="height:var(--logo-h);width:auto;display:block" alt="Logo"></div>
     <div class="doc-right">
       <div class="doc-tipo">Cotización</div>
-      <div class="doc-folio" id="cot_folioBadge" contenteditable="true" spellcheck="false"
-           title="Clic para editar" oninput="syncFolioCot(this.innerText.trim())"
-           onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">SUM-0101</div>
+      <div class="doc-folio" id="cot_folioBadge" spellcheck="false"
+           title="Folio asignado por el servidor (no se edita)">…</div>
       <div class="doc-meta">
         <div class="doc-meta-i">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -9958,7 +10001,7 @@ async function _procesarColaCotR(){
         _cotDesencolar(entry.id);
         if(typeof _cotOnSync==='function') _cotOnSync(entry.id, res.folio, res.url);
         if(res.folio) toast('Cotización guardada: '+res.folio,'ok',3000);
-        _cotCargarFolio(); // refrescar folio para la SIGUIENTE cotización
+        if(!_cotModoEdicion)_cotCargarFolio(); // refrescar folio para la SIGUIENTE cotización (no pisa una edición en curso)
         if(typeof guardarEventoSync==='function')guardarEventoSync({folio:res.folio||folio,operacion:'COTIZACION_GUARDADA',resultado:'OK'});
       } else if(res&&res.ok&&res.pdfOk===false){
         // Fila registrada pero el PDF NO subió → mantener en cola + avisar.
@@ -10105,21 +10148,53 @@ function _cotReset(){
 }
 
 // ── Folio SUM- ────────────────────────────────────────────────────────────
-function _cotGenFolioLocal(){
-  let n=parseInt(localStorage.getItem('_cot_fn')||'100')+1;
-  localStorage.setItem('_cot_fn',n);
-  return 'SUM-'+String(n).padStart(4,'0');
+// El folio se APARTA en el servidor al abrir la app y al empezar cada cotización (uso único, colchón de 3, igual que la remisión):
+// el número que ve el vendedor es el definitivo. Sin señal y sin folio apartado se muestra un temporal TMP- (el servidor lo renumera al conectar).
+const CLAVE_FOLIO_COT='cot_folio_apartado';
+let _cotTmpMostrado=null;   // el temporal que se está mostrando sin señal: se usa tal cual al generar, nunca se saca otro
+function _foliosCot_(){
+  try{const o=JSON.parse(localStorage.getItem(CLAVE_FOLIO_COT)||'null');return(o&&Array.isArray(o.folios)?o.folios:[]).filter(f=>/^SUM-\d{4,}$/.test(String(f||'')));}catch(_){return [];}
+}
+function _guardarFoliosCot_(lista){
+  try{if(lista.length)localStorage.setItem(CLAVE_FOLIO_COT,JSON.stringify({folios:lista,ts:Date.now()}));else localStorage.removeItem(CLAVE_FOLIO_COT);return true;}catch(_){return false;}
+}
+let _apartandoFolioCot=null;
+function apartarFolioCot(maxMs){
+  if(_apartandoFolioCot)return _apartandoFolioCot;
+  const faltan=FOLIOS_COLCHON-_foliosCot_().length,url=getScriptUrl();
+  if(faltan<=0||!isOnline||!url)return Promise.resolve(_foliosCot_()[0]||null);
+  _apartandoFolioCot=(async()=>{
+    try{
+      const ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),maxMs||15000);
+      const r=await fetch(url+'?tipo=reservar_folio_cot&n='+faltan,{signal:ctrl.signal,cache:'no-store'});
+      clearTimeout(t);
+      const d=await r.json();
+      const nuevos=(d&&Array.isArray(d.folios)?d.folios:[d&&d.folio]).filter(f=>/^SUM-\d{4,}$/.test(String(f||'')));
+      if(nuevos.length){const lista=_foliosCot_();nuevos.forEach(f=>{if(lista.indexOf(f)<0)lista.push(f);});_guardarFoliosCot_(lista);}
+    }catch(_){/* sin señal: se usa un temporal */}
+    finally{_apartandoFolioCot=null;}
+    return _foliosCot_()[0]||null;
+  })();
+  return _apartandoFolioCot;
+}
+// Un folio apartado se usa UNA vez: al generar la cotización sale de la lista y se repone el colchón por detrás.
+function _cotTomarFolio_(folio){
+  if(folio===_cotTmpMostrado)_cotTmpMostrado=null;
+  const lista=_foliosCot_(),i=lista.indexOf(folio);
+  if(i<0)return;
+  lista.splice(i,1);_guardarFoliosCot_(lista);
+  setTimeout(()=>{apartarFolioCot();},0);
 }
 function _cotCargarFolio(){
-  const el=document.getElementById('cot_folioBadge');
-  if(el) el.innerText=_cotGenFolioLocal();
-  const url=getScriptUrl();if(!url||!isOnline)return;
-  fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'folio',token:API_TOKEN})}).then(r=>r.json()).then(d=>{
-    if(d&&d.folio){
-      if(el) el.innerText=d.folio;
-      const m=d.folio.match(/(\d+)$/);if(m)localStorage.setItem('_cot_fn',String(parseInt(m[1])-1));
-    }
-  }).catch(()=>{});
+  const el=document.getElementById('cot_folioBadge');if(!el)return;
+  const ya=_foliosCot_()[0];
+  if(ya){el.innerText=ya;apartarFolioCot();return;}
+  if(!getScriptUrl()||!isOnline){_cotTmpMostrado=_cotTmpMostrado||_folioTemporal_();el.innerText=_cotTmpMostrado;return;}
+  el.innerText='…';
+  apartarFolioCot().then(f=>{
+    if(f){el.innerText=f;return;}
+    _cotTmpMostrado=_cotTmpMostrado||_folioTemporal_();el.innerText=_cotTmpMostrado;
+  });
 }
 function syncFolioCot(v){
   const fc=document.getElementById('cot_folioBadge');if(fc)fc.innerText=v||'—';
@@ -10506,9 +10581,12 @@ async function _generarCotizacion(){
   toast(isOnline?'Generando cotización...':'Generando (sin conexión, se subirá luego)...');
 
   const folioEl=document.getElementById('cot_folioBadge');
-  let folio=folioEl?.innerText.trim()||_cotGenFolioLocal();
-  // En modo edición conservamos el folio original (no asignamos TMP-)
-  if(!isOnline && !_cotModoEdicion) folio=_folioTemporal_();
+  let folio=folioEl?.innerText.trim();
+  // En modo edición conservamos el folio original. Sin señal se conserva el folio ya apartado o el temporal que se estaba mostrando; nunca se inventa otro.
+  if(!_cotModoEdicion){
+    if(!/^(SUM-\d{4,}|TMP-[A-Z0-9]+)$/.test(folio||'')||(!isOnline&&!_foliosCot_().includes(folio)&&folio!==_cotTmpMostrado))folio=_folioTemporal_();
+    _cotTomarFolio_(folio);
+  }
 
   const now=new Date();
   const dd=String(now.getDate()).padStart(2,'0'),mm_=String(now.getMonth()+1).padStart(2,'0'),yyyy=now.getFullYear();

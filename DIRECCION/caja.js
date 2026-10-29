@@ -149,6 +149,7 @@ async function enviarAnulacionesDireccion(pin) {
       if (sinRed) { _fallaServidorCola_(COLAS.anulaciones, a.id, 'sin respuesta del servidor', true); break; }
       if (r.ok) _quitarDeCola_(COLAS.anulaciones, a.id);   // CREADO o YA_ANULADO: ya quedó corregido
       else if (/no existe|no encontrado/.test(String(r.error || ''))) _marcarRechazoCola_(COLAS.anulaciones, a.id, String(r.error));
+      else if (r.estado === 'CORTE_CERRADO' || r.requiereConfirmarCorte === true) _marcarRechazoCola_(COLAS.anulaciones, a.id, 'El corte de ese día está cerrado: vuelve a tocar «Corregir» para confirmar el ajuste');
       else _fallaServidorCola_(COLAS.anulaciones, a.id, sumetecMotivoRespuesta(r), sumetecFalloTransitorio(r));
     }
   } finally { _enviandoAnulaciones = false; }
@@ -194,16 +195,25 @@ if (typeof setInterval === 'function') setInterval(() => { procesarColaCaja(fals
 const _CLAVE_ID_CAPTURA_CAJA = 'sumetec_direccion_id_captura_caja';
 let _idCapturaCaja = typeof localStorage !== 'undefined'
   ? (localStorage.getItem(_CLAVE_ID_CAPTURA_CAJA) || null) : null;
-function idCapturaCaja() {
+// Mismo criterio que el corte (corte.js::_idCapturaCorte_): el ID se reutiliza SÓLO si lo que se va a guardar es lo mismo que la
+// captura que se quedó sin acuse. Si cambió algo (otro monto, otro concepto, otro día), es otro movimiento y sale con ID nuevo.
+const _CLAVE_FIRMA_CAPTURA_CAJA = 'sumetec_direccion_firma_captura_caja';
+function _firmaMovimientoCaja_(d) {
+  return Object.keys(d || {}).filter(k => k !== 'id').sort().map(k => k + '=' + String(d[k] == null ? '' : d[k]).trim()).join('|');
+}
+function idCapturaCaja(firma) {
+  if (_idCapturaCaja && firma && localStorage.getItem(_CLAVE_FIRMA_CAPTURA_CAJA) !== firma) _idCapturaCaja = null;
   if (!_idCapturaCaja) {
     _idCapturaCaja = crypto.randomUUID();
     localStorage.setItem(_CLAVE_ID_CAPTURA_CAJA, _idCapturaCaja);
   }
+  if (firma) localStorage.setItem(_CLAVE_FIRMA_CAPTURA_CAJA, firma);
   return _idCapturaCaja;
 }
 function soltarCapturaCaja() {
   _idCapturaCaja = null;
   localStorage.removeItem(_CLAVE_ID_CAPTURA_CAJA);
+  localStorage.removeItem(_CLAVE_FIRMA_CAPTURA_CAJA);
 }
 
 async function guardarMovimientoDireccion(pin, datos) {
@@ -274,13 +284,18 @@ async function anularMovimientoDireccion(pin, anulaA, motivo) {
   let token;
   try { token = await abrirSesionDireccion(pin); }
   catch (err) { _quitarDeCola_(COLAS.anulaciones, item.id); throw err; }
+  const enviar = extra => sumetecFetchLimite(url, {
+    method: 'POST', headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ tipo: 'anular_movimiento_caja', id: item.id, anulaA: id, motivo: item.motivo, token, origen: 'direccion', ...extra })
+  }).then(x => x.json());
   let r;
-  try {
-    r = await sumetecFetchLimite(url, {
-      method: 'POST', headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ tipo: 'anular_movimiento_caja', id: item.id, anulaA: id, motivo: item.motivo, token, origen: 'direccion' })
-    }).then(x => x.json());
-  } catch (_) { return { ok: true, estado: 'EN_COLA' }; }
+  try { r = await enviar({}); } catch (_) { return { ok: true, estado: 'EN_COLA' }; }
+  // Día con el corte cerrado: el servidor avisa y no toca nada hasta que el dueño confirme que se modifique ese corte.
+  if (!r.ok && (r.estado === 'CORTE_CERRADO' || r.requiereConfirmarCorte === true)) {
+    const acepta = typeof confirm === 'function' && confirm((r.mensaje || 'Ese día ya tiene el corte de caja cerrado.') + '\n\n¿Confirmas el ajuste?');
+    if (!acepta) { _quitarDeCola_(COLAS.anulaciones, item.id); throw Error('Corrección cancelada: el corte de ese día sigue cerrado y sin cambios.'); }
+    try { r = await enviar({ confirmaCorte: true }); } catch (_) { return { ok: true, estado: 'EN_COLA' }; }
+  }
   _quitarDeCola_(COLAS.anulaciones, item.id);
   if (!r.ok) throw Error(r.error || 'No se pudo corregir el movimiento');
   return r;
@@ -405,7 +420,7 @@ function activarCajaDireccion() {
     if (boton) boton.disabled = true; // sin esto, dos toques = dos peticiones
     try {
       const d = Object.fromEntries(new FormData(f));
-      d.id = idCapturaCaja(); // el reintento debe ser el MISMO movimiento
+      d.id = idCapturaCaja(_firmaMovimientoCaja_(d)); // el reintento del MISMO movimiento conserva el ID; uno distinto lo cambia
       const pin = await pedirPinDireccion();
       const r = await guardarMovimientoDireccion(pin, d);
       soltarCapturaCaja();
