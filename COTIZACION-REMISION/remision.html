@@ -3073,6 +3073,9 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
     if(leerSeguro('cola_offline',[]).some(e=>String(e.id)===String(entry.id)&&!e._detenido&&!e._conflict))return null;
     entry.expectedRevision=Number(remActiva?.serverRevision||0);
     entry.expectedPdfRevision=Number(remActiva?.pdfServerRevision||0);
+    // Operaciones de remisión que ESTE teléfono envió: si el servidor las aplicó y el acuse se perdió, su revisión va
+    // adelante de la que conocemos y el servidor las reconoce como propias en vez de pedir «revisión» al usuario.
+    entry.opsPropiasRem=Array.isArray(remActiva?.opsPropias)?remActiva.opsPropias.slice(-12):[];
     return sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(entry)})
     .then(r=>r.json())
     .then(d=>{
@@ -3083,6 +3086,7 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
         const pendiente=leerSeguro('cola_pdf',[]).find(e=>String(e.id||e.folio)===String(entry.id||entry.folio));
         const confirmacionVigente=!!pendiente && pendiente.operationId===entry.operationId;
         _dequeuePDF(entry.id||entry.folio,entry.operationId);
+        if(remActiva && d.revision!=null){remActiva.serverRevision=Math.max(Number(remActiva.serverRevision||0),Number(d.revision)||0);persistirRemisiones();}
         if(remActiva && d.pdfRevision!=null){remActiva.pdfServerRevision=Math.max(Number(remActiva.pdfServerRevision||0),Number(d.pdfRevision)||0);persistirRemisiones();}
         if(d.folio&&remActiva)_aplicarFolioDefinitivo(remActiva,d.folio);
         // Guardar el link nuevo en la remisión (al modificar, refresca el enlace del PDF).
@@ -4153,6 +4157,9 @@ function _encolarRemision(rem){
     if(cola[idx]._v2op)entrada._v2op=cola[idx]._v2op;
     if(Array.isArray(cola[idx]._cobrosFijos))entrada._cobrosFijos=cola[idx]._cobrosFijos;
   } else entrada._v2op=entrada.operationId;
+  // Se recuerda cada operación de remisión de este teléfono (ver opsPropiasRem en el envío del PDF).
+  if(!Array.isArray(rem.opsPropias))rem.opsPropias=[];
+  if(rem.opsPropias.indexOf(entrada.operationId)<0){rem.opsPropias=rem.opsPropias.concat(entrada.operationId).slice(-12);}   // lo persiste quien llama (persistirRemisiones tras encolar)
   if(idx>=0){
     entrada._try=cola[idx]._try||0;
     if(Number(cola[idx].rev||0)===entrada.rev){entrada._conflict=!!cola[idx]._conflict;entrada._lastError=cola[idx]._lastError||'';entrada._srv=cola[idx]._srv||0;entrada._detenido=!!cola[idx]._detenido||undefined;}
