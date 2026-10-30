@@ -44,14 +44,16 @@ function nuevaCompraCampo(datos) {
   if (datos.condicion === 'CONTADO' && Math.abs(suma - total) > 0.005) {
     throw Error('Una compra de contado debe quedar liquidada');
   }
-  const uuidCfdi = String(datos.uuidCfdi || '').trim();
+  // El UUID solo viaja si la compra está FACTURADA: el campo se oculta en las demás situaciones y un valor que se quedó escrito
+  // (de una lectura anterior) no debe guardarse como factura de otra compra (hallazgo CAM-CAP-004, 29/oct).
+  const uuidCfdi = datos.situacionFactura === 'FACTURADO' ? String(datos.uuidCfdi || '').trim() : '';
   if (uuidCfdi && !_uuidCfdiCompraValido_(uuidCfdi)) throw Error('El UUID CFDI debe tener formato XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX');
   if (datos.situacionFactura === 'FACTURADO' && !uuidCfdi) {
     throw Error('Un documento facturado requiere el UUID del CFDI');
   }
 
   const compra = {
-    ...datos, id,
+    ...datos, id, uuidCfdi,
     situacionFactura: datos.situacionFactura || 'ESPERANDO_FACTURA',
     estado: 'PENDIENTE_ERP'
   };
@@ -1005,6 +1007,9 @@ function activarComprasDireccion() {
 
   f.onsubmit = async e => {
     e.preventDefault();
+    _generacionOcrCompra++;
+    const btnLectura = document.getElementById('compraBtnOcr');
+    if (btnLectura) { btnLectura.disabled = !navigator.onLine; btnLectura.textContent = navigator.onLine ? '🔍 Leer ticket' : '🔍 Leer ticket (sin señal)'; }
     // C4 (2026-09-23): al guardar SIEMPRE se pide la foto de evidencia; omitirla
     // es válido pero queda registrado como "sin evidencia".
     let sinEvidencia = false;
@@ -1091,6 +1096,7 @@ function activarComprasDireccion() {
 const FOTO_TOPE_KB_COMPRA = 250;
 let _compraTocadaPorOcr = false;
 let _compraFotoComprimidaB64 = ''; // cache: evita comprimir 2 veces (preview + OCR)
+let _generacionOcrCompra = 0;
 
 function _leerArchivoComoB64Compra_(file) {
   return new Promise((resolve) => {
@@ -1214,6 +1220,7 @@ function _archivoCompraElegido_() {
 let _soloEvidenciaCompra = false;
 
 function _onFotoCompraElegida_() {
+  _generacionOcrCompra++;
   _compraTocadaPorOcr = false;
   _compraFotoComprimidaB64 = '';
   const fotoInput = document.getElementById('compra_foto');
@@ -1257,6 +1264,7 @@ function _onFotoCompraElegida_() {
 }
 
 function _resetFotoCompra_() {
+  _generacionOcrCompra++;
   _compraTocadaPorOcr = false;
   _compraFotoComprimidaB64 = '';
   if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar(); // el dato se guardó: la foto flotante se va
@@ -1283,24 +1291,43 @@ async function _leerTicketCompraConIA_() {
   const fotoInput = document.getElementById('compra_foto');
   const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
   if (!file || !navigator.onLine) return;
+  const formulario = document.querySelector('#form-compra');
+  if (!formulario) return;
+  const generacion = ++_generacionOcrCompra;
+  let editado = false;
+  const marcarEdicion = evento => { if (evento.target !== fotoInput) editado = true; };
+  formulario.addEventListener('input', marcarEdicion);
+  formulario.addEventListener('change', marcarEdicion);
+  const mismaCaptura = () => generacion === _generacionOcrCompra && document.querySelector('#form-compra') === formulario && document.getElementById('compra_foto') === fotoInput && fotoInput.files && fotoInput.files[0] === file;
+  const vigente = () => mismaCaptura() && !editado;
   const url = localStorage.getItem('sumetec_compras_url');
-  if (!url) { if (estado) estado.textContent = 'Vincula el teléfono primero.'; return; }
+  if (!url) { formulario.removeEventListener('input', marcarEdicion); formulario.removeEventListener('change', marcarEdicion); if (estado) estado.textContent = 'Vincula el teléfono primero.'; return; }
   if (btnOcr) { btnOcr.disabled = true; btnOcr.textContent = 'Leyendo…'; }
   if (estado) estado.textContent = '';
   try {
     const pin = await pedirPinDireccion();
+    if (!vigente()) return;
     const token = await abrirSesionDireccion(pin);
+    if (!vigente()) return;
     // Comprime UNA vez y la reusa para el guardado -- así el ticket no se
     // comprime dos veces ni se lee dos veces por accidente.
-    if (!_compraFotoComprimidaB64) _compraFotoComprimidaB64 = await _comprimirImagenCompra_(file);
+    if (!_compraFotoComprimidaB64) {
+      const comprimida = await _comprimirImagenCompra_(file);
+      if (!vigente()) return;
+      _compraFotoComprimidaB64 = comprimida;
+    }
+    const fotoOcr = typeof SumetecFoto !== 'undefined' ? await SumetecFoto.fotoParaOcr(_compraFotoComprimidaB64) : _compraFotoComprimidaB64;
+    if (!vigente()) return;
     const res = await fetch(url, {
       method: 'POST', headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ tipo: 'ocr_ticket', token, foto: typeof SumetecFoto !== 'undefined' ? await SumetecFoto.fotoParaOcr(_compraFotoComprimidaB64) : _compraFotoComprimidaB64 }),
+      body: JSON.stringify({ tipo: 'ocr_ticket', token, foto: fotoOcr }),
     });
     const resp = await res.json();
+    if (!vigente()) return;
     const r = _aplicarOcrACompra_(resp);
     // Si la IA no leyó el folio fiscal, se intenta con el QR de la factura (lector del teléfono).
     if (r.aplicado && !r.uuid) { const qr = await _leerQrDeArchivo_(file); if (qr) r.uuid = qr.uuid; }
+    if (!vigente()) return;
     if (!r.aplicado) {
       _compraTocadaPorOcr = false;
       if (estado) estado.textContent = '⚠️ No se pudo leer, captura a mano.';
@@ -1325,10 +1352,13 @@ async function _leerTicketCompraConIA_() {
     }
     if (estado) estado.textContent = r.uuid ? '✅ IA — leí el UUID de la factura. Revísalo antes de guardar.' : '✅ IA — revísalo antes de guardar.';
   } catch (e) {
+    if (!vigente()) return;
     _compraTocadaPorOcr = false;
     if (estado) estado.textContent = '⚠️ Error de lectura, captura a mano.';
   } finally {
-    if (btnOcr) { btnOcr.disabled = !navigator.onLine; btnOcr.textContent = navigator.onLine ? '🔍 Leer ticket' : '🔍 Leer ticket (sin señal)'; }
+    formulario.removeEventListener('input', marcarEdicion);
+    formulario.removeEventListener('change', marcarEdicion);
+    if (mismaCaptura() && btnOcr) { btnOcr.disabled = !navigator.onLine; btnOcr.textContent = navigator.onLine ? '🔍 Leer ticket' : '🔍 Leer ticket (sin señal)'; }
   }
 }
 

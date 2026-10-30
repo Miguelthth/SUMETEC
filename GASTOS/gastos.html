@@ -992,6 +992,7 @@ async function _pendFacTengo_(id) {
 // ── fin PENDIENTES DE FACTURA ────────────────────────────────────────────────
 
 function renderGastos() {
+  _generacionOcrGasto++;
   // Cada render fresco del formulario parte de cero: si no se resetearan
   // aquí, un ticket leído por OCR y luego abandonado (salir de la pantalla y
   // volver, sin guardar) podría "heredarse" en silencio al siguiente gasto
@@ -1191,6 +1192,7 @@ function _estatusEvidenciaGasto_(tieneFoto, uuidCfdi, tocadoPorOcr) {
 // cada reintento offline volvería a pagar la lectura de la imagen.
 let _gastoTocadoPorOcr = false;
 let _gastoFotoComprimidaB64 = ''; // cache: evita comprimir 2 veces (preview + OCR)
+let _generacionOcrGasto = 0;
 
 // "DD/MM/YYYY" -> "YYYY-MM-DD" (formato de <input type=date>). null si no es
 // una fecha válida o no viene en ese formato.
@@ -1237,6 +1239,7 @@ function _aplicarOcrAGasto_(resp) {
 }
 
 function _onFotoGastoElegida_() {
+  _generacionOcrGasto++;
   _gastoTocadoPorOcr = false;
   _gastoFotoComprimidaB64 = '';
   const fotoInput = document.getElementById('gas_foto');
@@ -1287,22 +1290,37 @@ async function _leerTicketConIA_() {
   const fotoInput = document.getElementById('gas_foto');
   const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
   if (!file || !navigator.onLine) return;
+  const generacion = ++_generacionOcrGasto;
+  const app = document.getElementById('app');
+  let editado = false;
+  const marcarEdicion = (evento) => { if (evento.target !== fotoInput) editado = true; };
+  if (app) { app.addEventListener('input', marcarEdicion); app.addEventListener('change', marcarEdicion); }
+  const mismaCaptura = () => generacion === _generacionOcrGasto && document.getElementById('gas_foto') === fotoInput && fotoInput.files && fotoInput.files[0] === file && !_guardandoGasto;
+  const vigente = () => mismaCaptura() && !editado;
   const url = getScriptUrl();
-  if (!url || !API_TOKEN) return;
+  if (!url || !API_TOKEN) { if (app) { app.removeEventListener('input', marcarEdicion); app.removeEventListener('change', marcarEdicion); } return; }
   if (btnOcr) { btnOcr.disabled = true; btnOcr.textContent = 'Leyendo…'; }
   if (estado) estado.textContent = '';
   try {
     // Comprime UNA vez y la reusa para el guardado -- así el ticket no se
     // comprime dos veces ni se lee dos veces por accidente.
-    if (!_gastoFotoComprimidaB64) _gastoFotoComprimidaB64 = await _comprimirImagen_(file);
+    if (!_gastoFotoComprimidaB64) {
+      const comprimida = await _comprimirImagen_(file);
+      if (!vigente()) return;
+      _gastoFotoComprimidaB64 = comprimida;
+    }
+    const fotoOcr = typeof SumetecFoto !== 'undefined' ? await SumetecFoto.fotoParaOcr(_gastoFotoComprimidaB64) : _gastoFotoComprimidaB64;
+    if (!vigente()) return;
     const res = await fetch(url, {
       method: 'POST', headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ tipo: 'ocr_ticket', token: API_TOKEN, foto: typeof SumetecFoto !== 'undefined' ? await SumetecFoto.fotoParaOcr(_gastoFotoComprimidaB64) : _gastoFotoComprimidaB64 }),
+      body: JSON.stringify({ tipo: 'ocr_ticket', token: API_TOKEN, foto: fotoOcr }),
     });
     const resp = await res.json();
+    if (!vigente()) return;
     const r = _aplicarOcrAGasto_(resp);
     // Si la IA no leyó el folio fiscal, se intenta con el QR de la factura (lector del teléfono).
     if (r.aplicado && !r.uuid) { const qr = await _leerQrDeArchivo_(file); if (qr) r.uuid = qr.uuid; }
+    if (!vigente()) return;
     if (!r.aplicado) {
       _gastoTocadoPorOcr = false;
       toast('No se pudo leer bien el ticket — captúralo a mano.', 4000);
@@ -1340,11 +1358,13 @@ async function _leerTicketConIA_() {
     if (estado) estado.textContent = r.uuid ? '✅ IA — leí el UUID de la factura. Revísalo antes de guardar.' : '✅ IA — revísalo antes de guardar.';
     toast('✅ Ticket leído. Revisa los datos antes de guardar.', 4000);
   } catch (e) {
+    if (!vigente()) return;
     _gastoTocadoPorOcr = false;
     toast('No se pudo leer el ticket (sin señal o error). Captúralo a mano.', 4000);
     if (estado) estado.textContent = '⚠️ Error de lectura, captura a mano.';
   } finally {
-    if (btnOcr) { btnOcr.disabled = !navigator.onLine; btnOcr.textContent = navigator.onLine ? '🔍 Leer ticket' : '🔍 Leer ticket (sin señal)'; }
+    if (app) { app.removeEventListener('input', marcarEdicion); app.removeEventListener('change', marcarEdicion); }
+    if (mismaCaptura() && btnOcr) { btnOcr.disabled = !navigator.onLine; btnOcr.textContent = navigator.onLine ? '🔍 Leer ticket' : '🔍 Leer ticket (sin señal)'; }
   }
 }
 
@@ -1358,6 +1378,9 @@ let _guardandoGasto = false;
 async function _guardarGasto_() {
   if (_guardandoGasto) return;
   _guardandoGasto = true;
+  _generacionOcrGasto++;
+  const btnLectura = document.getElementById('gasBtnOcr');
+  if (btnLectura) { btnLectura.disabled = !navigator.onLine; btnLectura.textContent = navigator.onLine ? '🔍 Leer ticket' : '🔍 Leer ticket (sin señal)'; }
   try {
   const fecha = document.getElementById('gas_fecha').value || _fechaLocal_();
   const concepto = (document.getElementById('gas_concepto').value || '').trim();
