@@ -2744,7 +2744,20 @@ function setFecha(){
   document.getElementById('fechaDisp').textContent=now.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
   document.getElementById('horaDisp').textContent=now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
 }
+// Aviso aparte (no forma parte del texto del folio, que se guarda y se imprime): el número que se ve es una LECTURA del servidor
+// o del contador local, no un folio apartado por este teléfono. Otro teléfono puede quedarse con él; el definitivo se asigna
+// al guardar. Solo se muestra cuando el número NO es uno apartado.
+function _folioAprox_(si){
+  const tip=document.getElementById('folioAproxTip'),fb=document.getElementById('folioBadge');
+  if(!si||!fb){if(tip)tip.remove();return;}
+  if(tip)return;
+  const d=document.createElement('div');d.id='folioAproxTip';d.className='no-print';
+  d.style.cssText='font-size:10px;color:#6b7280;font-weight:600;margin-top:2px';
+  d.textContent='≈ Número aproximado — el definitivo se asigna al guardar';
+  fb.parentNode.insertBefore(d,fb.nextSibling);
+}
 function syncFolio(v){
+  _folioAprox_(false);   // cualquier otro folio (apartado, guardado, temporal) quita el aviso; la lectura sin reservar lo vuelve a poner
   const fc=document.getElementById('folioCard');if(fc)fc.textContent=v||'—';
   // Bug 10: indicador visual cuando el folio es temporal (sin internet)
   const fb=document.getElementById('folioBadge');
@@ -2867,13 +2880,13 @@ function _cargarFolioSoloLectura_(){
     .then(d=>{
       if(d&&d.folio){
         const el=document.getElementById('folioBadge');
-        if(el){el.innerText=d.folio;syncFolio(d.folio);}
+        if(el){el.innerText=d.folio;syncFolio(d.folio);_folioAprox_(true);}
         // Sincronizar también el contador local por si falla la red en otra sesión
         const m=d.folio.match(/(\d+)$/);
         if(m) localStorage.setItem('r_fn',String(parseInt(m[1])-1));
       }
     })
-    .catch(()=>{});// Si falla, queda el folio local
+    .catch(()=>{_folioAprox_(true);});// Si falla, queda el folio local (sin apartar ni leer del servidor): se avisa que es aproximado
 }
 
 // Envía un cliente o producto nuevo al Sheets de Drive para registro.
