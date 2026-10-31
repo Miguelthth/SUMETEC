@@ -3695,7 +3695,9 @@ function toggleCPanel(){
   if(cPanelOpen){renderCList(CLIENTES);p.classList.add('open');document.getElementById('cSearch').value='';document.getElementById('cSearch').focus();_ajustarHojaTeclado(p);setTimeout(()=>_ajustarHojaTeclado(p),350);}
   else p.classList.remove('open');
 }
-function filtClientes(q){renderCList(CLIENTES.filter(c=>c.nombre.toLowerCase().includes(q.toLowerCase())||c.rfc.toLowerCase().includes(q.toLowerCase())))}
+// Hallazgo 30/oct: un cliente sin RFC (los 36 del maestro que llegan solo con nombre) hacía fallar `c.rfc.toLowerCase()`, el filtro se
+// interrumpía y la lista seguía mostrando los primeros 30 clientes sin filtrar: escribir un nombre no encontraba al cliente.
+function filtClientes(q){const s=String(q==null?'':q).toLowerCase();renderCList(CLIENTES.filter(c=>String(c&&c.nombre||'').toLowerCase().includes(s)||String(c&&c.rfc||'').toLowerCase().includes(s)))}
 function renderCList(list){
   document.getElementById('cList').innerHTML=list.length
     ?list.slice(0,30).map(c=>{
