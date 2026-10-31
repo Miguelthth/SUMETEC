@@ -2167,11 +2167,23 @@ let _bajandoCobros=false;
 // quema folios (cotizaciones piden uno nuevo en cada reintento) y agota la cuota de
 // Apps Script. Estos flags garantizan UNA pasada a la vez por cola.
 let _procRemEnCurso=false,_procPagosEnCurso=false,_procPDFEnCurso=false,_procElimEnCurso=false,_procCotEnCurso=false,_procNuevosEnCurso=false,_procCancelEnCurso=false;
-let _escrituraTurno=Promise.resolve();
-function _escrituraOrdenada(tarea){
-  const actual=_escrituraTurno.then(tarea,tarea);
-  _escrituraTurno=actual.catch(()=>{});
-  return actual;
+const SUMETEC_TIEMPO_ENVIO_PDF_MS=90000; // el envío del PDF espera más que el resto (ver guardarEnDrive)
+// Una escritura a la vez, en orden. Las del PDF son de BAJA prioridad (hallazgo 30/oct: un PDF tarda hasta 75 s en el
+// servidor y las remisiones y cobros formados detrás de él esperaban todo ese tiempo): una remisión, un abono o un cobro
+// se atiende antes que un PDF en espera, salvo que el PDF ya lleve 45 s formado (para que no se quede sin turno). Lo que ya
+// va en camino no se interrumpe. Todo el estado vive en la propia función para poder probarla sola.
+function _escrituraOrdenada(tarea,opciones){
+  const baja=!!(opciones&&opciones.bajaPrioridad);
+  const q=_escrituraOrdenada.q||(_escrituraOrdenada.q={altas:[],bajas:[],corriendo:false});
+  const siguiente=()=>{
+    if(q.corriendo)return;
+    const vieja=q.bajas.length&&Date.now()-q.bajas[0].desde>45000;
+    const it=vieja?q.bajas.shift():(q.altas.shift()||q.bajas.shift());
+    if(!it)return;
+    q.corriendo=true;
+    Promise.resolve().then(it.tarea).then(it.ok,it.mal).finally(()=>{q.corriendo=false;siguiente();});
+  };
+  return new Promise((ok,mal)=>{(baja?q.bajas:q.altas).push({tarea,ok,mal,desde:Date.now()});siguiente();});
 }
 let _buzonDisponible=null;
 async function _enviarConBuzon_(url,documento){
@@ -3076,7 +3088,9 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
     // Operaciones de remisión que ESTE teléfono envió: si el servidor las aplicó y el acuse se perdió, su revisión va
     // adelante de la que conocemos y el servidor las reconoce como propias en vez de pedir «revisión» al usuario.
     entry.opsPropiasRem=Array.isArray(remActiva?.opsPropias)?remActiva.opsPropias.slice(-12):[];
-    return sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(entry)})
+    // 90 s y no los 30 s de siempre (hallazgo 30/oct): el servidor espera candado hasta 15 s, sube a Drive y retoma el candado
+    // hasta 45 s; a los 30 s el teléfono se rendía, esperaba y reenviaba el PDF completo aunque el servidor ya lo estuviera guardando.
+    return sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(entry)},SUMETEC_TIEMPO_ENVIO_PDF_MS)
     .then(r=>r.json())
     .then(d=>{
       if(d&&d.ok&&d.url){
@@ -3131,7 +3145,7 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
       actualizarBadgePendientes();
     })
     .catch(e=>{console.error('guardarEnDrive',e);_bumpIntentoPDF(entry.id||entry.folio,entry.operationId,'sin respuesta del servidor',false);_estado('📵 PDF en cola — se reintenta al volver la señal');_revisarFallas();actualizarBadgePendientes();if(typeof guardarEventoSync==='function')guardarEventoSync({folio:entry.folio,operacion:'REMISION_GUARDADA',resultado:'ERROR',detalle:'sin conexión'});});
-  });
+  },{bajaPrioridad:true});
 }
 
 // ── Cola de PDFs (base64) — uno por remisión (sobreescribe el anterior) ──
