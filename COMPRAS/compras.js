@@ -365,6 +365,14 @@ function _renderHistorialComprasDireccion_() {
 // cachea para funcionar sin señal; un proveedor nuevo escrito aquí se recuerda
 // en este teléfono al guardar, y al llegar al ERP se da de alta al confirmar.
 const CLAVE_LISTAS_COMPRAS = 'sumetec_compras_listas_cache';
+function _normalizarListasCompras_(filas) {
+  if (!Array.isArray(filas) || !filas.length || !Array.isArray(filas[0])) return filas;
+  const encabezados = filas[0].map(x => String(x || '').trim());
+  return filas.slice(1).map(fila => encabezados.reduce((obj, clave, i) => {
+    if (clave) obj[clave] = fila[i] == null ? '' : fila[i];
+    return obj;
+  }, {}));
+}
 function _leerListasCompras_() {
   try { return JSON.parse(localStorage.getItem(CLAVE_LISTAS_COMPRAS) || 'null') || { proveedores: [], productos: [] }; }
   catch (_) { return { proveedores: [], productos: [] }; }
@@ -685,7 +693,8 @@ async function _actualizarListasCompras_(pin) {
     const token = await abrirSesionDireccion(pin);
     const pedir = tipo => fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ tipo, token }) }).then(x => x.json());
-    const [listas, catalogo, equivs, cfg] = await Promise.all([pedir('listas_gasto'), pedir('catalogo'), pedir('equivalencias'), pedir('configuracion').catch(() => null)]);
+    const [listasCrudas, catalogo, equivs, cfg] = await Promise.all([pedir('listas_gasto'), pedir('catalogo'), pedir('equivalencias'), pedir('configuracion').catch(() => null)]);
+    const listas = _normalizarListasCompras_(listasCrudas);
     // Acceso (2026-10-09): minutos de bloqueo y equipos sin PIN que fijó el ERP. seguridad.js los consulta. Ver acceso.js.
     if (cfg && cfg.ok && cfg.datos && typeof sumetecAplicarAcceso === 'function') { try { sumetecAplicarAcceso('compras', cfg.datos.ACCESO); } catch (_) { } }
     if (cfg && cfg.ok && cfg.datos && cfg.datos.COMPRAS && typeof cfg.datos.COMPRAS === 'object') { try { localStorage.setItem(CLAVE_AJUSTES_COMPRAS, JSON.stringify(cfg.datos.COMPRAS)); } catch (_) { } }
