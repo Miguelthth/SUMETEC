@@ -1732,6 +1732,12 @@ function _revertirCancelacionRechazada(id,d){
 function _cancelacionPendiente(id){
   try{ return leerSeguro('cola_cancel',[]).some(e=>String(e.id)===String(id)); }catch(_){ return false; }
 }
+// La cancelación no puede adelantarse al acuse de las anulaciones de esta remisión.
+function _cancelacionEsperaAnulaciones(id){
+  const cola=leerSeguro('cola_offline',[]);
+  if(!Array.isArray(cola))return true;
+  return cola.some(e=>String(e.id)===String(id)&&e.pago&&e.pago.tipo==='anulacion');
+}
 async function procesarColaCancel(){
   if(!isOnline||_procCancelEnCurso)return;
   const url=getScriptUrl();if(!url)return;
@@ -1742,6 +1748,7 @@ async function procesarColaCancel(){
     let ok=0;
     for(const item of [...cola]){
       if(item._detenido||!sumetecPuedeReintentar(item))continue;
+      if(_cancelacionEsperaAnulaciones(item.id))continue;
       try{
         const res=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
           body:JSON.stringify({tipo:'cancelar_remision',token:API_TOKEN,id:item.id,folio:item.folio,
@@ -8409,7 +8416,7 @@ async function confirmarCancelacion(){
   toast(isOnline?('Remisión '+r.folio+' cancelada'):('Remisión '+r.folio+' cancelada — ⏳ pendiente de enviar al volver la señal'),isOnline?'ok':'warn',isOnline?3000:6000);
   // Sincronizar cancelación con Sheets (si falla, se queda en cola_cancel y se reintenta)
   const url=getScriptUrl();
-  if(url&&isOnline){
+  if(url&&isOnline&&!_cancelacionEsperaAnulaciones(r.id)){
     fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({tipo:'cancelar_remision',token:API_TOKEN,id:r.id,folio:r.folio,motivo,fechaCancelacion:r.fechaCancelacion,device:_deviceLabel_()})
     }).then(res=>res.json()).then(d=>{
@@ -8813,7 +8820,7 @@ async function procesarCola(){
     // El PDF espera a que el cobro llegue (sale con el saldo correcto). En cuanto llega, se manda YA:
     // antes esperaba al siguiente latido (hasta 10 s sin hacer nada, medido 2026-09-29).
     if(enviados>0&&leerSeguro('cola_pdf',[]).length)setTimeout(procesarColaPDF,0);
-  }finally{ _procPagosEnCurso=false; }
+  }finally{ _procPagosEnCurso=false; if(isOnline&&leerSeguro('cola_cancel',[]).length)setTimeout(procesarColaCancel,0); }
 }
 // ── Fallas de exportación al ERP (C-02): ventas guardadas que NO llegaron al Excel del ERP ──
 function _fallasERP(){ return leerSeguro('fallas_erp',[]); }
