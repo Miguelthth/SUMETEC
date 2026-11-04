@@ -5320,7 +5320,11 @@ async function confirmarPagoRapido(){
     const _not=document.getElementById('prNotas')?.value||'';
     const pago=aplicarPago(rem, monto, {metodo:_met, notas:_not});
     if(!pago){ if(btn){btn.disabled=false;btn.textContent='✅ Registrar pago';} return; }
-    sincronizarRemision(rem); // asegurar que la fila exista en el servidor
+    // asegurar que la fila exista en el servidor. Si la remisión YA espera en la cola, no se vuelve a encolar: el abono no sube la
+    // revisión, así que se reutilizaría el mismo operationId con otro contenido (saldo/estado) y, si el envío anterior ya había
+    // llegado al buzón, el servidor lo rechaza como CONFLICTO_ID («El mismo ID ya tiene otro contenido») y la cola queda atorada.
+    // El cobro no se pierde: viaja dentro de la remisión (cobros) o sale solo cuando ella se confirma.
+    if(!leerSeguro('cola_remisiones',[]).some(e=>String(e.id)===String(rem.id)))sincronizarRemision(rem);
 
     // Activar esta remisión como la actual → desbloquea el botón PDF del toolbar
     remActualId=rem.id;
