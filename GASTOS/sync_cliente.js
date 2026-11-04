@@ -11,6 +11,7 @@
   function segundosConsulta(s){
     if(!s.visible || !s.online)return null;
     if(s.fallos>0)return [30,60,120,300][Math.min(s.fallos-1,3)];
+    if(s.pendiente)return 10;   // 2026-11-03 (V2): «pendiente» no es falla: el servidor aún arma el dato, se vuelve a preguntar pronto
     return s.activo?(s.rapido?15:30):120;
   }
   function reconstruir(map){
@@ -107,7 +108,7 @@
           }
         }
         catch(e){ses.fallos=(ses.fallos||0)+1;medir({app,equipo,clase:'sondeo',reintento,ms:Date.now()-inicio,bytes:0,eventos:0,ok:false});throw e;}
-        ses.fallos=r.ok===true?0:(ses.fallos||0)+1;
+        ses.fallos=(r.ok===true || r.codigo==='SYNC_PENDIENTE')?0:(ses.fallos||0)+1;
         medir({app,equipo,clase:'sondeo',reintento,ms:Date.now()-inicio,bytes:new TextEncoder().encode(JSON.stringify(r)).length,eventos:(r.eventos||[]).length,ok:r.ok===true});
         if(r.codigo==='TEMAS_NO_AUTORIZADOS'){
           temas=(r.permitidos || []).filter(t=>(TEMAS[app] || []).includes(t));
@@ -121,6 +122,7 @@
           const estado={temas:{},horizonte:{}};temas.forEach(t=>{const m=r.metas && r.metas[t];if(!m)throw new Error('SYNC_META_INVALIDA');estado.temas[t]={epoch:m.epoch,cursor:m.min,map:{}};estado.horizonte[t]=m.seq;});
           almacen.etapa=estado;almacen.horizonte=estado.horizonte;almacen.requiereCompleto=false;await guardarDB(key,almacen);continue;
         }
+        if(r.codigo==='SYNC_PENDIENTE'){const e=new Error('SYNC_PENDIENTE');e.pendiente=true;throw e;}
         if(r.ok!==true)throw new Error(r.codigo || r.error || 'SYNC_NO_AUTORIZADO');
         if(r.sinCambios===true){
           if(r.mas || r.eventos.length || almacen.etapa)throw new Error('SYNC_VACIO_INVALIDO');
@@ -160,14 +162,14 @@
     try{return await ses.enVuelo;}finally{ses.enVuelo=null;}
   }
   function reloj(fn,opciones){
-    opciones=opciones || {};let timer=null,enVuelo=false,fallos=0,ultima=0,detenido=false;
-    function intervalo(){return segundosConsulta({visible:!root.document.hidden,online:root.navigator.onLine,activo:Date.now()-actividad<120000,fallos,rapido:opciones.rapido===true || rapidoAutorizado});}
+    opciones=opciones || {};let timer=null,enVuelo=false,fallos=0,ultima=0,detenido=false,pendiente=false;
+    function intervalo(){return segundosConsulta({visible:!root.document.hidden,online:root.navigator.onLine,activo:Date.now()-actividad<120000,fallos,rapido:opciones.rapido===true || rapidoAutorizado,pendiente});}
     function programar(){if(timer)root.clearTimeout(timer);const s=intervalo();if(s!=null&&!detenido)timer=root.setTimeout(tick,s*1000*(0.9+Math.random()*0.2));}
     async function tick(){
       if(detenido||enVuelo)return;
       if(intervalo()==null || escribiendo || Date.now()-ultima<5000){programar();return;}
       enVuelo=true;ultima=Date.now();
-      try{const r=await fn();if(r===false || r===null)throw new Error('SYNC_SIN_RESULTADO');fallos=0;}catch(_){fallos++;}
+      try{const r=await fn();if(r===false || r===null)throw new Error('SYNC_SIN_RESULTADO');fallos=0;pendiente=false;}catch(e){if(e && e.pendiente){pendiente=true;fallos=0;}else{pendiente=false;fallos++;}}
       finally{enVuelo=false;programar();}
     }
     function despertar(){if(intervalo()!=null)tick();else if(timer)root.clearTimeout(timer);}
@@ -194,11 +196,11 @@
       // el ping o la lectura siguen por el camino de siempre. Antes se rechazaban: la app marcaba «servidor lento»,
       // se saltaba los reintentos de sus colas y dejaba de bajar los cobros de los demás teléfonos.
       let r=null;
-      try{r=await consultar(String(input),d.token,app);}catch(_){r=null;}
+      try{r=await consultar(String(input),d.token,app);}catch(e){r=(e && e.pendiente)?{ok:true,pendiente:true}:null;}   // V2: con el servidor «pendiente» se sirve la última fotografía validada (≤10 min) y no se lee doble por el camino tradicional
       if(r){
         if(d.tipo==='ping')return new root.Response(JSON.stringify(r),{status:200,headers:{'Content-Type':'application/json'}});
         const key=await hash(String(input)+'\n'+d.token+'\n'+app),ses=sesiones.get(key),t=ses && ses.activo && (!ses.temas || ses.temas.includes(d.tipo)) && ses.activo.temas[d.tipo];
-        if(t)return new root.Response(JSON.stringify(reconstruir(t.map)),{status:200,headers:{'Content-Type':'application/json'}});
+        if(t && (!r.pendiente || (ses.ultimo && Date.now()-ses.ultimo<600000)))return new root.Response(JSON.stringify(reconstruir(t.map)),{status:200,headers:{'Content-Type':'application/json'}});
       }
       return nativo(input,options);
     }
