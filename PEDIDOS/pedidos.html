@@ -41,6 +41,7 @@
         <div class="intro-note"><span class="note-rule" aria-hidden="true"></span><strong>Nosotros te confirmamos precio y existencia.</strong><span>Armar tu pedido no genera un cobro.</span></div>
       </section>
       <div id="notice" class="notice" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="repeat-order"><button id="repeat-last" class="button secondary" type="button" disabled>Repetir mi última compra</button><p class="quiet">Copia las cantidades anteriores a un carrito vacío para revisarlas antes de enviar.</p></div>
       <div class="workspace-grid">
         <section class="selection" aria-labelledby="section-title">
           <nav class="views" aria-label="Productos para tu pedido">
@@ -58,6 +59,7 @@
           <button id="review" class="button primary wide" type="button" disabled>Revisar pedido</button><p class="cart-disclaimer">Solicitud sujeta a confirmación de SUMETEC.</p>
           <section id="pending" class="pending" aria-labelledby="pending-title" hidden><h3 id="pending-title">Pedido en espera de confirmación</h3><p>Conservamos tus cantidades para evitar duplicados. Consulta si llegó o reintenta el mismo pedido.</p><button id="check-status" type="button" class="button secondary wide">Consultar si llegó</button><button id="retry-send" type="button" class="text-button wide">Reintentar el mismo pedido</button><button id="correct-order" type="button" class="text-button wide">Corregir pedido</button><p>Para corregirlo, comprobamos primero si ya llegó. Si SUMETEC ya lo recibió, te mostraremos su folio.</p></section>
           <section id="receipt" class="receipt" tabindex="-1" aria-labelledby="receipt-title" hidden><span class="receipt-check" aria-hidden="true">✓</span><h3 id="receipt-title">Gracias. Ya lo recibimos.</h3><p id="receipt-folio" class="receipt-folio"></p><p id="receipt-status"></p><p>SUMETEC te confirma precio y existencia. Este folio es tu comprobante de solicitud.</p><button id="new-order" class="button secondary wide" type="button">Iniciar otro pedido</button></section>
+          <details id="order-history" class="order-history"><summary>Mis solicitudes</summary><p id="history-empty" class="quiet">Aquí conservaremos los recibos de este enlace en este navegador.</p><ul id="receipt-history" class="receipt-history"></ul></details>
         </aside>
       </div>
       <button id="jump-cart" type="button" class="mobile-cart"><span id="cart-label">0 productos en tu pedido</span><strong>Ver pedido →</strong></button>

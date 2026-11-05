@@ -18,6 +18,51 @@
   };
   const ENTIDADES = {negocio:'negocios',visita:'visitas',precio:'precios',compromiso:'compromisos',ubicacion:'ubicaciones',contacto:'contactos',entrevista:'entrevistas',necesidad:'necesidades',oportunidad:'oportunidades',solicitud:'solicitudes',ruta:'rutas',parada:'paradas',evento_ruta:'eventosRuta',carga:'cargas',tiempo:'tiempos',propuesta:'propuestas',documento:'documentos',consumo:'consumo',vinculo:'vinculos',catalogo:'catalogo',evidencia:'evidencias'};
   const TABLAS = [...new Set(Object.values(ENTIDADES)), 'operaciones', 'meta'];
+  const RESPALDO_LIMITE_BYTES = 20 * 1024 * 1024;
+  const bytesJSON = valor => new TextEncoder().encode(JSON.stringify(valor)).length;
+  function resumirCola(operaciones, ahora = Date.now()) {
+    const pendientes=operaciones.filter(o=>!['CONFIRMADA','DESCARTADA'].includes(o.estadoLocal));
+    const fechas=pendientes.map(o=>o.creadoTs).filter(t=>Number.isFinite(Date.parse(t))).sort((a,b)=>Date.parse(a)-Date.parse(b));
+    return {pendientes:pendientes.length,fotosPendientes:pendientes.filter(o=>o.tipo==='comercial_evidencia').length,
+      fallos:pendientes.filter(o=>['CONFLICTO','RECHAZADA'].includes(o.estadoLocal)||o.detalle?.mensaje||o.detalle?.codigo).length,
+      intentos:pendientes.reduce((s,o)=>s+(Number(o.intentos)||0),0),masAntiguaTs:fechas[0]||null,
+      antiguedadHoras:fechas.length?Math.max(0,(ahora-Date.parse(fechas[0]))/3600000):null,
+      fotosBytes:operaciones.filter(o=>o.tipo==='comercial_evidencia'&&typeof o.base64==='string').reduce((s,o)=>s+Math.floor(o.base64.length*3/4)-(o.base64.endsWith('==')?2:o.base64.endsWith('=')?1:0),0)};
+  }
+  function validarRespaldo(copia) {
+    if(copia?.app!=='logistica'||![1,2].includes(copia.schema)||!copia.tablas||typeof copia.tablas!=='object'||Array.isArray(copia.tablas))throw Error('No es un respaldo de Logística');
+    for(const [tabla,filas]of Object.entries(copia.tablas)) {
+      if(!TABLAS.includes(tabla)||!Array.isArray(filas))throw Error('Respaldo inválido');
+      const key=tabla==='operaciones'?'operationId':tabla==='meta'?'clave':'id';
+      const ids=new Set();for(const fila of filas){if(!fila||typeof fila[key]!=='string'||ids.has(fila[key]))throw Error('Respaldo con identificadores inválidos');if(!['meta','documentos','consumo','vinculos','catalogo'].includes(tabla)&&!/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(fila[key]))throw Error('Respaldo con UUID inválido');ids.add(fila[key]);}
+    }
+  }
+  function prepararRespaldo(copia, limite=RESPALDO_LIMITE_BYTES) {
+    validarRespaldo(copia);
+    if(bytesJSON(copia)<=limite)return [copia];
+    const id=crypto.randomUUID(),partes=[];
+    const nueva=()=>({...copia,tablas:Object.fromEntries(Object.keys(copia.tablas).map(t=>[t,[]])),paquete:{id,parte:1,total:1}});
+    let parte=nueva(),bytes=bytesJSON(parte);
+    for(const [tabla,filas]of Object.entries(copia.tablas))for(const fila of filas){
+      const peso=bytesJSON(fila)+1;
+      if(bytes+peso+256>limite){if(!Object.values(parte.tablas).some(f=>f.length))throw Error('Un registro supera 20 MB; conserva el respaldo original y consulta administración');partes.push(parte);parte=nueva();bytes=bytesJSON(parte);}
+      if(bytes+peso+256>limite)throw Error('Un registro supera 20 MB; conserva el respaldo original y consulta administración');
+      parte.tablas[tabla].push(fila);bytes+=peso;
+    }
+    partes.push(parte);
+    partes.forEach((p,i)=>{p.paquete.parte=i+1;p.paquete.total=partes.length;if(bytesJSON(p)>limite)throw Error('No se pudo preparar un respaldo recuperable');});
+    return partes;
+  }
+  function unirRespaldo(copias) {
+    if(!Array.isArray(copias)||!copias.length)throw Error('Selecciona el respaldo completo');
+    if(copias.length===1&&!copias[0]?.paquete){validarRespaldo(copias[0]);return copias[0];}
+    const primera=copias[0],p=primera?.paquete,indices=new Set();
+    if(!p||typeof p.id!=='string'||!p.id||!Number.isInteger(p.total)||p.total<1||copias.length!==p.total)throw Error('Selecciona todas las partes del respaldo completo');
+    for(const copia of copias){validarRespaldo(copia);const q=copia.paquete;if(!q||q.id!==p.id||q.total!==p.total||copia.schema!==primera.schema||copia.exportadoTs!==primera.exportadoTs||!Number.isInteger(q.parte)||q.parte<1||q.parte>p.total||indices.has(q.parte))throw Error('Las partes no pertenecen al mismo paquete completo');indices.add(q.parte);}
+    const unido={...primera,tablas:{}};delete unido.paquete;
+    for(const copia of copias.slice().sort((a,b)=>a.paquete.parte-b.paquete.parte))for(const [tabla,filas]of Object.entries(copia.tablas))(unido.tablas[tabla]??=[]).push(...filas);
+    validarRespaldo(unido);return unido;
+  }
   const texto = (valor, max = 2000) => { const t = String(valor ?? '').trim(); if (t.length > max) throw Error(`Se superó el límite de ${max} caracteres`); return t; };
   const exigir = (valor, nombre, max) => { const t = texto(valor, max); if (!t) throw Error(`Falta ${nombre}`); return t; };
   const contextoDefecto = () => ({ uuid: () => crypto.randomUUID(), ahora: () => new Date().toISOString(), dispositivoId: '' });
@@ -250,12 +295,8 @@
         });
       },
       async restaurar(copia) {
-        if(copia?.app!=='logistica'||![1,2].includes(copia.schema)||!copia.tablas)throw Error('No es un respaldo de Logística');
-        for(const [tabla,filas]of Object.entries(copia.tablas)) {
-          if(!TABLAS.includes(tabla)||!Array.isArray(filas))throw Error('Respaldo inválido');
-          const key=tabla==='operaciones'?'operationId':tabla==='meta'?'clave':'id';
-          const ids=new Set();for(const fila of filas){if(!fila||typeof fila[key]!=='string'||ids.has(fila[key]))throw Error('Respaldo con identificadores inválidos');if(!['meta','documentos','consumo','vinculos','catalogo'].includes(tabla)&&!/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(fila[key]))throw Error('Respaldo con UUID inválido');ids.add(fila[key]);}
-        }
+        if(copia?.paquete)throw Error('Reúne todas las partes del respaldo antes de restaurar');
+        validarRespaldo(copia);
         // La identidad, credenciales y cursor del teléfono receptor no se restauran.
         const locales=await todos('operaciones');const idsLocales=new Set(locales.map(o=>o.operationId));
         await escribir(TABLAS,t=>{for(const[tabla,filas]of Object.entries(copia.tablas))if(tabla!=='meta')for(const fila of filas){if(tabla==='operaciones'&&idsLocales.has(fila.operationId))continue;const clave=tabla==='operaciones'?fila.operationId:fila.id;const r=t[tabla].get(clave);r.onsuccess=()=>{if(!r.result)t[tabla].add(fila);};}});
@@ -286,6 +327,7 @@
       visitas: () => todos('visitas'),
       precios: () => todos('precios'),
       pendientes: async () => ordenarOperaciones((await todos('operaciones')).filter(o=>!['CONFIRMADA','DESCARTADA'].includes(o.estadoLocal))),
+      salud: async () => resumirCola(await todos('operaciones')),
       async expediente(id) {
         const [negocio, visitas, precios] = await Promise.all([leer('negocios', id), todos('visitas'), todos('precios')]);
         if (!negocio) throw Error('No se encontró el negocio');
@@ -304,5 +346,5 @@
       cerrar: () => db.close()
     };
   }
-  return { abrir, RESULTADOS, crearNegocio, crearVisita, crearPrecio, crearOperacion, fechaDesdeTijuana, ordenarOperaciones, medidasFoto, FOTO_LADO_MAX };
+  return { abrir, RESULTADOS, crearNegocio, crearVisita, crearPrecio, crearOperacion, fechaDesdeTijuana, ordenarOperaciones, medidasFoto, FOTO_LADO_MAX, resumirCola, prepararRespaldo, unirRespaldo, RESPALDO_LIMITE_BYTES };
 });

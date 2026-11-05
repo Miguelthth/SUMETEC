@@ -1,7 +1,7 @@
 (function (root) {
   'use strict';
   const clone = value => JSON.parse(JSON.stringify(value));
-  const empty = () => ({ lines: [], note: '', pending: null, receipt: null });
+  const empty = () => ({ lines: [], note: '', pending: null, receipt: null, receipts: [] });
   const clean = value => String(value ?? '').slice(0, 500);
   const normalized = value => clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const product = item => ({ codigo: clean(item.codigo), descripcion: clean(item.descripcion), categoria: clean(item.categoria), unidad: clean(item.unidad) || 'PZA' });
@@ -27,22 +27,31 @@
       throw new Error('Revisa las cantidades: de 1 a 1,000,000 por producto y hasta 100 productos distintos.');
     }
   }
-  function createCart({ storage, key, uuid }) {
+  function receiptValue(receipt) {
+    if (!receipt || !validId(receipt.id) || typeof receipt.folio !== 'string' || !receipt.folio) throw new Error('No pudimos comprobar el recibo del pedido.');
+    return {id: receipt.id, folio: clean(receipt.folio), estado: clean(receipt.estado || 'PENDIENTE'), fecha: clean(receipt.fecha), referencia: clean(receipt.referencia)};
+  }
+  function createCart({ storage, key, uuid, locks = root.navigator?.locks }) {
     let current = empty(), savedVersion = null;
-    try {
+    function read() { try {
       const saved = storage.getItem(key);
-      savedVersion = saved;
+      const next = saved === null ? empty() : JSON.parse(saved);
       if (saved !== null) {
-        current = JSON.parse(saved);
-        validateLines(current.lines);
-        if (typeof current.note !== 'string' || current.note.length > 1000 || !Object.hasOwn(current, 'pending') || !Object.hasOwn(current, 'receipt')) throw new Error();
-        if (current.pending) {
-          validateLines(current.pending.lineas);
-          if (!validId(current.pending.id) || !current.pending.lineas.length || typeof current.pending.nota !== 'string' || current.pending.nota.length > 1000) throw new Error();
+        validateLines(next.lines);
+        if (typeof next.note !== 'string' || next.note.length > 1000 || !Object.hasOwn(next, 'pending') || !Object.hasOwn(next, 'receipt')) throw new Error();
+        if (next.pending) {
+          validateLines(next.pending.lineas);
+          if (!validId(next.pending.id) || !next.pending.lineas.length || typeof next.pending.nota !== 'string' || next.pending.nota.length > 1000) throw new Error();
         }
-        if (current.receipt && (!validId(current.receipt.id) || typeof current.receipt.folio !== 'string')) throw new Error();
+        if (next.receipt) next.receipt = receiptValue(next.receipt);
+        if (next.receipts === undefined) next.receipts = next.receipt ? [clone(next.receipt)] : [];
+        if (!Array.isArray(next.receipts)) throw new Error();
+        next.receipts = next.receipts.map(receiptValue);
+        if (new Set(next.receipts.map(r => r.id)).size !== next.receipts.length) throw new Error();
       }
-    } catch (_) { throw new Error('No se pudo abrir tu pedido guardado. No borres los datos del navegador: contacta a SUMETEC para revisar si ya llegó.'); }
+      current = next; savedVersion = saved;
+    } catch (_) { throw new Error('No se pudo abrir tu pedido guardado. No borres los datos del navegador: contacta a SUMETEC para revisar si ya llegó.'); } }
+    read();
     function save(next) {
       let latest;
       try { latest = storage.getItem(key); }
@@ -61,6 +70,16 @@
     }
     return {
       get state() { return clone(current); },
+      async exclusive(action, {refresh = false} = {}) {
+        if (typeof locks?.request !== 'function') throw new Error('Este navegador no permite el acceso exclusivo al pedido. Abre tu enlace en un navegador actualizado antes de enviarlo.');
+        return locks.request(key, async () => {
+          if (storage.getItem(key) !== savedVersion) {
+            read();
+            if (!refresh) throw new Error('Tu pedido cambió en otra pestaña. Revisa las cantidades guardadas antes de continuar.');
+          }
+          return action();
+        });
+      },
       flush() { save(clone(current)); },
       add(item, quantity = 1) {
         editable();
@@ -82,6 +101,13 @@
         editable(); if (typeof note !== 'string' || note.length > 1000) throw new Error('La nota puede tener hasta 1,000 caracteres.');
         save({ ...clone(current), note });
       },
+      repeat(lines) {
+        editable();
+        if (current.lines.length || current.note) throw new Error('Tu carrito ya tiene información. Consérvala o quita sus productos y nota antes de repetir la última compra.');
+        validateLines(lines);
+        if (!lines.length) throw new Error('Todavía no hay una compra anterior que repetir.');
+        save({...clone(current), lines: lines.map(line => ({...product(line), cantidad: Number(line.cantidad)}))});
+      },
       prepare() {
         if (current.pending) return clone(current.pending);
         editable(); validateLines(current.lines);
@@ -93,7 +119,14 @@
       },
       receive(receipt) {
         if (!current.pending || receipt?.id !== current.pending.id || typeof receipt.folio !== 'string' || !receipt.folio || typeof receipt.estado !== 'string') throw new Error('No pudimos comprobar la confirmación. Consulta el estado del mismo pedido.');
-        save({ ...clone(current), pending: null, receipt: { id: receipt.id, folio: clean(receipt.folio), estado: clean(receipt.estado), fecha: clean(receipt.fecha) } });
+        const value = receiptValue(receipt);
+        save({ ...clone(current), pending: null, receipt: value, receipts: [...current.receipts.filter(r => r.id !== value.id), value] });
+      },
+      updateReceipt(receipt) {
+        const known = current.receipts.find(r => r.id === receipt?.id);
+        if (!known || known.folio !== receipt.folio || typeof receipt.estado !== 'string') throw new Error('No pudimos comprobar el estado de esa solicitud.');
+        const value = receiptValue(receipt);
+        save({...clone(current), receipt: current.receipt?.id === value.id ? value : current.receipt, receipts: current.receipts.map(r => r.id === value.id ? value : r)});
       },
       rejectPending(id, proof) {
         if (proof?.descartado !== true || proof.id !== id || !current.pending || current.pending.id !== id) throw new Error('Primero comprueba si SUMETEC recibió el pedido pendiente.');
@@ -101,7 +134,7 @@
       },
       startNew() {
         if (current.pending) throw new Error('Primero comprueba si SUMETEC recibió el pedido pendiente.');
-        save(empty());
+        save({...empty(), receipts: clone(current.receipts)});
       }
     };
   }
@@ -167,15 +200,17 @@
       if (tipo === 'catalogo_pedidos') return { ok: true, cliente: 'Taller de muestra', productos: clone(demoProducts) };
       if (tipo === 'historial_cliente') return { ok: true, ultimo: demoProducts.slice(0, 3).map((item, i) => ({ ...item, cantidad: [100, 50, 50][i] })), frecuentes: clone(demoProducts.slice(0, 4)), fecha: '2026-10-16' };
       const receiptKey = key + ':demo-recibo';
+      const saved = JSON.parse(storage.getItem(receiptKey) || 'null');
+      const receipts = Array.isArray(saved) ? saved : saved ? [saved] : [];
       if (tipo === 'enviar_pedido') {
-        const saved = storage.getItem(receiptKey);
-        const previous = saved ? JSON.parse(saved) : null;
-        const receipt = previous?.id === data.id ? previous : { id: data.id, folio: 'DEMO-PED-0001', estado: 'PENDIENTE', fecha: new Date().toISOString() };
-        storage.setItem(receiptKey, JSON.stringify(receipt));
+        const previous = receipts.find(r => r.id === data.id);
+        const receipt = previous || { id: data.id, folio: 'DEMO-PED-' + String(receipts.length + 1).padStart(4, '0'), estado: 'PENDIENTE', fecha: new Date().toISOString() };
+        if (!previous) receipts.push(receipt);
+        storage.setItem(receiptKey, JSON.stringify(receipts));
         return { ok: true, pedido: receipt, notificacionPendiente: false };
       }
-      const receipt = JSON.parse(storage.getItem(receiptKey) || 'null');
-      if (receipt?.id !== data.id) throw new Error('Esta demostración no tiene una confirmación guardada. Reintenta el mismo pedido.');
+      const receipt = receipts.find(r => r.id === data.id);
+      if (!receipt) throw new Error('Esta demostración no tiene una confirmación guardada. Reintenta el mismo pedido.');
       return { ok: true, pedido: receipt };
     };
   }
@@ -194,30 +229,43 @@
       $('setup-message').textContent = 'SUMETEC necesita terminar la conexión del servicio. Conserva tu enlace y contacta a SUMETEC para hacer tu pedido mientras tanto.';
       return;
     }
-    let model, api;
+    let model, api, cartKey;
     try {
       if (!root.crypto?.subtle || !root.crypto.randomUUID) throw new Error('Abre este enlace con una conexión segura y un navegador actualizado para guardar tu pedido.');
-      const key = await storageKey(token, root.crypto);
-      model = createCart({ storage: localStorage, key, uuid: () => crypto.randomUUID() });
-      api = demo ? demoApi(localStorage, key) : createApi({ apiUrl, token });
+      cartKey = await storageKey(token, root.crypto);
+      model = createCart({ storage: localStorage, key: cartKey, uuid: () => crypto.randomUUID() });
+      api = demo ? demoApi(localStorage, cartKey) : createApi({ apiUrl, token });
     } catch (error) { $('setup-title').textContent = 'Necesitamos revisar tu dispositivo'; $('setup-message').textContent = error.message; return; }
     $('setup').hidden = true; $('workspace').hidden = false;
     $('demo-banner').hidden = !demo;
-    let products = [], history = { ultimo: [], frecuentes: [] }, view = 'ultimo', busy = false;
-    const locked = () => Boolean(model.state.pending || model.state.receipt || busy);
-    root.sumetecPedidosPuedeActualizar = () => !busy;
-    root.sumetecPedidosGuardarParaActualizar = () => {
-      if (busy) throw new Error('Espera a que termine el envío antes de actualizar.');
-      if (!model.state.pending && !model.state.receipt) {
-        for (const input of $('cart-lines').querySelectorAll('input[data-codigo]'))
-          model.setQuantity(input.dataset.codigo, input.value);
-        model.setNote($('note').value);
+    let products = [], history = { ultimo: [], frecuentes: [] }, view = 'ultimo', busy = false, reviewedOrder = null, saving = 0;
+    const openedHash = location.hash;
+    window.addEventListener('hashchange', () => {
+      const nextToken = tokenFromHash(location.hash);
+      if (!demo && nextToken && nextToken !== token) {
+        if (busy || saving) { window.history.replaceState(null, '', location.pathname + location.search + openedHash); notice('Espera a que termine el guardado, consulta o envío antes de abrir otro enlace.', true); }
+        else location.reload();
       }
-      model.flush();
+    });
+    const locked = () => Boolean(model.state.pending || model.state.receipt || busy);
+    root.sumetecPedidosPuedeActualizar = () => !busy && !saving;
+    root.sumetecPedidosGuardarParaActualizar = async () => {
+      if (busy || saving) throw new Error('Espera a que termine el guardado o envío antes de actualizar.');
+      await model.exclusive(() => {
+        if (!model.state.pending && !model.state.receipt) {
+          for (const input of $('cart-lines').querySelectorAll('input[data-codigo]'))
+            model.setQuantity(input.dataset.codigo, input.value);
+          model.setNote($('note').value);
+        }
+        model.flush();
+      });
       return true;
     };
-    function action(callback) {
-      try { callback(); renderCart(); } catch (error) { notice(error.message, true); }
+    async function action(callback) {
+      if (busy) return;
+      saving++;
+      try { await model.exclusive(callback); } catch (error) { notice(error.message, true); }
+      finally { saving--; if (!saving) {renderCart(); renderProducts();} }
     }
     function renderProducts() {
       const query = $('search').value;
@@ -259,7 +307,7 @@
         const input = element('input', 'quantity'); input.type = 'number'; input.inputMode = 'numeric'; input.min = '1'; input.max = '1000000'; input.step = '1'; input.value = String(item.cantidad); input.disabled = isLocked;
         input.setAttribute('aria-label', `Cantidad en tu pedido de ${item.codigo}`);
         input.dataset.codigo = item.codigo;
-        input.addEventListener('change', () => { action(() => model.setQuantity(item.codigo, input.value)); input.value = String(model.state.lines.find(line => line.codigo === item.codigo)?.cantidad || 1); });
+        input.addEventListener('change', () => { const quantity = input.value; action(() => model.setQuantity(item.codigo, quantity)); });
         label.append(input);
         const remove = button('Quitar', () => action(() => model.remove(item.codigo)), 'text-button'); remove.disabled = isLocked;
         controls.append(label, remove); row.append(controls); $('cart-lines').append(row);
@@ -269,19 +317,36 @@
       $('pending').hidden = !state.pending;
       $('receipt').hidden = !state.receipt;
       $('retry-send').disabled = busy; $('check-status').disabled = busy; $('correct-order').disabled = busy; $('new-order').disabled = busy;
+      $('repeat-last').disabled = isLocked || !!state.lines.length || !!state.note || !history.ultimo.length || !products.length;
       if (state.receipt) {
         $('receipt-folio').textContent = state.receipt.folio;
         $('receipt-status').textContent = state.receipt.estado.toUpperCase() === 'ATENDIDO' ? 'SUMETEC marcó tu solicitud como atendida.' : 'Solicitud recibida por SUMETEC.';
       }
+      $('receipt-history').replaceChildren();
+      $('history-empty').hidden = state.receipts.length > 0;
+      for (const receipt of [...state.receipts].reverse()) {
+        const row = element('li', 'saved-receipt');
+        row.append(element('strong', '', receipt.folio), element('p', '', receipt.estado === 'ATENDIDO' ? 'Atendida' : 'Recibida por SUMETEC'));
+        if (receipt.referencia) row.append(element('p', '', `Cotización: ${receipt.referencia}`));
+        const check = button('Consultar estado', () => checkReceipt(receipt.id));
+        check.disabled = busy; row.append(check); $('receipt-history').append(row);
+      }
     }
     async function send(operation = 'enviar_pedido') {
       if (busy) return;
-      let payload;
-      try { payload = model.prepare(); } catch (error) { notice(error.message, true); return; }
+      const reviewed = operation === 'enviar_pedido' && !model.state.pending ? reviewedOrder : model.state;
       busy = true; renderCart(); renderProducts();
       $('review-dialog').close();
       notice(operation === 'estado_pedido' ? 'Consultando si SUMETEC recibió tu pedido…' : operation === 'descartar_pedido' ? 'Comprobando el pedido antes de permitir cambios…' : 'Enviando tu solicitud…');
       try {
+        // El candado cubre lectura fresca, UUID durable, red y acuse; otra ventana reutiliza el mismo intento.
+        await model.exclusive(async () => {
+        const fresh = model.state;
+        if (!reviewed || JSON.stringify([fresh.lines, fresh.note]) !== JSON.stringify([reviewed.lines, reviewed.note]) ||
+            (reviewed.pending && reviewed.pending.id !== (fresh.pending?.id || fresh.receipt?.id))) throw new Error('Revisa el pedido otra vez: cambió en otra pestaña después de abrir la revisión.');
+        if (model.state.receipt) { notice('Este pedido ya quedó registrado. Conservamos su folio sin enviarlo otra vez.'); return; }
+        const payload = model.prepare();
+        renderCart(); renderProducts();
         const result = await api(operation, operation === 'enviar_pedido' ? payload : { id: payload.id });
         if (result.descartado === true) {
           model.rejectPending(payload.id, result);
@@ -292,21 +357,48 @@
         notice(result.notificacionPendiente ? 'Tu solicitud quedó registrada. El aviso a SUMETEC está pendiente; no hace falta volver a enviarla.' : 'Tu solicitud quedó registrada. SUMETEC te confirma precio y existencia.');
         renderCart();
         $('receipt').focus();
+        }, {refresh: true});
       } catch (error) { notice(error.message, true); }
       finally { busy = false; renderCart(); renderProducts(); }
     }
-    $('note').addEventListener('input', () => {
-      try { model.setNote($('note').value); $('note-count').textContent = `${$('note').value.length}/1000`; }
-      catch (error) { notice(error.message, true); $('note').value = model.state.note; }
+    async function checkReceipt(id) {
+      if (busy) return;
+      busy = true; renderCart(); renderProducts(); notice('Consultando el estado de tu solicitud…');
+      try {
+        await model.exclusive(async () => {
+          const result = await api('estado_pedido', {id});
+          model.updateReceipt(result.pedido);
+        }, {refresh: true});
+        notice('Estado de la solicitud actualizado.');
+      } catch (error) { notice(error.message, true); }
+      finally { busy = false; renderCart(); renderProducts(); }
+    }
+    $('note').addEventListener('input', async () => {
+      const note = $('note').value;
+      saving++;
+      try { await model.exclusive(() => model.setNote(note)); $('note-count').textContent = `${note.length}/1000`; $('repeat-last').disabled = !!note || locked() || !!model.state.lines.length; }
+      catch (error) { notice(error.message, true); renderCart(); renderProducts(); }
+      finally { saving--; if (!saving) renderCart(); }
     });
     $('search').addEventListener('input', renderProducts);
     document.querySelectorAll('[data-view]').forEach(tab => tab.addEventListener('click', () => { view = tab.dataset.view; renderProducts(); }));
     $('jump-cart').addEventListener('click', () => { $('cart').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('cart-title').focus({ preventScroll: true }); });
-    $('review').addEventListener('click', () => {
-      const state = model.state; $('review-lines').replaceChildren();
-      for (const item of state.lines) $('review-lines').append(element('li', '', `${item.cantidad} ${item.unidad || 'PZA'} · ${item.codigo} · ${item.descripcion || ''}`));
-      $('review-note').textContent = state.note || 'Sin nota adicional.';
-      $('review-dialog').showModal();
+    $('review').addEventListener('click', async () => {
+      if (busy) return;
+      const quantities = [...$('cart-lines').querySelectorAll('input[data-codigo]')].map(input => [input.dataset.codigo, input.value]);
+      const note = $('note').value;
+      saving++;
+      try {
+        await model.exclusive(() => {
+          for (const [code, quantity] of quantities) model.setQuantity(code, quantity);
+          model.setNote(note);
+          const state = model.state; reviewedOrder = state; $('review-lines').replaceChildren();
+          for (const item of state.lines) $('review-lines').append(element('li', '', `${item.cantidad} ${item.unidad || 'PZA'} · ${item.codigo} · ${item.descripcion || ''}`));
+          $('review-note').textContent = state.note || 'Sin nota adicional.';
+          $('review-dialog').showModal();
+        });
+      } catch (error) { notice(error.message, true); }
+      finally { saving--; if (!saving) {renderCart(); renderProducts();} }
     });
     $('close-review').addEventListener('click', () => $('review-dialog').close());
     $('confirm-send').addEventListener('click', () => send());
@@ -314,6 +406,16 @@
     $('check-status').addEventListener('click', () => send('estado_pedido'));
     $('correct-order').addEventListener('click', () => send('descartar_pedido'));
     $('new-order').addEventListener('click', () => action(() => { model.startNew(); renderProducts(); notice('Tu nuevo pedido está listo para agregar productos.'); $('search').focus(); }));
+    $('repeat-last').addEventListener('click', () => action(() => {
+      if (history.ultimo.some(line => !products.some(p => p.codigo === line.codigo))) throw new Error('Un producto de tu última compra ya no está en el catálogo. Revisa los productos disponibles antes de pedir.');
+      model.repeat(history.ultimo); notice('Copiamos las cantidades de tu última compra. Revisa medidas y cantidades antes de enviar.');
+      $('cart').scrollIntoView({behavior:'smooth', block:'start'}); $('cart-title').focus({preventScroll:true});
+    }));
+    window.addEventListener('beforeunload', event => { if (busy || saving) { event.preventDefault(); event.returnValue = ''; } });
+    window.addEventListener('storage', event => {
+      if (event.key !== null && event.key !== cartKey) return;
+      if (!busy) model.exclusive(() => {renderCart(); renderProducts();}, {refresh:true}).catch(error => notice(error.message, true));
+    });
     async function load() {
       $('reload-data').disabled = true; notice('Cargando tus productos…');
       const results = await Promise.allSettled([api('catalogo_pedidos'), api('historial_cliente')]);

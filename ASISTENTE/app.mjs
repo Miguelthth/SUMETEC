@@ -1,12 +1,31 @@
-import {createState,createDemo,loadState,saveState,addThread,addInstruction,prepareDraft,editDraft,summarize,ACTIONS,setComposerDraft,getComposerDraft} from './model.mjs';
+import {createState,loadState,saveState,addThread,addInstruction,prepareDraft,editDraft,saveDraftEdit,reviewDraft,summarize,setComposerDraft,getComposerDraft,parseBackup,replaceFromBackup,updateFollowup,followupAgenda,PREIMPORT_KEY} from './model.mjs';
 
 const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-let mode='work',state,view='chat',blockedStorage=false,toastTimer;
+let mode='work',state,view='chat',blockedStorage=false,toastTimer,canWrite=false,releaseWriter,importedSpaces;
+// Mantener el candado durante toda la página evita la carrera de leer y después sobrescribir localStorage.
+await new Promise(resolve=>{
+  if(!navigator.locks?.request){resolve();return;}
+  navigator.locks.request('sumetec-asistente:writer',{ifAvailable:true},lock=>{
+    canWrite=!!lock;resolve();
+    if(lock)return new Promise(release=>{releaseWriter=release;});
+  }).catch(()=>resolve());
+});
 try{mode=sessionStorage.getItem('sumetec-asistente:mode')==='demo'?'demo':'work';state=loadState(localStorage,mode);}catch(error){state=createState();blockedStorage=true;showStorageError(error.message);}
+
+function requireWriter(){if(canWrite)return true;toast('Esta ventana es de consulta. Cierra la otra ventana y pulsa Retomar edición.');return false;}
+function reflectWriter(){
+  $('#writer-warning').hidden=canWrite;
+  $('#writer-message').textContent=navigator.locks?.request?'Otra ventana de Asistente está editando. Aquí puedes consultar; para escribir, cierra la otra ventana y retoma la edición.':'Este navegador no permite proteger la escritura entre ventanas. Usa una versión actual de Chrome, Edge o Safari para editar. Puedes consultar y exportar tus datos.';
+  const editable=canWrite&&!blockedStorage;
+  document.querySelectorAll('[data-write],#instruction,#draft-form input,#draft-form textarea,#followup-form input,#followup-form select').forEach(control=>{control.disabled=!editable;});
+  document.querySelectorAll('[data-action="import"]').forEach(control=>{control.disabled=!canWrite;});
+  if(!canWrite)$('#save-state').textContent='Consulta · edición bloqueada';
+}
 
 function showStorageError(message){$('#storage-warning').hidden=false;$('#storage-warning').textContent=message;$('#save-state').textContent='Sin guardar';}
 function persist(){
+  if(!canWrite)return false;
   if(blockedStorage){showStorageError('El historial anterior no se puede leer. No se sobrescribirá: exporta un respaldo y conserva esta pestaña.');return false;}
   const result=saveState(localStorage,state);
   if(!result.ok){showStorageError(result.error);return false;}
@@ -34,6 +53,7 @@ function render(){
   $('#instruction').value=getComposerDraft(state,state.selectedThread);
   $('[data-action="open-context"]').disabled=!currentThread();
   renderChat();renderReview();renderMail();renderSummary();
+  reflectWriter();
 }
 
 function renderChat(){
@@ -65,11 +85,14 @@ function renderSummary(){
   $('#summary-drafts').innerHTML=state.drafts.length?state.drafts.map(draftCard).join(''):empty('Sin borradores todavía','Prepara una pregunta desde el chat o un correo.');
   const tasks=state.messages.filter(m=>m.role==='user'&&m.status==='pending').slice().reverse();
   $('#summary-tasks').innerHTML=tasks.length?tasks.map(m=>`<button class="task-row" data-task-thread="${esc(m.threadId||'')}"><p>${esc(m.body)}</p><span>${esc(threadFor(m.threadId)?.name||'Conversación general')} · En espera de IA</span></button>`).join(''):empty('Sin indicaciones pendientes','Las instrucciones que escribas aparecerán aquí.');
+  const labels={pending:'Pendiente',waiting:'Esperando proveedor',resolved:'Resuelto'};
+  const agenda=followupAgenda(state,{status:$('#followup-filter').value});
+  $('#followup-list').innerHTML=agenda.length?agenda.map(item=>`<article class="followup-card ${item.overdue?'overdue':''}"><div><strong>${esc(item.thread.name)}</strong><p>${esc(item.thread.subject)}</p><span class="tag">${labels[item.status]}</span><p class="followup-meta">${item.nextContactAt?`${item.overdue?'Contacto vencido':'Próximo contacto'}: ${esc(item.nextContactAt)}`:'Sin fecha de próximo contacto'} · ${item.daysOpen===null?'Fecha de captura no disponible':`${item.daysOpen} días desde la captura`}</p></div><div class="followup-actions"><button class="button subtle" data-followup-thread="${esc(item.thread.id)}">Abrir hilo</button><button class="button subtle" data-edit-followup="${esc(item.thread.id)}" data-write>Editar seguimiento</button></div></article>`).join(''):empty('Sin proveedores en este filtro','Agrega un correo o cambia el estado elegido.');
 }
 
 function modal(title,html){
   if(!closeModal())return;
-  $('#modal-title').textContent=title;$('#modal-body').innerHTML=html;$('#modal').showModal();
+  $('#modal-title').textContent=title;$('#modal-body').innerHTML=html;$('#modal').showModal();reflectWriter();
 }
 function closeModal(){
   const draftForm=$('#draft-form');
@@ -80,6 +103,7 @@ function showConnections(){modal('Conexiones del asistente',`<p class="dialog-hi
 function showRules(){modal('Así trabajará tu asistente',`<p class="dialog-hint">Reglas acordadas para SUMETEC. Definen el alcance de la futura conexión real.</p><ul class="rules-list"><li>Buscar clientes en Tijuana y alrededores.</li><li>Investigar proveedores de México, Estados Unidos y China.</li><li>Solicitar cotizaciones y dar seguimiento a proveedores.</li><li>Presentarte precios de venta y compromisos para revisión.</li><li>Comparar productos equivalentes y distinguir precios, estimaciones y cotizaciones confirmadas.</li></ul><div class="notice">Hoy puedes guardar indicaciones, preparar plantillas y revisar borradores. Los envíos y la interpretación con IA aún no están activos.</div><div class="dialog-actions"><button class="button primary" data-action="close-modal">Entendido</button></div>`);}
 
 function showAddMail(){
+  if(!requireWriter())return;
   modal('Agregar una conversación',`<p class="dialog-hint">Copia un correo para trabajar sobre él. Se guardará ${state.mode==='demo'?'en los ejemplos de prueba':'en tu espacio de trabajo de este navegador'}.</p><form id="mail-form"><label class="field">Nombre del proveedor<input name="name" required maxlength="120" autocomplete="organization" placeholder="Nombre de la empresa"></label><label class="field">Correo del proveedor<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="ventas@proveedor.com"></label><label class="field">Asunto<input name="subject" required maxlength="200" placeholder="Cotización o consulta"></label><label class="field">Mensaje recibido<textarea name="body" required maxlength="20000" placeholder="Pega aquí el texto del correo…"></textarea></label><p id="form-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" class="button subtle" data-action="close-modal">Cancelar</button><button type="submit" class="button primary">Guardar conversación</button></div></form>`);
 }
 function showThread(id){
@@ -89,22 +113,32 @@ function showThread(id){
 
 function showDraft(id){
   const draft=state.drafts.find(d=>d.id===id);if(!draft)return;
-  modal('Revisar borrador',`<div class="notice">Plantilla editable, sin IA. ${state.mode==='demo'?'Este destinatario es de ejemplo. ':''}Gmail está pendiente de conectar; este mensaje no se ha enviado.</div><form id="draft-form" data-id="${esc(draft.id)}" data-dirty="false"><label class="field">Para<span class="readonly">${esc(draft.to)}</span></label><label class="field">Asunto<input name="subject" required maxlength="200" value="${esc(draft.subject)}"></label><label class="field">Mensaje<textarea name="body" class="long" required maxlength="20000">${esc(draft.body)}</textarea></label><p id="draft-error" class="error" role="alert"></p><div class="dialog-actions"><button type="submit" class="button subtle">Guardar cambios</button><button type="button" class="button subtle" data-action="copy-draft">Copiar texto</button><button type="button" class="button primary" data-action="review-draft">Marcar revisado</button></div><p class="footnote">Puedes copiar el texto para usarlo manualmente. Marcar revisado no envía el correo.</p></form>`);
-  $('#draft-form')?.addEventListener('input',()=>{$('#draft-form').dataset.dirty='true';});
+  modal('Revisar borrador',`<div class="notice">Plantilla editable, sin IA. ${state.mode==='demo'?'Estás en el espacio de ejemplos. ':''}Gmail está pendiente de conectar; este mensaje no se ha enviado.</div><form id="draft-form" data-id="${esc(draft.id)}" data-dirty="false"><label class="field">Para<span class="readonly">${esc(draft.to)}</span></label><label class="field">Asunto<input name="subject" required maxlength="200" value="${esc(draft.subject)}"></label><label class="field">Mensaje<textarea name="body" class="long" required maxlength="20000">${esc(draft.body)}</textarea></label><p id="draft-error" class="error" role="alert"></p><div class="dialog-actions"><button type="submit" class="button subtle">Guardar cambios</button><button type="button" class="button subtle" data-action="copy-draft">Copiar texto</button><button type="button" class="button primary" data-action="review-draft">Marcar revisado</button><button type="button" class="button subtle" data-action="export">Exportar respaldo</button></div><p class="footnote">Los cambios se guardan al escribir. Si aparece «Sin guardar», conserva esta ventana y exporta un respaldo. Marcar revisado no envía el correo.</p></form>`);
+  $('#draft-form')?.addEventListener('input',()=>{
+    if(!requireWriter())return;
+    const form=$('#draft-form'),values=new FormData(form);
+    saveDraftEdit(state,form.dataset.id,{subject:values.get('subject'),body:values.get('body')});
+    form.dataset.dirty=String(!persist());renderReview();renderSummary();reflectWriter();
+  });
+  $('#draft-form [type="submit"]').disabled=!canWrite||blockedStorage;
+  $('[data-action="review-draft"]').disabled=!canWrite||blockedStorage;
 }
 function saveDraftForm(notify=true){
   const form=$('#draft-form');if(!form)return false;
+  if(!requireWriter())return false;
   if(!form.reportValidity())return false;
   try{
     if(form.dataset.dirty==='true'){const values=new FormData(form);editDraft(state,form.dataset.id,{subject:values.get('subject'),body:values.get('body')});form.dataset.dirty='false';}
-    const saved=persist();render();if(notify)toast(saved?'Borrador guardado. No se ha enviado.':'Borrador en memoria: exporta un respaldo.');return true;
+    const saved=persist();form.dataset.dirty=String(!saved);render();if(notify)toast(saved?'Borrador guardado. No se ha enviado.':'Borrador en memoria: exporta un respaldo.');return saved;
   }catch(error){$('#draft-error').textContent=error.message;return false;}
 }
 function makeDraft(action,open=true){
+  if(!requireWriter())return null;
   if(!currentThread()){toast('Selecciona o agrega primero el correo del proveedor.');setView('mail');return null;}
   const draft=prepareDraft(state,state.selectedThread,action);persist();render();if(open)showDraft(draft.id);return draft;
 }
 function sendInstruction(){
+  if(!requireWriter())return;
   const textarea=$('#instruction'),value=textarea.value.trim();if(!value)return;
   try{
     addInstruction(state,state.selectedThread,value);
@@ -122,10 +156,10 @@ function sendInstruction(){
 
 function toggleDemo(){
   if(!closeModal())return;
-  if(!persist()){toast('Exporta un respaldo antes de cambiar de espacio. Hay datos sin guardar.');return;}
+  if(canWrite&&!persist()){toast('Exporta un respaldo antes de cambiar de espacio. Hay datos sin guardar.');return;}
   mode=state.mode==='demo'?'work':'demo';
   try{state=loadState(localStorage,mode);sessionStorage.setItem('sumetec-asistente:mode',mode);}catch(error){showStorageError(error.message);return;}
-  view='chat';persist();render();toast(mode==='demo'?'Ejemplos de prueba. Tu trabajo propio sigue separado.':'Volviste a tu espacio de trabajo.');
+  view='chat';if(canWrite)persist();render();toast(mode==='demo'?'Ejemplos de prueba. Tu trabajo propio sigue separado.':'Volviste a tu espacio de trabajo.');
 }
 function download(filename,content,type='application/json'){
   const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -135,6 +169,48 @@ function exportBackup(){
   download(`sumetec-asistente-respaldo-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({exportedAt:new Date().toISOString(),current:state,stored:raw},null,2));toast('Respaldo preparado para descargar.');
 }
 
+function showFollowup(id){
+  if(!requireWriter())return;
+  const thread=threadFor(id);if(!thread)return;
+  const followup=thread.followup||{status:'pending',nextContactAt:''};
+  modal('Seguimiento del proveedor',`<p class="dialog-hint">${esc(thread.name)} · ${esc(thread.subject)}. Esta agenda es manual; no envía correos ni crea recordatorios externos.</p><form id="followup-form" data-id="${esc(thread.id)}"><label class="field">Estado<select name="status"><option value="pending">Pendiente</option><option value="waiting">Esperando proveedor</option><option value="resolved">Resuelto</option></select></label><label class="field">Próximo contacto<input name="nextContactAt" type="date" value="${esc(followup.nextContactAt)}"></label><p class="footnote">La antigüedad se calcula desde que agregaste este correo a la app, no desde su recepción en Gmail.</p><p class="error" id="followup-error" role="alert"></p><div class="dialog-actions"><button type="button" class="button subtle" data-action="export">Exportar respaldo</button><button type="button" class="button subtle" data-action="close-modal">Cancelar</button><button type="submit" class="button primary" data-write>Guardar seguimiento</button></div></form>`);
+  $('#followup-form [name="status"]').value=followup.status;
+}
+function reflectImport(){
+  const mode=$('#import-space').value,selected=importedSpaces?.[mode];
+  $('#import-preview').textContent=selected?`${mode==='work'?'Trabajo propio':'Ejemplos de prueba'}: ${selected.threads.length} conversaciones, ${selected.messages.length} mensajes y ${selected.drafts.length} borradores. Se reemplazará solamente este espacio; el otro seguirá igual.`:'Selecciona un respaldo y el espacio que deseas recuperar.';
+  $('[data-action="confirm-import"]').disabled=!canWrite||!selected||!$('#import-confirm').checked;
+}
+function showImport(){
+  if(!requireWriter())return;
+  importedSpaces=null;
+  modal('Importar respaldo',`<p class="dialog-hint">Elige un JSON exportado por Asistente. Trabajo propio y ejemplos se recuperan en su mismo espacio. Antes de reemplazar, se comprobará una copia local del historial anterior y se preparará su descarga.</p><label class="field">Respaldo JSON<input id="backup-file" type="file" accept=".json,application/json"></label><label class="field">Espacio que se reemplazará<select id="import-space" disabled><option value="">Elige un espacio</option></select></label><p id="import-preview" class="notice"></p><label class="import-check"><input id="import-confirm" type="checkbox"> Confirmo reemplazar el espacio elegido con el historial de este respaldo.</label><p id="import-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" class="button subtle" data-action="previous-backup">Descargar respaldo previo local</button><button type="button" class="button primary" data-action="confirm-import" disabled>Reemplazar espacio elegido</button></div><p class="footnote">La copia local previa conserva el último reemplazo. Guarda también los archivos descargados fuera de este navegador.</p>`);
+  reflectImport();
+  $('#backup-file').addEventListener('change',async event=>{
+    importedSpaces=null;$('#import-error').textContent='';$('#import-confirm').checked=false;$('#import-space').disabled=true;reflectImport();
+    const file=event.target.files[0];if(!file)return;
+    try{
+      if(file.size>10*1024*1024)throw Error('El respaldo supera 10 MB.');
+      const parsed=parseBackup(await file.text());
+      if(event.target!==$('#backup-file')||event.target.files[0]!==file)return;
+      importedSpaces=parsed;$('#import-space').innerHTML='<option value="">Elige un espacio</option>'+Object.keys(parsed).map(mode=>`<option value="${mode}">${mode==='work'?'Trabajo propio':'Ejemplos de prueba'}</option>`).join('');$('#import-space').disabled=false;reflectImport();
+    }catch(error){if(event.target===$('#backup-file')&&event.target.files[0]===file)$('#import-error').textContent=error.message;}
+  });
+  $('#import-space').addEventListener('change',()=>{$('#import-confirm').checked=false;reflectImport();});
+  $('#import-confirm').addEventListener('change',reflectImport);
+}
+function confirmImport(){
+  if(!requireWriter())return;
+  const target=$('#import-space').value,selected=importedSpaces?.[target];
+  if(!selected||!$('#import-confirm').checked)return;
+  if(!blockedStorage&&!persist()){$('#import-error').textContent='Hay cambios sin guardar. Exporta un respaldo y resuelve el almacenamiento antes de reemplazar.';return;}
+  const result=replaceFromBackup(localStorage,selected,target);
+  if(!result.ok){$('#import-error').textContent=result.error;return;}
+  download(`sumetec-asistente-antes-importar-${new Date().toISOString().replace(/[:.]/g,'-')}.json`,result.backup);
+  if(target===mode||blockedStorage){mode=target;state=loadState(localStorage,target);blockedStorage=false;sessionStorage.setItem('sumetec-asistente:mode',mode);}
+  $('#storage-warning').hidden=true;$('#save-state').textContent='Guardado en este navegador';closeModal();render();toast('Espacio restaurado. Se conservó el respaldo previo local y se preparó su descarga.');
+}
+
 document.addEventListener('click',async event=>{
   const button=event.target.closest('button');if(!button)return;
   try{
@@ -142,6 +218,8 @@ document.addEventListener('click',async event=>{
     if(button.dataset.template){makeDraft(button.dataset.template);return;}
     if(button.dataset.draft){showDraft(button.dataset.draft);return;}
     if(button.dataset.thread){showThread(button.dataset.thread);return;}
+    if(button.dataset.editFollowup){showFollowup(button.dataset.editFollowup);return;}
+    if(button.dataset.followupThread){state.selectedThread=button.dataset.followupThread;persist();setView('chat');return;}
     if(button.hasAttribute('data-task-thread')){state.selectedThread=button.dataset.taskThread||null;persist();setView('chat');return;}
     if(button.dataset.useThread){const action=button.dataset.nextTemplate;state.selectedThread=button.dataset.useThread;persist();closeModal();setView('chat');if(action)makeDraft(action);else $('#instruction').focus();return;}
     switch(button.dataset.action){
@@ -154,17 +232,22 @@ document.addEventListener('click',async event=>{
       case 'toggle-demo':toggleDemo();break;
       case 'demo-from-modal':closeModal();if(state.mode==='demo')setView('chat');else toggleDemo();break;
       case 'export':exportBackup();break;
+      case 'import':showImport();break;
+      case 'confirm-import':confirmImport();break;
+      case 'resume-writer':location.reload();break;
+      case 'previous-backup':{const raw=localStorage.getItem(PREIMPORT_KEY);if(raw)download('sumetec-asistente-antes-importar.json',raw);else toast('Todavía no hay un reemplazo con respaldo previo en este navegador.');break;}
       case 'copy-draft':{
-        if(!saveDraftForm(false))break;
+        if(canWrite&&!saveDraftForm(false))break;
         const form=$('#draft-form'),draft=state.drafts.find(d=>d.id===form.dataset.id);
         try{await navigator.clipboard.writeText(`Para: ${draft.to}\nAsunto: ${draft.subject}\n\n${draft.body}`);toast('Texto copiado. El correo no se ha enviado.');}
         catch{$('#draft-error').textContent='El navegador no permitió copiar. Selecciona el texto y cópialo manualmente.';}break;
       }
       case 'review-draft':{
+        if(!requireWriter())break;
         if(!saveDraftForm(false))break;
         const draft=state.drafts.find(d=>d.id===$('#draft-form').dataset.id);
-        if(/\[completar\]/i.test(draft.body)){$('#draft-error').textContent='Completa las medidas y cantidades antes de marcarlo revisado.';break;}
-        draft.reviewed=true;const saved=persist();render();toast(saved?'Borrador marcado como revisado. Sigue sin enviarse.':'Revisión en memoria: exporta un respaldo.');break;
+        try{reviewDraft(state,draft.id);}catch(error){$('#draft-error').textContent=error.message;break;}
+        const saved=persist();render();toast(saved?'Borrador marcado como revisado. Sigue sin enviarse.':'Revisión en memoria: exporta un respaldo.');break;
       }
     }
   }catch(error){toast(error.message);}
@@ -173,16 +256,29 @@ document.addEventListener('submit',event=>{
   if(event.target.id==='chat-form'){event.preventDefault();sendInstruction();}
   if(event.target.id==='draft-form'){event.preventDefault();saveDraftForm();}
   if(event.target.id==='mail-form'){
-    event.preventDefault();try{const values=Object.fromEntries(new FormData(event.target));addThread(state,values);const saved=persist();closeModal();setView('chat');toast(saved?'Conversación guardada. Ya puedes darle una indicación.':'Conversación en memoria: exporta un respaldo.');}catch(error){$('#form-error').textContent=error.message;}
+    event.preventDefault();if(!requireWriter())return;try{const values=Object.fromEntries(new FormData(event.target));addThread(state,values);const saved=persist();closeModal();setView('chat');toast(saved?'Conversación guardada. Ya puedes darle una indicación.':'Conversación en memoria: exporta un respaldo.');}catch(error){$('#form-error').textContent=error.message;}
+  }
+  if(event.target.id==='followup-form'){
+    event.preventDefault();if(!requireWriter())return;
+    try{updateFollowup(state,event.target.dataset.id,Object.fromEntries(new FormData(event.target)));if(!persist()){$('#followup-error').textContent='Seguimiento sin guardar. Exporta un respaldo antes de salir.';return;}closeModal();render();toast('Seguimiento guardado.');}catch(error){$('#followup-error').textContent=error.message;}
   }
 });
 $('#context-select').addEventListener('change',event=>{state.selectedThread=event.target.value||null;persist();render();});
 $('#mail-search').addEventListener('input',renderMail);
+$('#followup-filter').addEventListener('change',()=>{renderSummary();reflectWriter();});
 $('#instruction').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();sendInstruction();}});
-$('#instruction').addEventListener('input',()=>{setComposerDraft(state,state.selectedThread,$('#instruction').value);persist();});
+$('#instruction').addEventListener('input',()=>{if(!canWrite)return;setComposerDraft(state,state.selectedThread,$('#instruction').value);persist();});
 window.sumetecAsistenteGuardarParaActualizar=()=>{
-  if(document.querySelector('dialog[open]'))return false;
+  if(!canWrite||document.querySelector('dialog[open]'))return false;
   setComposerDraft(state,state.selectedThread,$('#instruction').value);return persist();
 };
 $('#modal').addEventListener('cancel',event=>{event.preventDefault();closeModal();});
+window.addEventListener('storage',event=>{
+  if(canWrite||event.key!==`sumetec-asistente:${mode}:v1`)return;
+  try{state=loadState(localStorage,mode);$('#modal').close();render();}catch(error){showStorageError(error.message);}
+});
+window.addEventListener('beforeunload',event=>{if($('#save-state').textContent==='Sin guardar'||$('#draft-form')?.dataset.dirty==='true'){event.preventDefault();event.returnValue='';}});
+window.addEventListener('pagehide',()=>{canWrite=false;releaseWriter?.();});
+window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
+if(canWrite&&!blockedStorage)persist();
 render();

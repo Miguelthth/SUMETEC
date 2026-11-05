@@ -28,7 +28,27 @@
       if (storage.getItem('cot_draft_r') !== texto) throw Error('Sin persistencia');
     } catch (_) { throw Error('No se pudo guardar el borrador. Libera espacio o exporta tus datos antes de continuar.'); }
   }
-  const api = {crearBorrador,guardarBorrador};
+  function fechaPedido(pedido) {
+    const valor=typeof pedido?.fecha==='string'?Date.parse(pedido.fecha):NaN;
+    return Number.isFinite(valor)?valor:null;
+  }
+  function ordenarPendientes(pedidos) {
+    return [...pedidos].sort((a,b)=>(fechaPedido(a)??Infinity)-(fechaPedido(b)??Infinity));
+  }
+  function estadoPendiente(pedido,ahora=Date.now()) {
+    const fecha=fechaPedido(pedido),minutos=fecha===null?null:Math.floor((ahora-fecha)/60000);
+    let antiguedad='Fecha no disponible';
+    if(minutos!==null) {
+      if(minutos<0)antiguedad='Fecha posterior al reloj de este equipo';
+      else if(minutos<60)antiguedad=minutos?'Hace '+minutos+' min':'Hace menos de 1 min';
+      else if(minutos<1440)antiguedad='Hace '+Math.floor(minutos/60)+' h';
+      else {const dias=Math.floor(minutos/1440),horas=Math.floor(minutos%1440/60);antiguedad='Hace '+dias+(dias===1?' día':' días')+(horas?' y '+horas+' h':'');}
+    }
+    return {minutosEsperando:minutos===null||minutos<0?null:minutos,antiguedad,
+      correo:pedido.notificado===true?'Aviso por correo enviado':pedido.notificado===false?'Aviso por correo sin confirmar':'Aviso por correo sin dato',
+      revisarCorreo:pedido.notificado===false};
+  }
+  const api = {crearBorrador,guardarBorrador,ordenarPendientes,estadoPendiente};
   if (typeof module === 'object' && module.exports) { module.exports = api; return; }
 
   let dialogo, lista, mensaje, contador, ultimaConsulta = 0, consultando = false, origen = null;
@@ -83,8 +103,14 @@
   function pintar(pedidos,total) {
     lista.replaceChildren();
     if(!pedidos.length)lista.append(nodo('p','No hay pedidos pendientes. Comparte su enlace con un cliente para recibir el primero.'));
-    for(const pedido of pedidos) {
+    if(pedidos.length) {
+      const sinAviso=pedidos.filter(p=>p.notificado===false).length;
+      lista.append(nodo('p','Más antiguos primero · '+pedidos.length+' en esta vista'+(sinAviso?' · '+sinAviso+' con aviso por correo sin confirmar':''),'portal-ayuda'));
+    }
+    for(const pedido of ordenarPendientes(pedidos)) {
+      const estado=estadoPendiente(pedido);
       const fila=nodo('article',null,'portal-fila');fila.append(nodo('small',pedido.folio+' · '+pedido.fecha),nodo('h3',pedido.cliente));
+      fila.append(nodo('p',estado.antiguedad,'portal-antiguedad'),nodo('p',estado.correo,estado.revisarCorreo?'portal-alerta':'portal-ayuda'));
       fila.append(nodo('p',pedido.lineas.length+' productos · Pendiente de revisar'));
       fila.append(boton('Revisar pedido',()=>detalle(pedido.id)));lista.append(fila);
     }
@@ -104,6 +130,10 @@
   async function detalle(id) {
     const {pedido}=await consultar('detalle',{id});
     lista.replaceChildren();lista.append(nodo('h3',pedido.folio+' · '+pedido.cliente));
+    if(pedido.estado==='PENDIENTE') {
+      const estado=estadoPendiente(pedido);
+      lista.append(nodo('p',estado.antiguedad,'portal-antiguedad'),nodo('p',estado.correo,estado.revisarCorreo?'portal-alerta':'portal-ayuda'));
+    }
     for(const linea of pedido.lineas)lista.append(nodo('p',linea.cantidad+' '+(linea.unidad||'')+' · '+linea.codigo+' · '+linea.descripcion));
     if(pedido.nota)lista.append(nodo('p',pedido.nota,'portal-nota'));
     if(pedido.estado!=='PENDIENTE'){aviso('Este pedido ya fue atendido. Actualiza la bandeja.');return;}

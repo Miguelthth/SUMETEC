@@ -1,5 +1,5 @@
 // Generado por build.mjs: el caché cambia con el contenido completo del paquete.
-const BUILD = 'f42515cefd17d7a5';
+const BUILD = '0639a131fc541ea5';
 const ASSETS = ["asistente.html","styles.css","app.mjs","model.mjs","pwa.js","manifest.json","favicon.png","icons/asistente-192.png","icons/asistente-512.png","icons/asistente-maskable-512.png","icons/asistente-180.png"];
 const BASE = new URL('./',self.registration.scope);
 const PREFIX = 'sumetec-asistente-'+encodeURIComponent(BASE.pathname)+'-';

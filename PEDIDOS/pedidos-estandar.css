@@ -66,3 +66,4 @@ footer{line-height:1.6;padding-bottom:calc(28px + env(safe-area-inset-bottom))}
   footer{padding-bottom:calc(104px + env(safe-area-inset-bottom))}.section-heading h2{font-size:18px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.repeat-order{margin:16px 0 24px}.repeat-order .quiet{margin:8px 0}.order-history{margin-top:24px;border-top:1px solid var(--line,#d5dfe7);padding-top:16px}.order-history summary{cursor:pointer;font-weight:600;min-height:44px;display:list-item;align-content:center}.receipt-history{list-style:none;padding:0;margin:0}.saved-receipt{padding:16px 0;border-top:1px solid var(--line,#d5dfe7)}.saved-receipt p{margin:6px 0}.saved-receipt button{margin-top:8px}

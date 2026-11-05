@@ -1,5 +1,5 @@
 // build_deploy.py actualiza estos hashes a partir del contenido del paquete.
-const CACHE = 'sumetec-pedidos-5416ca8af5';
+const CACHE = 'sumetec-pedidos-cb131f61ee';
 const CACHE_ASSETS = 'sumetec-pedidos-assets-683bfdff97';
 const PREFIJO = 'sumetec-pedidos-';
 const CACHE_CONTROL = 'sumetec-pedidos@aceptada';

@@ -6906,7 +6906,11 @@ async function refrescarCatalogo(silencioso,catVer){
     localStorage.setItem('gs_cc',JSON.stringify(CLIENTES));
     localStorage.setItem('gs_sync',new Date().toLocaleString('es-MX'));
     localStorage.setItem('gs_sync_ts',String(Date.now())); // para calcular horas de desactualización
-    if(catVer!=null)localStorage.setItem('cat_ver',String(catVer)); // solo al terminar bien
+    // N16R (5/nov): si alguna de las lecturas salió de la foto ANTERIOR del diario (el servidor contestó «pendiente» porque aún armaba la nueva),
+    // esta descarga no es la versión catVer: no se sella, y se reintenta pronto (en el siguiente latido, ~20 s) en vez de esperar un cambio más.
+    const _fotoVieja=[rP,rC,rCM,rPM].some(r=>r&&r.headers&&typeof r.headers.get==='function'&&r.headers.get('X-Sumetec-Foto')==='vieja');
+    if(_fotoVieja)_catUltimoIntento=Date.now()-40000;
+    else if(catVer!=null)localStorage.setItem('cat_ver',String(catVer)); // solo al terminar bien
     if(!silencioso&&!catalogoVacio)toast('Catálogo actualizado ✓ ('+PRODUCTOS.length+' productos · '+CLIENTES.length+' clientes)','ok');
   }catch(e){ console.warn('refrescarCatalogo',e); }
   finally{ _catEnCurso=false; }

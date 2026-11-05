@@ -1,3 +1,3 @@
 // Generado por build_deploy.py.
-const VERSION_CODIGO='5416ca8af5';
+const VERSION_CODIGO='cb131f61ee';
 globalThis.SUMETEC_VERSION=VERSION_CODIGO;

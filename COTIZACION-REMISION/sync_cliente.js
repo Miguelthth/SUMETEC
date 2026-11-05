@@ -200,7 +200,9 @@
       if(r){
         if(d.tipo==='ping')return new root.Response(JSON.stringify(r),{status:200,headers:{'Content-Type':'application/json'}});
         const key=await hash(String(input)+'\n'+d.token+'\n'+app),ses=sesiones.get(key),t=ses && ses.activo && (!ses.temas || ses.temas.includes(d.tipo)) && ses.activo.temas[d.tipo];
-        if(t && (!r.pendiente || (ses.ultimo && Date.now()-ses.ultimo<600000)))return new root.Response(JSON.stringify(reconstruir(t.map)),{status:200,headers:{'Content-Type':'application/json'}});
+        // N16R (5/nov): con el servidor «pendiente» la foto servida es la ANTERIOR; se avisa en un encabezado para que quien lee el catálogo no la
+        // dé por la versión nueva (remision.html::refrescarCatalogo no sella cat_ver con una foto vieja y reintenta pronto).
+        if(t && (!r.pendiente || (ses.ultimo && Date.now()-ses.ultimo<600000)))return new root.Response(JSON.stringify(reconstruir(t.map)),{status:200,headers:r.pendiente?{'Content-Type':'application/json','X-Sumetec-Foto':'vieja'}:{'Content-Type':'application/json'}});
       }
       return nativo(input,options);
     }

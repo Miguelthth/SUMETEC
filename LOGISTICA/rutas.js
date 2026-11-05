@@ -43,8 +43,8 @@
    const metros=distancia(a,b)*c.factorRecta;pares[k]={minutos:metros/1000/c.velocidadKmh*60,metros,fuente:'APROXIMADO',rotulo:'Línea recta con factor; sin tráfico',...pocas};missingPairs.push({clave:k,origen:{...a},destino:{...b}});
   }
   const r={pares,missingPairs,proveedor,...(trafico?{factorTrafico:trafico}:{})};
-  // Matriz por franja: una salida de 14:00 a 18:00 usa el tráfico de cada hora, no sólo el de la hora de inicio. Sólo guarda lo que cambia por franja (propio o ajustado); lo demás cae a pares.
-  if(opciones.porFranja){const fs=c.franjas||FRANJAS;r.franjas=fs.map(({id,desde,hasta})=>({id,desde,hasta}));r.porFranja={};for(const f of fs)if(f.id!==opciones.franja)r.porFranja[f.id]=Object.fromEntries(Object.entries(crearMatriz(puntos,{...opciones,franja:f.id,porFranja:false}).pares).filter(([,v])=>['MEDIDO','MEDIDO_ZONA'].includes(v.fuente)||v.factorTrafico));}
+  // Matriz por franja: una salida de 14:00 a 18:00 usa el tráfico de cada hora, no sólo el de la hora de inicio. Conserva también la alternativa de cada franja para no heredar mediciones de otra hora.
+  if(opciones.porFranja){const fs=c.franjas||FRANJAS;r.franjas=fs.map(({id,desde,hasta})=>({id,desde,hasta}));r.porFranja={};for(const f of fs)if(f.id!==opciones.franja)r.porFranja[f.id]=Object.fromEntries(Object.entries(crearMatriz(puntos,{...opciones,franja:f.id,porFranja:false}).pares));}
   return r;
  }
  // Error de cada fuente contra lo que realmente tardó. Sin esto no se sabe si pagar Google mejora algo.
