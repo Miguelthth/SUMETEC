@@ -3169,6 +3169,7 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
   },{bajaPrioridad:true});
   // Ronda 15: si esta remisión nueva está esperando su PDF, se sube YA (sin candado) y después sigue la vía de siempre, que solo actúa si
   // el PDF no quedó enlazado con la remisión (si ya quedó, su entrada de la cola se retiró al llegar el acuse).
+  _pdfPrevioTraza_(entry.id,'pdf_listo',(_pdfPrevioEspera.has(String(entry.id))?'espera':'sin_espera')+(_pdfPrevioEnVuelo.has(String(entry.id))?',en_vuelo':'')+(correoEnviar?',correo':'')+(_pdfSinCola.has(entry.operationId)?',sin_cola':''));
   if(!correoEnviar&&remActiva&&_pdfPrevioEspera.has(String(entry.id))&&!_pdfSinCola.has(entry.operationId)&&!_pdfPrevioEnVuelo.has(String(entry.id)))
     return _pdfPrevioSubir_(url,entry,b64,remActiva,()=>firmaGenerada===_hashRemPDF(remActiva,folio,total,0)).then(viaClasica);
   return viaClasica();
@@ -4110,14 +4111,27 @@ const PDF_PREVIO_ESPERA_MS=9000, PDF_PREVIO_TOPE_MS=7000;
 const _pdfPrevioEspera=new Map();      // id de la remisión nueva -> hora límite de su espera (solo en memoria: al recargar, sale como siempre)
 const _pdfPrevioEnVuelo=new Set();     // ids con una subida previa en camino
 let _pdfPrevioBloqueadoHasta=0;        // el servidor la rechazó (apagada / no la conoce): vía de siempre durante 10 min
-function _pdfPrevioAplica_(rem){
-  try{
-    if(!rem||!rem.id||!rem.folio||String(rem.folio).indexOf('TMP-')===0)return false;
-    if(!isOnline||!getScriptUrl()||!window.jspdf||Date.now()<_pdfPrevioBloqueadoHasta)return false;
-    if(rem.sincronizado||rem.pdfSubidoTs||Number(rem.serverRevision||0)>0||rem._resetPagos)return false;
-    return true;
-  }catch(_){return false;}
+// Traza de cada decisión (ronda 15b, 2026-11-06): en N21R solo 7 de 20 remisiones llevaron su PDF por adelantado y desde el servidor no se ve por qué.
+// Se guarda en el teléfono (pdf_previo_traza, últimas 150) como [hora, id, evento, detalle]; nunca estorba ni lanza.
+function _pdfPrevioTraza_(id,ev,det){
+  try{const t=leerSeguro('pdf_previo_traza',[]);t.push([Date.now(),String(id),ev,det==null?'':String(det).slice(0,80)]);guardarSeguro('pdf_previo_traza',JSON.stringify(t.slice(-150)));}catch(_){}
 }
+function _pdfPrevioMotivoNo_(rem){
+  try{
+    if(!rem||!rem.id||!rem.folio)return 'sin_folio';
+    if(String(rem.folio).indexOf('TMP-')===0)return 'folio_temporal';
+    if(!isOnline)return 'sin_red';
+    if(!getScriptUrl())return 'sin_url';
+    if(!window.jspdf)return 'sin_jspdf';
+    if(Date.now()<_pdfPrevioBloqueadoHasta)return 'bloqueado';
+    if(rem.sincronizado)return 'ya_sincronizada';
+    if(rem.pdfSubidoTs)return 'ya_subio_pdf';
+    if(Number(rem.serverRevision||0)>0)return 'ya_tiene_revision';
+    if(rem._resetPagos)return 'reinicio_pagos';
+    return '';
+  }catch(_){return 'error';}
+}
+function _pdfPrevioAplica_(rem){return _pdfPrevioMotivoNo_(rem)==='';}
 function _pdfPrevioReintentarCola_(demora,n){
   setTimeout(()=>{ if(_procRemEnCurso&&(n||0)<40)return _pdfPrevioReintentarCola_(500,(n||0)+1); procesarColaRemisiones(); },demora||0);
 }
@@ -4132,21 +4146,42 @@ async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
   const id=String(entry.id);
   if(_pdfPrevioEnVuelo.has(id))return;
   _pdfPrevioEnVuelo.add(id);
+  const t0=Date.now();
   try{
-    const r=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({tipo:'pdf_remision_previo',id:entry.id,folio:entry.folio,cliente:entry.cliente,fecha:entry.fecha,pdf:b64,pdfOperationId:entry.operationId,hashPdf:entry.hashPdf||'',device:entry.device})},PDF_PREVIO_TOPE_MS);
-    const d=await r.json();
+    const mandar=async()=>{
+      const r=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({tipo:'pdf_remision_previo',id:entry.id,folio:entry.folio,cliente:entry.cliente,fecha:entry.fecha,pdf:b64,pdfOperationId:entry.operationId,hashPdf:entry.hashPdf||'',device:entry.device})},PDF_PREVIO_TOPE_MS);
+      return r.json();
+    };
+    let d=await mandar();
+    // Otra subida de PDF tiene el usuario de Drive (el servidor lo marca reintentable): una segunda oportunidad corta, si aún queda espera.
+    if(d&&!d.ok&&d.reintentable&&(_pdfPrevioEspera.get(id)||0)-Date.now()>3500){
+      _pdfPrevioTraza_(id,'reintento',d.error||'');
+      await new Promise(ok=>setTimeout(ok,700));
+      d=await mandar();
+    }
     if(d&&d.ok&&d.url&&String(d.pdfOperationId)===String(entry.operationId)){
       // Solo se marca la remisión si sigue esperando, no cambió mientras subía y su PDF en cola es este mismo.
-      if(_pdfPrevioEspera.has(id)&&vigente()){
+      let motivoNo='';
+      if(!_pdfPrevioEspera.has(id))motivoNo='espera_vencida';
+      else if(!vigente())motivoNo='remision_cambio';
+      else{
         const cola=leerSeguro('cola_remisiones',[]),it=cola.find(e=>String(e.id)===id);
         const pdfQ=leerSeguro('cola_pdf',[]).find(e=>String(e.id||e.folio)===id);
-        if(it&&!it._conflict&&!it._detenido&&pdfQ&&pdfQ.operationId===entry.operationId&&!pdfQ.correoEnviar&&Number(it.rev||0)===Number(rem._rev||0)){
-          it.pdfPrevioOp=entry.operationId;guardarSeguro('cola_remisiones',JSON.stringify(cola));
-        }
+        if(!it)motivoNo='ya_no_esta_en_cola';
+        else if(it._conflict||it._detenido)motivoNo='conflicto_o_detenida';
+        else if(!pdfQ)motivoNo='pdf_fuera_de_cola';
+        else if(pdfQ.operationId!==entry.operationId)motivoNo='otra_operacion_pdf';
+        else if(pdfQ.correoEnviar)motivoNo='con_correo';
+        else if(Number(it.rev||0)!==Number(rem._rev||0))motivoNo='otra_revision';
+        else{it.pdfPrevioOp=entry.operationId;guardarSeguro('cola_remisiones',JSON.stringify(cola));}
       }
-    }else if(d&&(d.codigo==='PDF_PREVIO_APAGADO'||/no autorizado|tipo desconocido/i.test(String(d.error||''))))_pdfPrevioBloqueadoHasta=Date.now()+600000;
-  }catch(e){ /* sin respuesta: la remisión sale sin la marca y el PDF por la vía de siempre */ }
+      _pdfPrevioTraza_(id,motivoNo?'subida_sin_marca':'subida_con_marca',(motivoNo||'ok')+' '+(Date.now()-t0)+'ms');
+    }else{
+      _pdfPrevioTraza_(id,'subida_fallo',((d&&(d.codigo||d.error))||'respuesta_rara')+' '+(Date.now()-t0)+'ms');
+      if(d&&(d.codigo==='PDF_PREVIO_APAGADO'||/no autorizado|tipo desconocido/i.test(String(d.error||''))))_pdfPrevioBloqueadoHasta=Date.now()+600000;
+    }
+  }catch(e){ _pdfPrevioTraza_(id,'subida_fallo','excepcion '+String(e&&e.message||e).slice(0,40)+' '+(Date.now()-t0)+'ms'); /* sin respuesta: la remisión sale sin la marca y el PDF por la vía de siempre */ }
   finally{_pdfPrevioEnVuelo.delete(id);_pdfPrevioSoltar_(id);}
 }
 // El servidor contestó la remisión con la dirección del PDF que subimos antes: se da por guardado sin mandarlo otra vez.
@@ -4166,9 +4201,10 @@ function _adoptarPdfPrevio_(r,item,d){
         _dequeuePDF(item.id,pdfQ.operationId);_pdfSinCola.delete(pdfQ.operationId);
         delete r.pdfPendiente;r.pdfSubidoTs=Date.now();if(pdfQ.hashPdf)r.pdfHash=pdfQ.hashPdf;
         _estadoHeaderVivo('✅ Guardado en Drive ✓',3000);
+        _pdfPrevioTraza_(item.id,'adoptado','');
         if(typeof guardarEventoSync==='function'){guardarEventoSync({folio:d.folio||item.folio,operacion:'REMISION_GUARDADA',resultado:'OK'});guardarEventoSync({folio:d.folio||item.folio,operacion:'PDF_GUARDADO',resultado:'OK'});}
       }
-    }
+    }else _pdfPrevioTraza_(item.id,'adoptado_sin_pdf_en_cola','');
     persistirRemisiones();
     return true;
   }catch(_){return false;}
@@ -4180,8 +4216,13 @@ async function sincronizarRemision(rem,opciones){
   _encolarRemision(rem); // durable antes de enviar
   // Ronda 15: una remisión NUEVA espera un momento a que su PDF suba (ver arriba); al vencer la espera sale sola. Solo la ruta de «remisión
   // nueva» (que genera su PDF en seguida) lo pide: los reintentos y reconciliaciones no tienen PDF en camino y salen sin esperar.
+  if(opciones&&opciones.esperarPdf){
+    const motivoNo=_pdfPrevioMotivoNo_(rem);
+    if(motivoNo)_pdfPrevioTraza_(rem.id,'sin_espera',motivoNo);
+  }
   if(opciones&&opciones.esperarPdf&&_pdfPrevioAplica_(rem)){
     const id=String(rem.id);
+    _pdfPrevioTraza_(id,'espera','');
     _pdfPrevioEspera.set(id,Date.now()+PDF_PREVIO_ESPERA_MS);
     setTimeout(()=>_pdfPrevioSoltar_(id),PDF_PREVIO_ESPERA_MS+100);
   }
@@ -4370,6 +4411,7 @@ async function procesarColaRemisiones(){
       const esperaPdf=_pdfPrevioEspera.get(String(item.id));
       if(esperaPdf){if(Date.now()<esperaPdf){huboRetenida=true;continue;}_pdfPrevioEspera.delete(String(item.id));}
       try{
+        _pdfPrevioTraza_(item.id,'envio',(item.pdfPrevioOp?'con_marca':'sin_marca')+(esperaPdf?' (aun_esperaba)':''));
         const res=await _escrituraOrdenada(()=>_enviarConBuzon_(url,_docRemisionConCobros_(item)));
         if(res.ok){
           const d=await res.json();
