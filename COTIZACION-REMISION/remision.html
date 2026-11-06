@@ -3290,6 +3290,7 @@ async function procesarColaPDF(){
         huerfanos.push(String(entry.id||entry.folio));
         continue;
       }
+      if(_pdfEsperaSuRemision_(entry.id))continue;   // ronda 15d: ver _pdfEsperaSuRemision_
       try{
         await descargarPDF(rem);
         ok++;
@@ -4132,6 +4133,17 @@ function _pdfPrevioMotivoNo_(rem){
   }catch(_){return 'error';}
 }
 function _pdfPrevioAplica_(rem){return _pdfPrevioMotivoNo_(rem)==='';}
+// Ronda 15d (N22R/N23R): procesarColaPDF corre en cada latido (~10 s) y regeneraba el PDF de TODAS las entradas de la cola aunque su remisión siguiera
+// esperando su turno (ese PDF no puede salir hasta que la remisión se confirme). Con la cola atrasada eran varias regeneraciones por remisión (jsPDF +
+// base64 + localStorage en el teléfono) y, si una terminaba justo después de que el PDF se dio por guardado, lo volvía a meter a la cola y se subía otra
+// vez (turnos de candado de más). Mientras la remisión espera, o su PDF va en camino, el PDF no se toca; al confirmarse la remisión se procesa como siempre.
+function _pdfEsperaSuRemision_(id){
+  try{
+    id=String(id);
+    if(_pdfPrevioEspera.has(id)||_pdfPrevioEnVuelo.has(id))return true;
+    return leerSeguro('cola_remisiones',[]).some(e=>String(e.id)===id);
+  }catch(_){return false;}
+}
 function _pdfPrevioReintentarCola_(demora,n){
   setTimeout(()=>{ if(_procRemEnCurso&&(n||0)<40)return _pdfPrevioReintentarCola_(500,(n||0)+1); procesarColaRemisiones(); },demora||0);
 }
