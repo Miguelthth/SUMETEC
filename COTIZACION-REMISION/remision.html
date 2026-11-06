@@ -4107,7 +4107,7 @@ async function registrarRemision(gpsParam){
 // viaja con la marca `pdfPrevioOp`; el servidor enlaza la dirección en la misma fila y el PDF ya no hace segundo viaje. Si algo falla (sin
 // señal, servidor viejo o apagado, Drive ocupado, la remisión cambió, se acabó la espera) la remisión sale como siempre y el PDF por su vía de
 // siempre: nada depende de que esto funcione. Los dos interruptores: PDF_PREVIO=0 en el servidor, y estas constantes.
-const PDF_PREVIO_ESPERA_MS=9000, PDF_PREVIO_TOPE_MS=7000;
+const PDF_PREVIO_ESPERA_MS=11000, PDF_PREVIO_TOPE_MS=9000;
 const _pdfPrevioEspera=new Map();      // id de la remisión nueva -> hora límite de su espera (solo en memoria: al recargar, sale como siempre)
 const _pdfPrevioEnVuelo=new Set();     // ids con una subida previa en camino
 let _pdfPrevioBloqueadoHasta=0;        // el servidor la rechazó (apagada / no la conoce): vía de siempre durante 10 min
@@ -4153,7 +4153,15 @@ async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
         body:JSON.stringify({tipo:'pdf_remision_previo',id:entry.id,folio:entry.folio,cliente:entry.cliente,fecha:entry.fecha,pdf:b64,pdfOperationId:entry.operationId,hashPdf:entry.hashPdf||'',device:entry.device})},PDF_PREVIO_TOPE_MS);
       return r.json();
     };
-    let d=await mandar();
+    let d;
+    try{d=await mandar();}
+    catch(e1){
+      // Un «Failed to fetch» (Google cortó la conexión) es pasajero: se reintenta una vez si queda espera. El tiempo agotado (AbortError) no.
+      if(e1&&e1.name==='AbortError'||(_pdfPrevioEspera.get(id)||0)-Date.now()<=3500)throw e1;
+      _pdfPrevioTraza_(id,'reintento','red '+String(e1&&e1.message||e1).slice(0,30));
+      await new Promise(ok=>setTimeout(ok,500));
+      d=await mandar();
+    }
     // Otra subida de PDF tiene el usuario de Drive (el servidor lo marca reintentable): una segunda oportunidad corta, si aún queda espera.
     if(d&&!d.ok&&d.reintentable&&(_pdfPrevioEspera.get(id)||0)-Date.now()>3500){
       _pdfPrevioTraza_(id,'reintento',d.error||'');
@@ -4411,6 +4419,12 @@ async function procesarColaRemisiones(){
       const esperaPdf=_pdfPrevioEspera.get(String(item.id));
       if(esperaPdf){if(Date.now()<esperaPdf){huboRetenida=true;continue;}_pdfPrevioEspera.delete(String(item.id));}
       try{
+        // La copia de la cola se tomó al empezar la pasada: si esta remisión esperaba su turno detrás de otra lenta, la marca de su PDF ya subido
+        // se puso DESPUÉS (N22R: 3 de 20 salieron sin marca por esto). Se vuelve a leer justo antes de enviar.
+        if(!item.pdfPrevioOp){
+          const fresca=leerSeguro('cola_remisiones',[]).find(e=>String(e.id)===String(item.id)&&e.operationId===item.operationId);
+          if(fresca&&fresca.pdfPrevioOp)item.pdfPrevioOp=fresca.pdfPrevioOp;
+        }
         _pdfPrevioTraza_(item.id,'envio',(item.pdfPrevioOp?'con_marca':'sin_marca')+(esperaPdf?' (aun_esperaba)':''));
         const res=await _escrituraOrdenada(()=>_enviarConBuzon_(url,_docRemisionConCobros_(item)));
         if(res.ok){
