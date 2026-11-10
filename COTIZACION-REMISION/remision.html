@@ -2121,9 +2121,21 @@ function _heartbeatProgramado(){
 // hace más de 12 s, así el servidor ya está despierto cuando se envíe la remisión. Reutiliza heartbeat() (mismas reglas, sin traslape).
 // CALENTAR_SERVIDOR=false lo apaga.
 const CALENTAR_SERVIDOR=true, CALENTAR_SERVIDOR_MS=12000;
+// M2 (2026-11-10): con una remisión en captura (ya tiene artículos), en vez del ping sale el aviso a Facturación cada 90 s; también despierta el
+// servidor y le quita ~2.2 s al turno de la remisión (el aviso ya no se escribe dentro). AVISO_ADELANTADO=false lo apaga en el teléfono.
+const AVISO_ADELANTADO=true, AVISO_ADELANTADO_MS=90000;
+let _avisoVentaTs=0;
 function _calentarServidor_(){
   try{
     if(!CALENTAR_SERVIDOR||document.hidden||!isOnline||_hbEnCurso)return;
+    if(AVISO_ADELANTADO&&typeof items!=='undefined'&&Array.isArray(items)&&items.length&&API_TOKEN&&Date.now()-_avisoVentaTs>=AVISO_ADELANTADO_MS){
+      const url=getScriptUrl();
+      if(url){
+        _avisoVentaTs=Date.now();_hbUltimaConsulta=Date.now();
+        sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'aviso_venta'})},20000).catch(()=>{});
+        return;
+      }
+    }
     if(Date.now()-_hbUltimaConsulta<CALENTAR_SERVIDOR_MS)return;
     heartbeat();
   }catch(_){}
@@ -2205,6 +2217,18 @@ function _escrituraOrdenada(tarea,opciones){
   return new Promise((ok,mal)=>{(baja?q.bajas:q.altas).push({tarea,ok,mal,desde:Date.now()});siguiente();});
 }
 let _buzonDisponible=null;
+// A1: cierre de fotos pedido por un acuse; se manda en cuanto no quede ningún PDF subiendo ni en cola (lo llaman el acuse, el fin de la subida
+// previa y el fin de procesarColaPDF). Si nunca se queda vacío (un PDF detenido), el reloj del servidor lo cierra solo al minuto.
+let _cierreTrasPdf=false;
+function _cierreSiNadaPendiente_(url){
+  try{
+    if(!_cierreTrasPdf)return;
+    if(typeof _pdfPrevioEnVuelo!=='undefined'&&_pdfPrevioEnVuelo.size)return;
+    if(leerSeguro('cola_pdf',[]).length)return;
+    _cierreTrasPdf=false;
+    sumetecFetchLimite(url||getScriptUrl(),{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'buzon_cerrar'})}).catch(()=>{});
+  }catch(_){}
+}
 async function _enviarConBuzon_(url,documento){
   const post=async cuerpo=>{
     const respuesta=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(cuerpo)});
@@ -2220,7 +2244,8 @@ async function _enviarConBuzon_(url,documento){
   const emular=d=>({ok:true,status:200,json:async()=>d});
   // P5 (2026-11-09): el teléfono avisa que pide aparte el cierre de fotos (cobros/clientes que ven los otros teléfonos); el acuse de la venta ya
   // no lo espera. Al llegar el acuse con `cierrePendiente`, se manda `buzon_cerrar` sin esperar respuesta (si se pierde, lo cierra el reloj).
-  const cerrarAparte=r=>{if(r&&r.cierrePendiente)post({tipo:'buzon_cerrar'}).catch(()=>{});};
+  // A1 (2026-11-10): el cierre espera a que no quede PDF por subir (N29R: el cierre tomó el candado 7.7 s y el PDF esperó 6 s detrás).
+  const cerrarAparte=r=>{try{if(r&&r.cierrePendiente&&typeof _cierreSiNadaPendiente_==='function'){_cierreTrasPdf=true;_cierreSiNadaPendiente_(url);}}catch(_){}};   // nunca tumba el envío
   const recibido=await post({tipo:'buzon_recibir',documento:limpio,procesar:true,cierreAparte:true});   // un viaje: el servidor lo aplica en la misma llamada si puede
   cerrarAparte(recibido);
   if(recibido?.codigo==='BUZON_DOCUMENTO_GRANDE')return directo();
@@ -3320,7 +3345,7 @@ async function procesarColaPDF(){
     }
     if(ok>0)_estado('⬆️ Subiendo '+ok+' PDF(s) a Drive…');
     actualizarBadgePendientes();
-  }finally{ _procPDFEnCurso=false; }
+  }finally{ _procPDFEnCurso=false; if(typeof _cierreSiNadaPendiente_==='function')_cierreSiNadaPendiente_(); }
 }
 
 function addRow(d={}){if(_formBloqueado)return;items.push({_id:_id++,qty:'',clave:'',desc:'',precio:'',iva:ivaGlobal,...d});renderTable();calcTotals()}
@@ -4287,12 +4312,19 @@ async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
       else if(!_pdfPrevioEspera.has(id))motivoNo='espera_vencida';
       else motivoNo=_pdfPrevioMotivoMarca_(id,entry,rem,vigente);
       _pdfPrevioTraza_(id,motivoNo?'subida_sin_marca':'subida_con_marca',(motivoNo||(marcadaAntes?'paralelo':'ok'))+' '+(Date.now()-t0)+'ms');
+      // M1: la remisión ya estaba escrita y el servidor enlazó este PDF al recibirlo: se da por guardado, sin mandarlo otra vez.
+      if(d.enlazada){
+        try{
+          const r=(typeof remisiones!=='undefined'?remisiones:[]).find(x=>String(x.id)===id);
+          if(r&&_adoptarPdfPrevio_(r,{id,folio:entry.folio,pdfPrevioOp:entry.operationId},{...d,folio:d.folio||entry.folio}))_pdfPrevioTraza_(id,'enlazada','');
+        }catch(_){}
+      }
     }else{
       _pdfPrevioTraza_(id,'subida_fallo',((d&&(d.codigo||d.error))||'respuesta_rara')+' '+(Date.now()-t0)+'ms');
       if(d&&(d.codigo==='PDF_PREVIO_APAGADO'||/no autorizado|tipo desconocido/i.test(String(d.error||''))))_pdfPrevioBloqueadoHasta=Date.now()+600000;
     }
   }catch(e){ _pdfPrevioTraza_(id,'subida_fallo','excepcion '+String(e&&e.message||e).slice(0,40)+' '+(Date.now()-t0)+'ms'); /* sin respuesta: la remisión sale sin la marca y el PDF por la vía de siempre */ }
-  finally{_pdfPrevioEnVuelo.delete(id);_pdfPrevioSoltar_(id);}
+  finally{_pdfPrevioEnVuelo.delete(id);_pdfPrevioSoltar_(id);if(typeof _cierreSiNadaPendiente_==='function')_cierreSiNadaPendiente_(url);}
 }
 // El servidor contestó la remisión con la dirección del PDF que subimos antes: se da por guardado sin mandarlo otra vez.
 function _adoptarPdfPrevio_(r,item,d){
