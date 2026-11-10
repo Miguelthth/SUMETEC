@@ -1,4 +1,4 @@
-const CACHE = 'sumetec-rem-1298c3280f';
+const CACHE = 'sumetec-rem-b2fd023c16';
 const PREFIJO = 'sumetec-rem-';
 
 // Versión ACEPTADA (2026-09-29, pedido de Miguel: «que no se actualice sola hasta que le dé
@@ -181,8 +181,8 @@ self.addEventListener('message', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
 
-  // Apps Script y Google Fonts: solo red, nunca caché
-  if (url.includes('script.google.com') || url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com')) {
+  // Apps Script, Google Fonts y la subida directa del PDF a Drive (www.googleapis.com/upload, 2026-11-09): solo red, nunca caché
+  if (url.includes('script.google.com') || url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com') || url.startsWith('https://www.googleapis.com/')) {
     return;
   }
 

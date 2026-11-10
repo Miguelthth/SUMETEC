@@ -4154,6 +4154,61 @@ function _pdfPrevioCancelar_(id){
   try{const cola=leerSeguro('cola_remisiones',[]),it=cola.find(e=>String(e.id)===id);if(it&&it.pdfPrevioOp){delete it.pdfPrevioOp;guardarSeguro('cola_remisiones',JSON.stringify(cola));}}catch(_){}
   _pdfPrevioSoltar_(id);
 }
+// ── PDF directo a Drive (2026-11-09, meta 5 s) ──
+// El servidor reserva «boletos» (un archivo de Drive con ID fijo y su dirección de subida). El teléfono sube los bytes DIRECTO a Drive y luego
+// manda a Apps Script solo un aviso corto con la huella SHA-256: el PDF ya no viaja en base64 por Apps Script (eso costaba 4–7 s).
+// Cualquier falla devuelve null y el PDF sale por la vía de siempre. Si Drive rechaza la subida desde el navegador, se deja de intentar 30 min.
+let _pdfDirectoBloqueadoHasta=0,_pdfBoletosPidiendo=false;
+function _pdfBoletosVigentes_(){
+  try{const ahora=Date.now()+600000;return leerSeguro('pdf_boletos',[]).filter(b=>b&&b.id&&b.url&&Number(b.vence)>ahora);}catch(_){return [];}
+}
+async function _pdfBoletosRellenar_(url){
+  if(_pdfBoletosPidiendo||Date.now()<_pdfDirectoBloqueadoHasta||!isOnline||!url)return;
+  const vig=_pdfBoletosVigentes_();
+  if(vig.length>=3)return;
+  _pdfBoletosPidiendo=true;
+  try{
+    const r=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'pdf_boletos',n:6,origen:location.origin})},20000);
+    const d=await r.json();
+    if(d&&d.ok&&Array.isArray(d.boletos)){guardarSeguro('pdf_boletos',JSON.stringify(_pdfBoletosVigentes_().concat(d.boletos).slice(-12)));}
+    else if(d&&(d.codigo==='PDF_DIRECTO_APAGADO'||d.codigo==='PDF_PREVIO_APAGADO'||/no autorizado|tipo desconocido/i.test(String(d.error||''))))_pdfDirectoBloqueadoHasta=Date.now()+1800000;
+  }catch(_){}finally{_pdfBoletosPidiendo=false;}
+}
+// Se piden boletos poco después de abrir la app y al volver la señal, para que la primera remisión ya tenga uno.
+if(typeof window!=='undefined'&&typeof window.addEventListener==='function'){
+  setTimeout(()=>{try{_pdfBoletosRellenar_(getScriptUrl());}catch(_){}},8000);
+  window.addEventListener('online',()=>setTimeout(()=>{try{_pdfBoletosRellenar_(getScriptUrl());}catch(_){}},3000));
+}
+function _pdfTomarBoleto_(){
+  const vig=_pdfBoletosVigentes_(),b=vig.shift();
+  guardarSeguro('pdf_boletos',JSON.stringify(vig));   // un boleto se usa una sola vez, salga bien o mal
+  return b||null;
+}
+async function _pdfDirectoSubir_(url,entry,b64){
+  const id=String(entry.id),t0=Date.now();
+  if(Date.now()<_pdfDirectoBloqueadoHasta||typeof crypto==='undefined'||!crypto.subtle)return null;
+  if(!_pdfBoletosVigentes_().length)return null;   // sin boleto: la vía de siempre, sin ningún efecto (los boletos se piden al abrir y al volver la señal)
+  const b=_pdfTomarBoleto_();
+  setTimeout(()=>_pdfBoletosRellenar_(url),0);
+  const bin=atob(b64),bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  const sha=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');
+  let put;
+  try{put=await sumetecFetchLimite(b.url,{method:'PUT',body:bytes},PDF_PREVIO_TOPE_MS);}
+  catch(e){
+    // Un error de red/CORS en la subida directa casi siempre es que Drive no la acepta desde aquí: no insistir un rato.
+    if(!(e&&e.name==='AbortError'))_pdfDirectoBloqueadoHasta=Date.now()+1800000;
+    _pdfPrevioTraza_(id,'directo_fallo','put '+String(e&&e.name||e).slice(0,30)+' '+(Date.now()-t0)+'ms');return null;
+  }
+  if(!put.ok){_pdfPrevioTraza_(id,'directo_fallo','put HTTP '+put.status+' '+(Date.now()-t0)+'ms');return null;}
+  const tPut=Date.now()-t0;
+  const r=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({tipo:'pdf_remision_previo',id:entry.id,folio:entry.folio,cliente:entry.cliente,fecha:entry.fecha,pdfOperationId:entry.operationId,
+                         hashPdf:entry.hashPdf||'',device:entry.device,boletoId:b.id,sha256:sha,tamano:bytes.length})},PDF_PREVIO_TOPE_MS);
+  const d=await r.json();
+  _pdfPrevioTraza_(id,d&&d.ok?'directo_ok':'directo_fallo',(d&&d.ok?'':String(d&&(d.codigo||d.error)||'?').slice(0,30)+' ')+'put '+tPut+'ms total '+(Date.now()-t0)+'ms');
+  return d&&d.ok?d:null;
+}
 async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
   const id=String(entry.id);
   if(_pdfPrevioEnVuelo.has(id))return;
@@ -4165,7 +4220,9 @@ async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
         body:JSON.stringify({tipo:'pdf_remision_previo',id:entry.id,folio:entry.folio,cliente:entry.cliente,fecha:entry.fecha,pdf:b64,pdfOperationId:entry.operationId,hashPdf:entry.hashPdf||'',device:entry.device})},PDF_PREVIO_TOPE_MS);
       return r.json();
     };
-    let d;
+    // PDF directo (2026-11-09): primero con boleto, directo a Drive. null = no se pudo y sigue la vía de siempre.
+    let d=await _pdfDirectoSubir_(url,entry,b64).catch(()=>null);
+    if(!d||!d.ok){
     try{d=await mandar();}
     catch(e1){
       // Un «Failed to fetch» (Google cortó la conexión) es pasajero: se reintenta una vez si queda espera. El tiempo agotado (AbortError) no.
@@ -4179,6 +4236,7 @@ async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
       _pdfPrevioTraza_(id,'reintento',d.error||'');
       await new Promise(ok=>setTimeout(ok,700));
       d=await mandar();
+    }
     }
     if(d&&d.ok&&d.url&&String(d.pdfOperationId)===String(entry.operationId)){
       // Solo se marca la remisión si sigue esperando, no cambió mientras subía y su PDF en cola es este mismo.
