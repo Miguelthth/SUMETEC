@@ -2116,7 +2116,19 @@ function _heartbeatProgramado(){
   _hbUltimaConsulta=ahora;
   heartbeat();
 }
-['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{_hbUltimaActividad=Date.now();},{passive:true}));
+// Calentar el servidor mientras se captura (2026-11-10, meta de velocidad): Apps Script se «enfría» si pasa un rato sin peticiones y la primera tarda
+// varios segundos en despertar. El ping programado sale cada 30–120 s; aquí además sale uno cuando el vendedor toca la pantalla y el último fue
+// hace más de 12 s, así el servidor ya está despierto cuando se envíe la remisión. Reutiliza heartbeat() (mismas reglas, sin traslape).
+// CALENTAR_SERVIDOR=false lo apaga.
+const CALENTAR_SERVIDOR=true, CALENTAR_SERVIDOR_MS=12000;
+function _calentarServidor_(){
+  try{
+    if(!CALENTAR_SERVIDOR||document.hidden||!isOnline||_hbEnCurso)return;
+    if(Date.now()-_hbUltimaConsulta<CALENTAR_SERVIDOR_MS)return;
+    heartbeat();
+  }catch(_){}
+}
+['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{_hbUltimaActividad=Date.now();_calentarServidor_();},{passive:true}));
 function startHeartbeat(){heartbeat();_hbTimer=SumetecSync.reloj(async()=>{await heartbeat();return ESTADO_HEARTBEAT==='conectado'||ESTADO_HEARTBEAT==='online';});}
 window.addEventListener('online',()=>{heartbeat();setTimeout(procesarColaElim,900);setTimeout(procesarColaRemisiones,1500);setTimeout(procesarCola,2100);setTimeout(procesarColaPDF,2700);setTimeout(_procesarColaCotR,3300);setTimeout(procesarColaNuevos,3600);setTimeout(procesarColaCancel,3900);});
 window.addEventListener('offline',()=>setOnlineState(false));
@@ -2206,7 +2218,11 @@ async function _enviarConBuzon_(url,documento){
   // Una celda de Sheets no puede guardar este documento; la ruta habitual sí.
   if(JSON.stringify(limpio).length>45000)return directo();
   const emular=d=>({ok:true,status:200,json:async()=>d});
-  const recibido=await post({tipo:'buzon_recibir',documento:limpio,procesar:true});   // un viaje: el servidor lo aplica en la misma llamada si puede
+  // P5 (2026-11-09): el teléfono avisa que pide aparte el cierre de fotos (cobros/clientes que ven los otros teléfonos); el acuse de la venta ya
+  // no lo espera. Al llegar el acuse con `cierrePendiente`, se manda `buzon_cerrar` sin esperar respuesta (si se pierde, lo cierra el reloj).
+  const cerrarAparte=r=>{if(r&&r.cierrePendiente)post({tipo:'buzon_cerrar'}).catch(()=>{});};
+  const recibido=await post({tipo:'buzon_recibir',documento:limpio,procesar:true,cierreAparte:true});   // un viaje: el servidor lo aplica en la misma llamada si puede
+  cerrarAparte(recibido);
   if(recibido?.codigo==='BUZON_DOCUMENTO_GRANDE')return directo();
   if(!recibido?.ok&&(
     recibido?.codigo==='BUZON_NO_ACTIVO'||
@@ -2218,7 +2234,8 @@ async function _enviarConBuzon_(url,documento){
   const reintentarCaja=recibido.estado==='RECHAZADO'&&recibido.resultado?.cajaConflicto===true;
   if(recibido.estado==='APLICADO'||recibido.estado==='RECHAZADO'&&!reintentarCaja)return emular(recibido.resultado);
   _estado('📥 Documento recibido; esperando aplicación en el servidor');
-  const aplicado=await post({tipo:'buzon_procesar',id:recibido.id,...(reintentarCaja?{reintentarCaja:true}:{})});
+  const aplicado=await post({tipo:'buzon_procesar',id:recibido.id,cierreAparte:true,...(reintentarCaja?{reintentarCaja:true}:{})});
+  cerrarAparte(aplicado);
   if(aplicado?.ok&&(aplicado.estado==='APLICADO'||aplicado.estado==='RECHAZADO'))return emular(aplicado.resultado);
   if(aplicado?.ok&&aplicado.estado==='DETENIDO')return emular({ok:false,buzonPendiente:true,buzonDetenido:true,error:'El servidor no pudo aplicar este documento tras varios intentos ('+(aplicado.error||'sin detalle')+'). No se perdió: avisa al dueño.'});
   return emular({ok:false,buzonPendiente:true,error:'Documento recibido; reintenta hasta confirmar su aplicación'});
@@ -4209,11 +4226,36 @@ async function _pdfDirectoSubir_(url,entry,b64){
   _pdfPrevioTraza_(id,d&&d.ok?'directo_ok':'directo_fallo',(d&&d.ok?'':String(d&&(d.codigo||d.error)||'?').slice(0,30)+' ')+'put '+tPut+'ms total '+(Date.now()-t0)+'ms');
   return d&&d.ok?d:null;
 }
+// Por qué la remisión en cola NO puede llevar la marca de su PDF ('' = sí puede). Mismas reglas antes (P6) y después de subir.
+function _pdfPrevioMotivoMarca_(id,entry,rem,vigente){
+  if(!vigente())return 'remision_cambio';
+  const cola=leerSeguro('cola_remisiones',[]),it=cola.find(e=>String(e.id)===id);
+  const pdfQ=leerSeguro('cola_pdf',[]).find(e=>String(e.id||e.folio)===id);
+  if(!it)return 'ya_no_esta_en_cola';
+  if(it._conflict||it._detenido)return 'conflicto_o_detenida';
+  if(!pdfQ)return 'pdf_fuera_de_cola';
+  if(pdfQ.operationId!==entry.operationId)return 'otra_operacion_pdf';
+  if(pdfQ.correoEnviar)return 'con_correo';
+  if(Number(it.rev||0)!==Number(rem._rev||0))return 'otra_revision';
+  it.pdfPrevioOp=entry.operationId;guardarSeguro('cola_remisiones',JSON.stringify(cola));
+  return '';
+}
+// P6 (2026-11-09): la remisión ya no espera a que su PDF termine de subir. En cuanto la subida EMPIEZA se le pone la marca y se suelta la espera:
+// remisión y PDF viajan a la vez. El servidor solo enlaza el PDF si de verdad quedó subido con esa misma operación; si no, sale por la vía de siempre.
+const PDF_PREVIO_PARALELO=true;
 async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
   const id=String(entry.id);
   if(_pdfPrevioEnVuelo.has(id))return;
   _pdfPrevioEnVuelo.add(id);
   const t0=Date.now();
+  let marcadaAntes=false;
+  // Hasta cuándo vale la pena reintentar la subida: el límite de la espera, aunque con P6 la espera se suelte antes.
+  const limiteEspera=_pdfPrevioEspera.get(id)||0;
+  const quedaEspera=()=>(marcadaAntes?limiteEspera:(_pdfPrevioEspera.get(id)||0))-Date.now();
+  if(PDF_PREVIO_PARALELO&&_pdfPrevioEspera.has(id)){
+    try{marcadaAntes=_pdfPrevioMotivoMarca_(id,entry,rem,vigente)==='';}catch(_){marcadaAntes=false;}
+    if(marcadaAntes){_pdfPrevioTraza_(id,'marca_paralelo','');_pdfPrevioSoltar_(id);}
+  }
   try{
     const mandar=async()=>{
       const r=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
@@ -4226,13 +4268,13 @@ async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
     try{d=await mandar();}
     catch(e1){
       // Un «Failed to fetch» (Google cortó la conexión) es pasajero: se reintenta una vez si queda espera. El tiempo agotado (AbortError) no.
-      if(e1&&e1.name==='AbortError'||(_pdfPrevioEspera.get(id)||0)-Date.now()<=3500)throw e1;
+      if(e1&&e1.name==='AbortError'||quedaEspera()<=3500)throw e1;
       _pdfPrevioTraza_(id,'reintento','red '+String(e1&&e1.message||e1).slice(0,30));
       await new Promise(ok=>setTimeout(ok,500));
       d=await mandar();
     }
     // Otra subida de PDF tiene el usuario de Drive (el servidor lo marca reintentable): una segunda oportunidad corta, si aún queda espera.
-    if(d&&!d.ok&&d.reintentable&&(_pdfPrevioEspera.get(id)||0)-Date.now()>3500){
+    if(d&&!d.ok&&d.reintentable&&quedaEspera()>3500){
       _pdfPrevioTraza_(id,'reintento',d.error||'');
       await new Promise(ok=>setTimeout(ok,700));
       d=await mandar();
@@ -4241,20 +4283,10 @@ async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
     if(d&&d.ok&&d.url&&String(d.pdfOperationId)===String(entry.operationId)){
       // Solo se marca la remisión si sigue esperando, no cambió mientras subía y su PDF en cola es este mismo.
       let motivoNo='';
-      if(!_pdfPrevioEspera.has(id))motivoNo='espera_vencida';
-      else if(!vigente())motivoNo='remision_cambio';
-      else{
-        const cola=leerSeguro('cola_remisiones',[]),it=cola.find(e=>String(e.id)===id);
-        const pdfQ=leerSeguro('cola_pdf',[]).find(e=>String(e.id||e.folio)===id);
-        if(!it)motivoNo='ya_no_esta_en_cola';
-        else if(it._conflict||it._detenido)motivoNo='conflicto_o_detenida';
-        else if(!pdfQ)motivoNo='pdf_fuera_de_cola';
-        else if(pdfQ.operationId!==entry.operationId)motivoNo='otra_operacion_pdf';
-        else if(pdfQ.correoEnviar)motivoNo='con_correo';
-        else if(Number(it.rev||0)!==Number(rem._rev||0))motivoNo='otra_revision';
-        else{it.pdfPrevioOp=entry.operationId;guardarSeguro('cola_remisiones',JSON.stringify(cola));}
-      }
-      _pdfPrevioTraza_(id,motivoNo?'subida_sin_marca':'subida_con_marca',(motivoNo||'ok')+' '+(Date.now()-t0)+'ms');
+      if(marcadaAntes)motivoNo='';   // ya salió con su marca (P6): el servidor lo enlaza al final de su turno o en el reenvío del PDF
+      else if(!_pdfPrevioEspera.has(id))motivoNo='espera_vencida';
+      else motivoNo=_pdfPrevioMotivoMarca_(id,entry,rem,vigente);
+      _pdfPrevioTraza_(id,motivoNo?'subida_sin_marca':'subida_con_marca',(motivoNo||(marcadaAntes?'paralelo':'ok'))+' '+(Date.now()-t0)+'ms');
     }else{
       _pdfPrevioTraza_(id,'subida_fallo',((d&&(d.codigo||d.error))||'respuesta_rara')+' '+(Date.now()-t0)+'ms');
       if(d&&(d.codigo==='PDF_PREVIO_APAGADO'||/no autorizado|tipo desconocido/i.test(String(d.error||''))))_pdfPrevioBloqueadoHasta=Date.now()+600000;
@@ -6449,6 +6481,7 @@ function nuevaRem(){
   // Sin confirm() — Chrome puede bloquearlo y dejar la app sin funcionar
   _limpiarFormulario();
   toast('Nueva remisión ✓','ok');
+  if(typeof _calentarServidor_==='function')_calentarServidor_();   // despierta el servidor mientras se captura (ver _calentarServidor_)
 }
 function _limpiarFormulario(){
   _desbloquearFormulario();
