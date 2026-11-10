@@ -3212,8 +3212,9 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
   // Ronda 15: si esta remisión nueva está esperando su PDF, se sube YA (sin candado) y después sigue la vía de siempre, que solo actúa si
   // el PDF no quedó enlazado con la remisión (si ya quedó, su entrada de la cola se retiró al llegar el acuse).
   _pdfPrevioTraza_(entry.id,'pdf_listo',(_pdfPrevioEspera.has(String(entry.id))?'espera':'sin_espera')+(_pdfPrevioEnVuelo.has(String(entry.id))?',en_vuelo':'')+(correoEnviar?',correo':'')+(_pdfSinCola.has(entry.operationId)?',sin_cola':''));
-  if(!correoEnviar&&remActiva&&_pdfPrevioEspera.has(String(entry.id))&&!_pdfSinCola.has(entry.operationId)&&!_pdfPrevioEnVuelo.has(String(entry.id)))
+  if(!correoEnviar&&remActiva&&(_pdfPrevioEspera.has(String(entry.id))||_pdfPrevioAnticipado.has(String(entry.id)))&&!_pdfSinCola.has(entry.operationId)&&!_pdfPrevioEnVuelo.has(String(entry.id)))
     return _pdfPrevioSubir_(url,entry,b64,remActiva,()=>firmaGenerada===_hashRemPDF(remActiva,folio,total,0)).then(viaClasica);
+  _pdfPrevioAnticipado.delete(String(entry.id));   // marca anticipada sin subida previa (correo, etc.): este PDF sigue por la vía de siempre sin bloqueos
   return viaClasica();
 }
 
@@ -3223,8 +3224,10 @@ function _guardarEnColaPDF(entry){
   const key=String(entry.id||entry.folio);
   const previo=cola.find(e=>String(e.id||e.folio)===key);
   const {pdf,...light}=entry; // nunca guardar base64 en localStorage
+  const reservada=!previo&&typeof _pdfOpReservada!=='undefined'?_pdfOpReservada.get(key):null;   // marca anticipada: la operación con la que ya salió su remisión
+  if(reservada)_pdfOpReservada.delete(key);
   light.operationId=previo && previo.operationId && previo.hashPdf===entry.hashPdf ? previo.operationId :
-    (globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
+    (reservada||globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
   light._try=previo?Number(previo._try||0):0;
   if(previo && previo.hashPdf===entry.hashPdf){
     light._conflict=!!previo._conflict;light._lastError=previo._lastError||'';
@@ -4153,6 +4156,9 @@ async function registrarRemision(gpsParam){
 const PDF_PREVIO_ESPERA_MS=11000, PDF_PREVIO_TOPE_MS=9000;
 const _pdfPrevioEspera=new Map();      // id de la remisión nueva -> hora límite de su espera (solo en memoria: al recargar, sale como siempre)
 const _pdfPrevioEnVuelo=new Set();     // ids con una subida previa en camino
+let PDF_MARCA_ANTICIPADA=true;         // false = la remisión espera a su PDF como antes (P6)
+const _pdfPrevioAnticipado=new Map();  // id -> operación con la que su remisión ya salió (marca anticipada)
+const _pdfOpReservada=new Map();       // id -> operación reservada para su PDF (la toma _guardarEnColaPDF)
 let _pdfPrevioBloqueadoHasta=0;        // el servidor la rechazó (apagada / no la conoce): vía de siempre durante 10 min
 // Traza de cada decisión (ronda 15b, 2026-11-06): en N21R solo 7 de 20 remisiones llevaron su PDF por adelantado y desde el servidor no se ve por qué.
 // Se guarda en el teléfono (pdf_previo_traza, últimas 150) como [hora, id, evento, detalle]; nunca estorba ni lanza.
@@ -4182,17 +4188,18 @@ function _pdfPrevioAplica_(rem){return _pdfPrevioMotivoNo_(rem)==='';}
 function _pdfEsperaSuRemision_(id){
   try{
     id=String(id);
-    if(_pdfPrevioEspera.has(id)||_pdfPrevioEnVuelo.has(id))return true;
+    if(_pdfPrevioEspera.has(id)||_pdfPrevioEnVuelo.has(id)||_pdfPrevioAnticipado.has(id))return true;
     return leerSeguro('cola_remisiones',[]).some(e=>String(e.id)===id);
   }catch(_){return false;}
 }
 function _pdfPrevioReintentarCola_(demora,n){
   setTimeout(()=>{ if(_procRemEnCurso&&(n||0)<40)return _pdfPrevioReintentarCola_(500,(n||0)+1); procesarColaRemisiones(); },demora||0);
 }
-function _pdfPrevioSoltar_(id){ if(_pdfPrevioEspera.delete(String(id)))_pdfPrevioReintentarCola_(0); }
+function _pdfPrevioSoltar_(id){ _pdfPrevioAnticipado.delete(String(id)); if(_pdfPrevioEspera.delete(String(id)))_pdfPrevioReintentarCola_(0); }
 // El usuario pidió el PDF con correo: ese PDF va por la vía de siempre (el servidor manda el correo al recibirlo).
 function _pdfPrevioCancelar_(id){
   id=String(id);
+  _pdfPrevioAnticipado.delete(id);_pdfOpReservada.delete(id);
   try{const cola=leerSeguro('cola_remisiones',[]),it=cola.find(e=>String(e.id)===id);if(it&&it.pdfPrevioOp){delete it.pdfPrevioOp;guardarSeguro('cola_remisiones',JSON.stringify(cola));}}catch(_){}
   _pdfPrevioSoltar_(id);
 }
@@ -4274,10 +4281,20 @@ async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
   _pdfPrevioEnVuelo.add(id);
   const t0=Date.now();
   let marcadaAntes=false;
+  // Marca anticipada: la remisión ya salió con la operación reservada. Solo sirve subir por adelantado ESTE PDF (misma operación, el contenido
+  // de la remisión que salió); si es otro, va por la vía de siempre.
+  const anticipada=_pdfPrevioAnticipado.has(id);
+  if(anticipada){
+    const opAnticipada=_pdfPrevioAnticipado.get(id);
+    _pdfPrevioAnticipado.delete(id);
+    let mismo=false;try{mismo=!!vigente()&&String(opAnticipada)===String(entry.operationId);}catch(_){mismo=false;}
+    if(!mismo){_pdfPrevioEnVuelo.delete(id);_pdfPrevioTraza_(id,'anticipada_otro_pdf','');return;}
+    marcadaAntes=true;_pdfPrevioTraza_(id,'marca_paralelo','anticipada');
+  }
   // Hasta cuándo vale la pena reintentar la subida: el límite de la espera, aunque con P6 la espera se suelte antes.
-  const limiteEspera=_pdfPrevioEspera.get(id)||0;
+  const limiteEspera=anticipada?Date.now()+PDF_PREVIO_ESPERA_MS:(_pdfPrevioEspera.get(id)||0);
   const quedaEspera=()=>(marcadaAntes?limiteEspera:(_pdfPrevioEspera.get(id)||0))-Date.now();
-  if(PDF_PREVIO_PARALELO&&_pdfPrevioEspera.has(id)){
+  if(!anticipada&&PDF_PREVIO_PARALELO&&_pdfPrevioEspera.has(id)){
     try{marcadaAntes=_pdfPrevioMotivoMarca_(id,entry,rem,vigente)==='';}catch(_){marcadaAntes=false;}
     if(marcadaAntes){_pdfPrevioTraza_(id,'marca_paralelo','');_pdfPrevioSoltar_(id);}
   }
@@ -4362,7 +4379,23 @@ async function sincronizarRemision(rem,opciones){
     const motivoNo=_pdfPrevioMotivoNo_(rem);
     if(motivoNo)_pdfPrevioTraza_(rem.id,'sin_espera',motivoNo);
   }
-  if(opciones&&opciones.esperarPdf&&_pdfPrevioAplica_(rem)){
+  if(opciones&&opciones.esperarPdf&&_pdfPrevioAplica_(rem)&&PDF_MARCA_ANTICIPADA){
+    // Marca anticipada (2026-11-10, N32R: la remisión esperó 1.2 s a que se dibujara su PDF solo para conocer su operación). La operación del PDF se
+    // reserva AHORA y la remisión sale enseguida con ella; el PDF, al encolarse, toma esa misma operación y sube por adelantado como en P6.
+    // El servidor solo enlaza un PDF que de verdad subió con esa operación (si no, lo enlaza al llegar, M1, o sale por la vía de siempre).
+    const id=String(rem.id);
+    try{
+      const cola=leerSeguro('cola_remisiones',[]),it=cola.find(e=>String(e.id)===id);
+      if(it&&!it.pdfPrevioOp&&!it._conflict&&!it._detenido){
+        const op=globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2);
+        it.pdfPrevioOp=op;guardarSeguro('cola_remisiones',JSON.stringify(cola));
+        _pdfOpReservada.set(id,op);_pdfPrevioAnticipado.set(id,op);
+        setTimeout(()=>{_pdfPrevioAnticipado.delete(id);_pdfOpReservada.delete(id);},60000);   // si el PDF nunca se dibuja, no se queda nada atorado
+        _pdfPrevioTraza_(id,'marca_anticipada','');
+      }
+    }catch(_){}
+  }
+  if(opciones&&opciones.esperarPdf&&_pdfPrevioAplica_(rem)&&!_pdfPrevioAnticipado.has(String(rem.id))){
     const id=String(rem.id);
     _pdfPrevioTraza_(id,'espera','');
     _pdfPrevioEspera.set(id,Date.now()+PDF_PREVIO_ESPERA_MS);
