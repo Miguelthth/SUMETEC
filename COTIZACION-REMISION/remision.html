@@ -2229,12 +2229,25 @@ function _cierreSiNadaPendiente_(url){
     sumetecFetchLimite(url||getScriptUrl(),{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'buzon_cerrar'})}).catch(()=>{});
   }catch(_){}
 }
+// Medición fina (2026-11-11): cada viaje al servidor queda en la traza como `viaje` = «tipo ms estado». Restándole el Total ms de su fila de
+// TiemposServidor (misma hora) sale lo que el servidor no puede ver: internet + arranque de Google. Solo anota; nunca cambia el envío.
+function _viajeTraza_(documento,tipo,ms,estado){try{if(typeof _pdfPrevioTraza_==='function')_pdfPrevioTraza_(documento&&documento.id||'',`viaje`,`${tipo} ${ms} ${estado}`);}catch(_){}}
 async function _enviarConBuzon_(url,documento){
+  const viaje=(tipo,t0,estado)=>{try{if(typeof _viajeTraza_==='function')_viajeTraza_(documento,tipo,Date.now()-t0,estado);}catch(_){}};
   const post=async cuerpo=>{
-    const respuesta=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(cuerpo)});
-    return respuesta.json();
+    const t0=Date.now();
+    try{
+      const respuesta=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(cuerpo)});
+      const d=await respuesta.json();
+      viaje(cuerpo.tipo,t0,d&&d.estado||(d&&d.ok?'ok':(d&&d.codigo||'error')));
+      return d;
+    }catch(e){viaje(cuerpo.tipo,t0,'falla');throw e;}
   };
-  const directo=()=>sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(documento)});
+  const directo=async()=>{
+    const t0=Date.now();
+    try{const r=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(documento)});viaje(documento&&documento.tipo||'directo',t0,r&&r.status||'');return r;}
+    catch(e){viaje(documento&&documento.tipo||'directo',t0,'falla');throw e;}
+  };
   if(_buzonDisponible===false)return directo();
   // Los datos de reintento son del teléfono y cambian; el documento durable no.
   const limpio={};
@@ -4161,9 +4174,9 @@ const _pdfPrevioAnticipado=new Map();  // id -> operación con la que su remisi�
 const _pdfOpReservada=new Map();       // id -> operación reservada para su PDF (la toma _guardarEnColaPDF)
 let _pdfPrevioBloqueadoHasta=0;        // el servidor la rechazó (apagada / no la conoce): vía de siempre durante 10 min
 // Traza de cada decisión (ronda 15b, 2026-11-06): en N21R solo 7 de 20 remisiones llevaron su PDF por adelantado y desde el servidor no se ve por qué.
-// Se guarda en el teléfono (pdf_previo_traza, últimas 150) como [hora, id, evento, detalle]; nunca estorba ni lanza.
+// Se guarda en el teléfono (pdf_previo_traza, últimas 300; eran 150 antes de anotar también cada viaje) como [hora, id, evento, detalle]; nunca estorba ni lanza.
 function _pdfPrevioTraza_(id,ev,det){
-  try{const t=leerSeguro('pdf_previo_traza',[]);t.push([Date.now(),String(id),ev,det==null?'':String(det).slice(0,80)]);guardarSeguro('pdf_previo_traza',JSON.stringify(t.slice(-150)));}catch(_){}
+  try{const t=leerSeguro('pdf_previo_traza',[]);t.push([Date.now(),String(id),ev,det==null?'':String(det).slice(0,80)]);guardarSeguro('pdf_previo_traza',JSON.stringify(t.slice(-300)));}catch(_){}
 }
 function _pdfPrevioMotivoNo_(rem){
   try{
@@ -4300,9 +4313,12 @@ async function _pdfPrevioSubir_(url,entry,b64,rem,vigente){
   }
   try{
     const mandar=async()=>{
+      const tV=Date.now();
       const r=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
         body:JSON.stringify({tipo:'pdf_remision_previo',id:entry.id,folio:entry.folio,cliente:entry.cliente,fecha:entry.fecha,pdf:b64,pdfOperationId:entry.operationId,hashPdf:entry.hashPdf||'',device:entry.device})},PDF_PREVIO_TOPE_MS);
-      return r.json();
+      const dV=await r.json();
+      if(typeof _viajeTraza_==='function')_viajeTraza_(entry,'pdf_remision_previo',Date.now()-tV,dV&&dV.ok?'ok':(dV&&dV.codigo||'error'));
+      return dV;
     };
     // PDF directo (2026-11-09): primero con boleto, directo a Drive. null = no se pudo y sigue la vía de siempre.
     let d=await _pdfDirectoSubir_(url,entry,b64).catch(()=>null);
