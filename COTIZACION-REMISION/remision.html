@@ -2197,6 +2197,7 @@ let _bajandoCobros=false;
 // a llamar al MISMO procesador antes de que termine, reenviando todo en paralelo:
 // quema folios (cotizaciones piden uno nuevo en cada reintento) y agota la cuota de
 // Apps Script. Estos flags garantizan UNA pasada a la vez por cola.
+let _procRemOtraPasada=false;   // auditoría 12/nov: alguien pidió enviar mientras otra pasada corría
 let _procRemEnCurso=false,_procPagosEnCurso=false,_procPDFEnCurso=false,_procElimEnCurso=false,_procCotEnCurso=false,_procNuevosEnCurso=false,_procCancelEnCurso=false;
 const SUMETEC_TIEMPO_ENVIO_PDF_MS=90000; // el envío del PDF espera más que el resto (ver guardarEnDrive)
 // Una escritura a la vez, en orden. Las del PDF son de BAJA prioridad (hallazgo 30/oct: un PDF tarda hasta 75 s en el
@@ -3084,7 +3085,7 @@ function _hashRemPDF(rem, folio, total, nLineas){
   for(let i=0;i<firma.length;i++)huella=Math.imul(huella^firma.charCodeAt(i),16777619)>>>0;
   return [folio||'', (+total||0).toFixed(2), saldo, nPagos, nLineas,Number(rem&&rem._rev||0),huella.toString(16)].join('|');
 }
-async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,yaSubidoAntes){
+async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,yaSubidoAntes,origenCola){
   const url=getScriptUrl();if(!url)return;
   let b64;
   try{ b64=doc.output('datauristring').split(',')[1]; }
@@ -3099,8 +3100,14 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
   // La ubicación ya se tomó al tocar REGISTRAR (rem.data._lat): se reusa en vez de
   // volver a esperar hasta 10 s al GPS antes de subir el PDF.
   const _gpsReg=remActiva&&remActiva.data&&remActiva.data._lat?{lat:remActiva.data._lat,lng:remActiva.data._lng}:null;
-  const gps=_dirCliente.length>3 ? null : (_gpsReg||await _gpsRapido(3000));
+  const _gpsYaDecidido=!!(remActiva&&remActiva.data&&remActiva.data._gpsDecidido);
+  const gps=_dirCliente.length>3 ? null : (_gpsReg||(_gpsYaDecidido?null:await _gpsRapido(3000)));
   if(firmaGenerada!==_hashRemPDF(remActiva,folio,total,0)){_estado('La remisión cambió mientras se preparaba el PDF. Genera el PDF actualizado.',7000);return;}
+  if(origenCola){
+    // Mientras esperábamos el GPS, el servidor pudo confirmar el PDF o el teléfono sustituirlo.
+    const vigente=leerSeguro('cola_pdf',[]).find(e=>String(e.id||e.folio)===String(origenCola.id||origenCola.folio));
+    if(!vigente||vigente.operationId!==origenCola.operationId||vigente._detenido||vigente._conflict||!sumetecPuedeReintentar(vigente))return;
+  }
   // Datos del cliente del formulario (para registro en hoja Clientes Maestro).
   // H-2: antes solo mandaba nombre/tel/dir/cp (rfc siempre ''); ahora también
   // viajan rfc/contacto/correo/persona moral capturados en "➕ Más datos".
@@ -3368,7 +3375,7 @@ async function procesarColaPDF(){
         continue;
       }
       try{
-        await descargarPDF(rem);
+        await descargarPDF(rem,false,entry);
         ok++;
       }catch(e){ console.error('procesarColaPDF',e); }
     }
@@ -4054,6 +4061,8 @@ async function registrarRemision(gpsParam){
   const{tot}=_calcTot(activos,sn.descPct);
   // Guardar GPS en el snap si viene del botón REGISTRAR
   if(gpsParam){sn._lat=gpsParam.lat;sn._lng=gpsParam.lng;}
+  // Auditoría 12/nov: desde el botón REGISTRAR la ubicación ya se decidió (con o sin lectura). El PDF la reusa y no vuelve a esperar 3 s.
+  if(arguments.length>0)sn._gpsDecidido=true;
 
   // ── Actualizar remisión existente ──
   const existingIdx=remisiones.findIndex(r=>r.id===remActualId);
@@ -4175,7 +4184,7 @@ async function registrarRemision(gpsParam){
       console.error('❌ error en descargarPDF:', e.message);
       _pdfPrevioSoltar_(rem.id);   // ronda 15: sin PDF no hay nada que esperar
     }
-  },400);
+  },60);   // auditoría 12/nov: 400→60 ms; basta para que se pinte «Registrando…» antes de que jsPDF ocupe la página
   return {ok:okGuardado,folio}; // M-09: registrarTodo decide si puede confirmar la venta
 }
 
@@ -4604,7 +4613,10 @@ function _remisionesQueLlevanCobros_(){
 }
 
 async function procesarColaRemisiones(){
-  if(!isOnline||_procRemEnCurso)return;
+  // Auditoría de tiempos (2026-11-12): si una venta entra mientras otra se está enviando, antes esta llamada se perdía y la venta esperaba
+  // al siguiente latido (~10 s). Ahora queda anotada otra pasada y se corre en cuanto termine la actual (mismo orden, revisión y reintentos).
+  if(_procRemEnCurso){_procRemOtraPasada=true;return;}
+  if(!isOnline)return;
   const url=getScriptUrl();if(!url)return;
   const cola=_prepararColaRemisionesRevision();
   if(!cola.length)return;
@@ -4682,7 +4694,8 @@ async function procesarColaRemisiones(){
       bajarCobros();
     }
     actualizarBadgePendientes();
-  }finally{ _procRemEnCurso=false; if(huboRetenida)_pdfPrevioReintentarCola_(700); }
+  }finally{ _procRemEnCurso=false; if(huboRetenida)_pdfPrevioReintentarCola_(700);
+    else if(_procRemOtraPasada){_procRemOtraPasada=false;setTimeout(procesarColaRemisiones,0);} }
 }
 function _estadoBadge(r){
   // N2: leerSeguro (no JSON.parse crudo) → si cola_offline se corrompe NO rompe el render de cobros.
@@ -7453,7 +7466,7 @@ function syncPrintHeader(){
 // Drive lleve el folio definitivo.
 // ── Comprobante de pago (para remisiones remotas sin items) ──────
 // Genera un PDF simple con folio, cliente, total y el historial de pagos.
-function _generarComprobantePago(rem, descargar, vistaPrevia){
+function _generarComprobantePago(rem, descargar, vistaPrevia, origenCola){
   if(!window.jspdf){toast('Necesitas internet para generar el PDF','err');return;}
   try{
     const {jsPDF}=window.jspdf;
@@ -7565,7 +7578,7 @@ function _generarComprobantePago(rem, descargar, vistaPrevia){
     }
 
     // Siempre subir a Drive
-    const subida=guardarEnDrive(doc,rem.folio,rem.cliente,rem.total,filename,rem,_hashRemPDF(rem,rem.folio,rem.total,0),!!rem.pdfSubidoTs);
+    const subida=guardarEnDrive(doc,rem.folio,rem.cliente,rem.total,filename,rem,_hashRemPDF(rem,rem.folio,rem.total,0),!!rem.pdfSubidoTs,origenCola);
 
     // Descargar solo si el usuario lo pidió explícitamente
     if(descargar){
@@ -7583,7 +7596,7 @@ function _generarComprobantePago(rem, descargar, vistaPrevia){
   }catch(e){toast('Error generando comprobante: '+e.message,'err');console.error(e);}
 }
 
-function descargarPDF(remOverride, forzarDescarga){
+function descargarPDF(remOverride, forzarDescarga, origenCola){
   // _regen=true → solo sube a Drive (sin descargar al celular)
   // forzarDescarga=true → genera desde datos guardados PERO también descarga
   const _regen = !!(remOverride && remOverride.data) && !forzarDescarga;
@@ -7603,7 +7616,7 @@ function descargarPDF(remOverride, forzarDescarga){
       _pdfSoloVistaPrevia=false;
       return _generarComprobantePago(remOverride, false, true);
     }
-    return _generarComprobantePago(remOverride, forzarDescarga);
+    return _generarComprobantePago(remOverride, forzarDescarga, false, origenCola);
   }
 
   // iOS/iPadOS: iPadOS 13+ se reporta como MacIntel, no como iPad
@@ -8056,7 +8069,7 @@ function descargarPDF(remOverride, forzarDescarga){
     // se pierde en silencio porque "nada cambió" en el contenido del PDF.
     let subidaPDF;
     if(_regen||!_yaSubidoIgual||_correoPendienteEnvio){
-      subidaPDF=guardarEnDrive(doc,folio_,cNombre,tot,filename,_regen?remOverride:null,_hashPDFActual,!!(remActivo&&remActivo.pdfSubidoTs));
+      subidaPDF=guardarEnDrive(doc,folio_,cNombre,tot,filename,_regen?remOverride:null,_hashPDFActual,!!(remActivo&&remActivo.pdfSubidoTs),origenCola);
     }
     if(_regen)return subidaPDF; // regeneración: solo subir a Drive con el folio definitivo, sin descargar/compartir
 
@@ -8619,6 +8632,9 @@ async function registrarTodo(){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Registrando…';}
 
   try{
+    // Auditoría de tiempos (2026-11-12): si el colchón de folios está vacío, la reserva arranca YA, mientras se espera el GPS (antes era uno
+    // después del otro: hasta 3 s de GPS y luego hasta 15 s de folio). registrarRemision espera esa misma reserva, no pide otra.
+    try{if(!folioApartado()&&isOnline)apartarFolio(15000);}catch(_){}
     // GPS: instantáneo si hay lectura reciente; si no, máximo 3 s (igual que antes).
     const gps=await _gpsRapido(3000);
 
