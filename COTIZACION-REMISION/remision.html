@@ -2890,8 +2890,20 @@ function tomarFolioApartado(){
   const lista=_foliosApartados_();
   const f=lista.shift()||null;
   if(f&&!_guardarFoliosApartados_(lista))return null;
-  if(f)setTimeout(()=>{apartarFolio();},0);
+  // Auditoría 12/nov (N48R: 47 reservas para 47 ventas, cada una 1-5 s con el candado y casi pegada al envío de la venta): ya no se pide un
+  // folio por cada uno gastado. Solo cuando queda 1 o ninguno se repone el colchón (pidiendo los que faltan, 2 o 3 de golpe), y la petición
+  // espera a que termine el envío de la venta en curso. El máximo sigue siendo FOLIOS_COLCHON. FOLIOS_REPONER_CON=3 vuelve a reponer siempre.
+  if(f&&lista.length<=FOLIOS_REPONER_CON){_reponerFolioPend=true;setTimeout(_reponerFolioSiToca_,20000);}
   return f;
+}
+const FOLIOS_REPONER_CON=1;
+let _reponerFolioPend=false;
+function _reponerFolioSiToca_(){
+  if(!_reponerFolioPend)return;
+  if(typeof _procRemEnCurso!=='undefined'&&_procRemEnCurso)return;   // el cierre de esa pasada lo vuelve a intentar
+  if(typeof _procRemOtraPasada!=='undefined'&&_procRemOtraPasada)return;
+  _reponerFolioPend=false;
+  apartarFolio();
 }
 let _apartandoFolio=null;   // la petición en camino: quien llegue después la espera en vez de pedir otra
 function apartarFolio(maxMs){
@@ -4694,7 +4706,7 @@ async function procesarColaRemisiones(){
       bajarCobros();
     }
     actualizarBadgePendientes();
-  }finally{ _procRemEnCurso=false; if(huboRetenida)_pdfPrevioReintentarCola_(700);
+  }finally{ _procRemEnCurso=false; if(_reponerFolioPend)setTimeout(_reponerFolioSiToca_,0); if(huboRetenida)_pdfPrevioReintentarCola_(700);
     else if(_procRemOtraPasada){_procRemOtraPasada=false;setTimeout(procesarColaRemisiones,0);} }
 }
 function _estadoBadge(r){
