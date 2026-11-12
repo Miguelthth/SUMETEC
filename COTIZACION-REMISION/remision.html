@@ -2233,6 +2233,23 @@ function _cierreSiNadaPendiente_(url){
 // Medición fina (2026-11-11): cada viaje al servidor queda en la traza como `viaje` = «tipo ms estado». Restándole el Total ms de su fila de
 // TiemposServidor (misma hora) sale lo que el servidor no puede ver: internet + arranque de Google. Solo anota; nunca cambia el envío.
 function _viajeTraza_(documento,tipo,ms,estado){try{if(typeof _pdfPrevioTraza_==='function')_pdfPrevioTraza_(documento&&documento.id||'',`viaje`,`${tipo} ${ms} ${estado}`);}catch(_){}}
+const CLAVE_BUZON_IDS='buzon_ids_enviados';
+function _buzonPrimerEnvio_(id){
+  if(!id)return false;
+  try{
+    // Primera vez con esta versión: lo que ya estaba en cola pudo haber llegado al buzón antes (acuse perdido), así que cuenta como enviado.
+    let crudo=localStorage.getItem(CLAVE_BUZON_IDS);
+    if(crudo===null){
+      const previos=[...leerSeguro('cola_remisiones',[]),...leerSeguro('cola_offline',[])].map(e=>String(e&&e.id||'')).filter(Boolean);
+      localStorage.setItem(CLAVE_BUZON_IDS,JSON.stringify(previos.slice(-400)));crudo=localStorage.getItem(CLAVE_BUZON_IDS);
+    }
+    const lista=JSON.parse(crudo||'[]');
+    if(!Array.isArray(lista)||lista.indexOf(id)>=0)return false;
+    lista.push(id);
+    localStorage.setItem(CLAVE_BUZON_IDS,JSON.stringify(lista.slice(-400)));
+    return JSON.parse(localStorage.getItem(CLAVE_BUZON_IDS)||'[]').indexOf(id)>=0;   // solo si de verdad quedó anotado
+  }catch(_){return false;}
+}
 async function _enviarConBuzon_(url,documento){
   const viaje=(tipo,t0,estado)=>{try{if(typeof _viajeTraza_==='function')_viajeTraza_(documento,tipo,Date.now()-t0,estado);}catch(_){}};
   const post=async cuerpo=>{
@@ -2260,7 +2277,10 @@ async function _enviarConBuzon_(url,documento){
   // no lo espera. Al llegar el acuse con `cierrePendiente`, se manda `buzon_cerrar` sin esperar respuesta (si se pierde, lo cierra el reloj).
   // A1 (2026-11-10): el cierre espera a que no quede PDF por subir (N29R: el cierre tomó el candado 7.7 s y el PDF esperó 6 s detrás).
   const cerrarAparte=r=>{try{if(r&&r.cierrePendiente&&typeof _cierreSiNadaPendiente_==='function'){_cierreTrasPdf=true;_cierreSiNadaPendiente_(url);}}catch(_){}};   // nunca tumba el envío
-  const recibido=await post({tipo:'buzon_recibir',documento:limpio,procesar:true,cierreAparte:true});   // un viaje: el servidor lo aplica en la misma llamada si puede
+  // N49T (12/nov): «primerEnvio» = este teléfono nunca mandó este ID al buzón. Se anota ANTES de enviar (un acuse perdido ya no cuenta como
+  // primero) y el servidor se ahorra buscar el ID en el buzón (0.5-1.4 s). Si no se puede anotar, no se marca y el servidor busca como siempre.
+  const primerEnvio=limpio.tipo==='remision'&&!limpio.pdf&&typeof _buzonPrimerEnvio_==='function'&&_buzonPrimerEnvio_(String(limpio.id||''));
+  const recibido=await post({tipo:'buzon_recibir',documento:limpio,procesar:true,cierreAparte:true,...(primerEnvio?{primerEnvio:true}:{})});   // un viaje: el servidor lo aplica en la misma llamada si puede
   cerrarAparte(recibido);
   if(recibido?.codigo==='BUZON_DOCUMENTO_GRANDE')return directo();
   if(!recibido?.ok&&(
