@@ -3230,6 +3230,17 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
         _revisarFallas();
         if(typeof guardarEventoSync==='function'){guardarEventoSync({folio:entry.folio,operacion:'REMISION_GUARDADA',resultado:'OK'});guardarEventoSync({folio:entry.folio,operacion:'PDF_GUARDADO',resultado:'ERROR',detalle:'El PDF no se guardó en Drive.'});}
       } else {
+        // N49S (12/nov): la subida previa del PDF tardó 10-14 s en Google, el teléfono la cortó a los 9 s y nunca supo que SÍ se guardó; el servidor ya
+        // contaba ese PDF (pdfRevision 1) y este reintento, que esperaba la 0, quedaba para siempre como «conflicto» (la cola no se vaciaba). Si el
+        // conflicto es SOLO de la revisión del PDF (la de la remisión cuadró), se adopta la del servidor y se reintenta UNA vez; el PDF dibuja la
+        // remisión vigente. Un segundo conflicto sigue por el camino de siempre (queda a la vista para revisarlo). PDF_CONFLICTO_AUTO=0 no aplica a este
+        // código: se quita volviendo al respaldo.
+        if(d && d.conflict && d.pdfRevision!=null && d.currentRevision==null && remActiva && !entry._autoRevPdf && Number(d.pdfRevision)>Number(entry.expectedPdfRevision||0)){
+          const q0=leerSeguro('cola_pdf',[]), a0=q0.find(e=>String(e.id||e.folio)===String(entry.id||entry.folio));
+          if(a0 && a0.operationId===entry.operationId){a0._autoRevPdf=Number(d.pdfRevision);guardarSeguro('cola_pdf',JSON.stringify(q0));}
+          remActiva.pdfServerRevision=Math.max(Number(remActiva.pdfServerRevision||0),Number(d.pdfRevision)||0);persistirRemisiones();
+          setTimeout(()=>{procesarColaPDF();},1500);return;
+        }
         if(d && (d.conflict||d.updateRequired)){
           const q=leerSeguro('cola_pdf',[]), actual=q.find(e=>String(e.id||e.folio)===String(entry.id||entry.folio));
           if(actual && actual.operationId===entry.operationId){actual._conflict=true;actual._lastError=d.error||'Conflicto de revisión PDF';if(d.pdfRevision!=null)actual._revServidor=Number(d.pdfRevision)||0;if(d.currentRevision!=null)actual._revRemServidor=Number(d.currentRevision)||0;guardarSeguro('cola_pdf',JSON.stringify(q));}
