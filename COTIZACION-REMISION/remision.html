@@ -4240,7 +4240,10 @@ async function registrarRemision(gpsParam){
 // viaja con la marca `pdfPrevioOp`; el servidor enlaza la dirección en la misma fila y el PDF ya no hace segundo viaje. Si algo falla (sin
 // señal, servidor viejo o apagado, Drive ocupado, la remisión cambió, se acabó la espera) la remisión sale como siempre y el PDF por su vía de
 // siempre: nada depende de que esto funcione. Los dos interruptores: PDF_PREVIO=0 en el servidor, y estas constantes.
-const PDF_PREVIO_ESPERA_MS=11000, PDF_PREVIO_TOPE_MS=9000;
+// N53R (12/nov, una venta sola): la subida previa tardó 7.7 s en Google y el teléfono la cortó a los 9 s (con el viaje de red no alcanzó). Google
+// SÍ la guardó, pero el teléfono no lo supo y volvió a subir el PDF por la vía de siempre ~2 min después. Va en paralelo con la venta (la remisión
+// ya salió con su marca), así que esperar más no frena al vendedor: tope 9 → 20 s.
+const PDF_PREVIO_ESPERA_MS=11000, PDF_PREVIO_TOPE_MS=20000;
 const _pdfPrevioEspera=new Map();      // id de la remisión nueva -> hora límite de su espera (solo en memoria: al recargar, sale como siempre)
 const _pdfPrevioEnVuelo=new Set();     // ids con una subida previa en camino
 let PDF_MARCA_ANTICIPADA=true;         // false = la remisión espera a su PDF como antes (P6)
