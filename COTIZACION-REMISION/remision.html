@@ -3119,12 +3119,12 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
   // _correoPendienteEnvio, capturada en el popup de confirmación justo al pulsar
   // Descargar (ver _descargarDesdeConfirmacion). Se revisa el correo otra vez
   // aquí por si se borró entre que se marcó la casilla y este momento.
-  const correoEnviar=!!(_correoPendienteEnvio&&_correoValido(datosCliente.email));
+  const correoSolicitado=!!(_correoPendienteEnvio&&_correoValido(datosCliente.email));
   _correoPendienteEnvio=false; // se consume una sola vez -- nunca se arrastra a la siguiente descarga
   // Asunto y cuerpo salen de la identidad del negocio (empresa.nombre/slogan),
   // nunca quemados en apps_script.js -- el servidor los usa tal cual si vienen.
-  const correoAsunto=correoEnviar?_asuntoCorreo(datosCliente.nombre||cliente,folio,total,'remision'):'';
-  const correoCuerpo=correoEnviar?_mensajeAgradecimiento(datosCliente.nombre||cliente,folio,total):'';
+  const correoAsunto=correoSolicitado?_asuntoCorreo(datosCliente.nombre||cliente,folio,total,'remision'):'';
+  const correoCuerpo=correoSolicitado?_mensajeAgradecimiento(datosCliente.nombre||cliente,folio,total):'';
   const entry={tipo:'remision',
     id:remActiva?remActiva.id:'',
     folio, cliente:cliente||'CLIENTE',
@@ -3134,9 +3134,10 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
     estado:remActiva?remActiva.estado:'pendiente',
     condicionesPago:document.getElementById('d_pago')?.value||'',
     horaDescarga, lat:gps?gps.lat:'', lng:gps?gps.lng:'',
-    datosCliente, correoEnviar, correoAsunto, correoCuerpo,
+    datosCliente, correoEnviar:correoSolicitado, correoAsunto, correoCuerpo,
     pdf:b64, hashPdf:hashPdf||'', device:_deviceLabel_()};
   _guardarEnColaPDF(entry); // nunca se pierde para Drive
+  const correoEnviar=entry.correoEnviar;
   if(correoEnviar)_pdfPrevioCancelar_(entry.id||entry.folio);   // ronda 15: el PDF con correo va por la vía de siempre
   if(globalThis.ComercialCliente&&remActiva?.data?.comercial){ComercialCliente.documento('REMISION',entry.id,folio,remActiva.data.comercial);ComercialCliente.enviar().catch(()=>{});}
   if(_pdfSinCola.has(entry.operationId)){
@@ -3192,7 +3193,7 @@ async function guardarEnDrive(doc,folio,cliente,total,filename,remParam,hashPdf,
           if(d.correoEnviado){
             _estadoHeaderVivo('✅ Guardado ✓ · ✉️ correo enviado',5000);
             // MC-03: marca local para "ya se envió antes" -- se lee en _mostrarConfirmacion.
-            if(remActiva && confirmacionVigente){remActiva.correoEnviadoInfo={ts:Date.now(),email:datosCliente.email};persistirRemisiones();}
+            if(remActiva && confirmacionVigente){remActiva.correoEnviadoInfo={ts:Date.now(),email:entry.datosCliente.email};persistirRemisiones();}
           }
           else _estadoHeaderVivo('✅ Guardado ✓ · ⚠️ correo no enviado',5000);
         } else {
@@ -3236,6 +3237,13 @@ function _guardarEnColaPDF(entry){
   const cola=leerSeguro('cola_pdf',[]);
   const key=String(entry.id||entry.folio);
   const previo=cola.find(e=>String(e.id||e.folio)===key);
+  // Una regeneración automática del mismo PDF conserva el envío solicitado y su destinatario.
+  if(previo?.correoEnviar&&previo.datosCliente?.email&&!entry.correoEnviar&&entry.hashPdf&&previo.hashPdf===entry.hashPdf){
+    entry.correoEnviar=true;
+    entry.correoAsunto=previo.correoAsunto;
+    entry.correoCuerpo=previo.correoCuerpo;
+    entry.datosCliente={...entry.datosCliente,email:previo.datosCliente.email};
+  }
   const {pdf,...light}=entry; // nunca guardar base64 en localStorage
   const reservada=!previo&&typeof _pdfOpReservada!=='undefined'?_pdfOpReservada.get(key):null;   // marca anticipada: la operación con la que ya salió su remisión
   if(reservada)_pdfOpReservada.delete(key);
@@ -3334,7 +3342,11 @@ async function procesarColaPDF(){
     // existe guardada pero todavía no se cargó a memoria (evita un falso huérfano).
     const remsGuardadas=leerSeguro('r_rems',[]);
     let ok=0; const huerfanos=[];
-    for(const entry of [...cola]){
+    for(const anterior of cola){
+      // Otra subida puede haber confirmado, sustituido o detenido este PDF mientras esperábamos.
+      const key=String(anterior.id||anterior.folio);
+      const entry=leerSeguro('cola_pdf',[]).find(e=>String(e.id||e.folio)===key&&e.operationId===anterior.operationId);
+      if(!entry){if(typeof _pdfPrevioTraza_==='function')_pdfPrevioTraza_(anterior.id,'cola_ya_atendida','');continue;}
       if(entry._conflict||entry._detenido||!sumetecPuedeReintentar(entry))continue;
       const rem=remisiones.find(x=>String(x.id)===String(entry.id))
               ||remsGuardadas.find(x=>String(x.id)===String(entry.id));
@@ -3345,18 +3357,22 @@ async function procesarColaPDF(){
         // siempre (badge "sin enviar" eterno, "Reintentar" sin efecto). Se
         // descarta: es irrecuperable, no un envío que valga la pena reintentar.
         console.warn('PDF en cola irrecuperable (sin datos locales), se descarta:',entry.folio||entry.id);
-        huerfanos.push(String(entry.id||entry.folio));
+        _dequeuePDF(key,entry.operationId);
+        huerfanos.push(key);
         continue;
       }
       if(_pdfEsperaSuRemision_(entry.id))continue;   // ronda 15d: ver _pdfEsperaSuRemision_
+      if(rem.pdfSubidoTs&&entry.hashPdf&&rem.pdfHash===entry.hashPdf&&!entry.correoEnviar){
+        _dequeuePDF(key,entry.operationId);
+        if(typeof _pdfPrevioTraza_==='function')_pdfPrevioTraza_(entry.id,'cola_ya_en_drive','');
+        continue;
+      }
       try{
         await descargarPDF(rem);
         ok++;
       }catch(e){ console.error('procesarColaPDF',e); }
     }
     if(huerfanos.length){
-      const c=leerSeguro('cola_pdf',[]);
-      guardarSeguro('cola_pdf',JSON.stringify(c.filter(e=>!huerfanos.includes(String(e.id||e.folio)))));
       toast('🧹 Se quitó '+huerfanos.length+' PDF atorado sin datos (ya no existía la remisión)','warn',5000);
     }
     if(ok>0)_estado('⬆️ Subiendo '+ok+' PDF(s) a Drive…');
@@ -4103,7 +4119,10 @@ async function registrarRemision(gpsParam){
       // CRÍTICO: la señal estaba "en línea" pero falló (datos intermitentes en campo).
       // NUNCA tirar la remisión — caemos al flujo offline con folio temporal y se
       // sincroniza sola al recuperar señal. El servidor le asigna el folio REM- definitivo.
-      setOnlineState(false); // la conexión realmente no es confiable ahora mismo
+      // Panorama (2026-11-11, N45R: 5 de 20 ventas). En racha, el servidor puede tardar más de 15 s en apartar folio porque el candado está
+      // ocupado: eso NO es falta de red. Marcar «sin conexión» aquí apagaba el PDF adelantado y las colas hasta el siguiente latido. Solo se
+      // marca sin conexión si el navegador o el último latido dicen que de verdad no hay red; si no, se sigue en línea con folio temporal.
+      if(!navigator.onLine||ESTADO_HEARTBEAT==='sin_conexion')setOnlineState(false); // la conexión realmente no es confiable ahora mismo
     }
   }
   if(!folio){
