@@ -2898,6 +2898,9 @@ function tomarFolioApartado(){
 }
 const FOLIOS_REPONER_CON=1;
 let _reponerFolioPend=false;
+function _reponerFolioSiBajo_(){
+  if(_foliosApartados_().length<=FOLIOS_REPONER_CON){_reponerFolioPend=true;_reponerFolioSiToca_();}
+}
 function _reponerFolioSiToca_(){
   if(!_reponerFolioPend)return;
   if(typeof _procRemEnCurso!=='undefined'&&_procRemEnCurso)return;   // el cierre de esa pasada lo vuelve a intentar
@@ -2940,7 +2943,7 @@ function cargarFolioRemoto(){
   const url=getScriptUrl();if(!url)return;
   // El folio que se muestra es el que este teléfono ya tiene apartado (o el que aparta ahora).
   const yaApartado=folioApartado();
-  if(yaApartado){_mostrarFolioApartado_(yaApartado);apartarFolio();return;}   // y repone el colchón por detrás
+  if(yaApartado){_mostrarFolioApartado_(yaApartado);_reponerFolioSiBajo_();return;}   // repone solo si queda 1 (auditoría envío completo 12/nov: antes pedía siempre)
   if(isOnline){apartarFolio().then(f=>{if(f)_mostrarFolioApartado_(f);else _cargarFolioSoloLectura_();});return;}
   _cargarFolioSoloLectura_();
 }

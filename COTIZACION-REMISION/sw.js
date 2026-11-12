@@ -1,4 +1,4 @@
-const CACHE = 'sumetec-rem-8e337a44ff';
+const CACHE = 'sumetec-rem-511eb8c17e';
 const PREFIJO = 'sumetec-rem-';
 
 // Versión ACEPTADA (2026-09-29, pedido de Miguel: «que no se actualice sola hasta que le dé
