@@ -2888,7 +2888,7 @@ const CLAVE_FOLIO_APARTADO='r_folio_apartado';
 // V1 (2026-10-19): colchón de hasta 3 folios. Así una venta tras otra no espera al candado de Google: se usa
 // el primero de la lista y se repone en segundo plano. Riesgo aceptado por Miguel: si se pierde el teléfono,
 // quedan hasta 3 huecos de folio, y entre teléfonos los números no siguen el orden de la hora.
-const FOLIOS_COLCHON=3;
+const FOLIOS_COLCHON=6;   // 2026-11-12: antes 3. Con reponer en 2, entra al candado ~5 veces por cada 20 ventas en vez de ~10.
 function _foliosApartados_(){
   try{
     const o=JSON.parse(localStorage.getItem(CLAVE_FOLIO_APARTADO)||'null');
@@ -2916,7 +2916,7 @@ function tomarFolioApartado(){
   if(f&&lista.length<=FOLIOS_REPONER_CON){_reponerFolioPend=true;setTimeout(_reponerFolioSiToca_,20000);}
   return f;
 }
-const FOLIOS_REPONER_CON=1;
+const FOLIOS_REPONER_CON=2;   // 2026-11-12: antes 1 (repone 4 de golpe).
 let _reponerFolioPend=false;
 function _reponerFolioSiBajo_(){
   if(_foliosApartados_().length<=FOLIOS_REPONER_CON){_reponerFolioPend=true;_reponerFolioSiToca_();}
@@ -4091,6 +4091,8 @@ function loadDraft(){
 
 async function registrarRemision(gpsParam){
   console.log('→ registrarRemision INICIO');
+  // Medición (2026-11-12): hora del clic en REGISTRAR; la traza del envío anota cuánto pasó desde aquí (lado del teléfono). Solo mide.
+  try{window._tClicRemision=Date.now();}catch(_){}
   const sn=snap();
   const activos=sn.items.filter(i=>(+i.qty>0)&&((+i.precio>0)||i.regalo));
   if(!activos.length){toast('Agrega al menos un producto con cantidad y precio','err');return;}
@@ -4688,7 +4690,7 @@ async function procesarColaRemisiones(){
           const fresca=leerSeguro('cola_remisiones',[]).find(e=>String(e.id)===String(item.id)&&e.operationId===item.operationId);
           if(fresca&&fresca.pdfPrevioOp)item.pdfPrevioOp=fresca.pdfPrevioOp;
         }
-        _pdfPrevioTraza_(item.id,'envio',(item.pdfPrevioOp?'con_marca':'sin_marca')+(esperaPdf?' (aun_esperaba)':''));
+        _pdfPrevioTraza_(item.id,'envio',(item.pdfPrevioOp?'con_marca':'sin_marca')+(esperaPdf?' (aun_esperaba)':'')+(window._tClicRemision?' desde_clic='+(Date.now()-window._tClicRemision):''));
         const res=await _escrituraOrdenada(()=>_enviarConBuzon_(url,_docRemisionConCobros_(item)));
         if(res.ok){
           const d=await res.json();
