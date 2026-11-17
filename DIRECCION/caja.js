@@ -292,7 +292,7 @@ async function anularMovimientoDireccion(pin, anulaA, motivo) {
   try { r = await enviar({}); } catch (_) { return { ok: true, estado: 'EN_COLA' }; }
   // Día con el corte cerrado: el servidor avisa y no toca nada hasta que el dueño confirme que se modifique ese corte.
   if (!r.ok && (r.estado === 'CORTE_CERRADO' || r.requiereConfirmarCorte === true)) {
-    const acepta = typeof confirm === 'function' && confirm((r.mensaje || 'Ese día ya tiene el corte de caja cerrado.') + '\n\n¿Confirmas el ajuste?');
+    const acepta = await sumetecConfirmar((r.mensaje || 'Ese día ya tiene el corte de caja cerrado.') + '\n\n¿Confirmas el ajuste?');
     if (!acepta) { _quitarDeCola_(COLAS.anulaciones, item.id); throw Error('Corrección cancelada: el corte de ese día sigue cerrado y sin cambios.'); }
     try { r = await enviar({ confirmaCorte: true }); } catch (_) { return { ok: true, estado: 'EN_COLA' }; }
   }
@@ -351,8 +351,8 @@ function _pintarRechazadosCaja_(despuesDe) {
     p.textContent = `${etiqueta} ${x.tipoMovimiento || x.anulaA || ''} ${x.monto ? '$' + Number(x.monto).toFixed(2) : ''} no se guardó: ${x.rechazo}. `;
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'btn btn-outline-secondary'; b.textContent = 'Descartar';
-    b.onclick = () => {
-      if (!confirm('¿Descartar esta captura pendiente? NO llegará al servidor.')) return;
+    b.onclick = async () => {
+      if (!await sumetecConfirmar('¿Descartar esta captura pendiente? NO llegará al servidor.')) return;
       _quitarDeCola_(COLAS[k], x.id); p.remove();
     };
     // «Reintentar» suelta el freno (sirve cuando el rechazo fue por fallos del servidor, no por datos distintos).
@@ -454,7 +454,7 @@ function activarCajaDireccion() {
       lista.querySelectorAll('button.anular').forEach(b => b.onclick = async () => {
         if (typeof _autorizarDireccion_ === 'function' && !await _autorizarDireccion_('anular_movimiento_caja', 'libre',
           b.dataset.id, 'Corregir un movimiento de caja')) return;
-        const motivo = prompt('Explica la corrección (mínimo 10 caracteres)');
+        const motivo = await sumetecPedirTexto('Explica la corrección (mínimo 10 caracteres)');
         if (motivo === null) return;
         try {
           const rAnul = await anularMovimientoDireccion(pin, b.dataset.id, motivo);

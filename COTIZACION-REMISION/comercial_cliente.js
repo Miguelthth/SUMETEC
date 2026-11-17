@@ -119,8 +119,8 @@
       datos.precios.map(p=>'<p>'+esc(p.codigo||p.producto||p.descripcion)+' · '+esc(p.precio)+' '+esc(p.moneda)+' / '+esc(p.unidad)+' · IVA '+esc(p.ivaTasa)+'% '+(p.ivaIncluido?'incluido':'adicional')+' · '+esc(p.vigenciaHasta||'sin vigencia pactada')+' · '+esc(p.condiciones||'')+'</p>').join('')+
       '<p>'+datos.ubicaciones.length+' ubicación(es) confirmada(s) · '+cliente.pendientes()+' pendiente(s)</p><button type="button" id="comercialConsultar">Consultar expediente</button> <button type="button" id="comercialConfirmarGPS">Confirmar ubicación actual</button>';
     document.getElementById('comercialConsultar').onclick=()=>root.consultarComercialCliente();
-    document.getElementById('comercialConfirmarGPS').onclick=()=>{
-      if(!confirm('¿Estás en el establecimiento seleccionado y confirmas guardar su ubicación?'))return;
+    document.getElementById('comercialConfirmarGPS').onclick=async()=>{
+      if(!await sumetecConfirmar('¿Estás en el establecimiento seleccionado y confirmas guardar su ubicación?'))return;
       navigator.geolocation.getCurrentPosition(p=>{try{cliente.ubicacion(p.coords.latitude,p.coords.longitude);cliente.enviar().catch(e=>toast(e.message,'err'));panel();}catch(e){toast(e.message,'err');}},e=>toast(e.message,'err'),{enableHighAccuracy:true,timeout:10000,maximumAge:0});
     };
   }
@@ -131,7 +131,7 @@
   root.prepararPropuestaComercial=async function(){
     if(!root.COMERCIAL_HABILITADO)return;
     try{await cliente.sync();const data=cliente.preparar(location.href);if(!data)return;
-      if(!confirm('¿Abrir una cotización nueva para esta propuesta? Revisa cliente, productos y precios antes de guardar.'))return;
+      if(!await sumetecConfirmar('¿Abrir una cotización nueva para esta propuesta? Revisa cliente, productos y precios antes de guardar.'))return;
       // Abrir el modo existente conserva sus reglas de moneda e IVA.
       if(typeof _activarModoCot==='function')_activarModoCot();
       const nombre=data.referencia.cliente;

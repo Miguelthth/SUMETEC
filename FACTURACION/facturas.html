@@ -496,7 +496,7 @@ let _factTokenMem='';
 function _tokenFact(){ return _factTokenMem; }
 async function configurarTokenFact(){
   const actual = _tokenFact();
-  const v = (prompt('Token propio de Facturación. Se guardará cifrado con tu PIN.', actual) || '').trim();
+  const v = (await sumetecPedirTexto('Token propio de Facturación. Se guardará cifrado con tu PIN.', actual) || '').trim();
   if (v === actual) return; // sin cambio real -- no hace falta recargar
   if (v) {
     const pin=await sumetecPedirPinToken('Facturación',true);
@@ -1241,7 +1241,7 @@ async function facturarGlobal(){
   if(api.modo!=='demo' && !isOnline){ toast('📵 Sin conexión — necesitas internet para timbrar.','err',5000); return; }
   if(!await _autorizarFact_('timbrar_global','libre')) return;
   const t = _ultimoGlobal.totales;
-  const ok = confirm(`¿Timbrar la factura global de ${_pendientesGlobal.length} remisión(es)?\n\nTotal: $${t.total.toFixed(2)} MXN\n\nEsta acción no se puede deshacer.`);
+  const ok = await sumetecConfirmar(`¿Timbrar la factura global de ${_pendientesGlobal.length} remisión(es)?\n\nTotal: $${t.total.toFixed(2)} MXN\n\nEsta acción no se puede deshacer.`);
   if(!ok) return;
   _facturandoGlobal = true;
   const btn = document.querySelector('#resultadoGlobal button.fact');
@@ -1449,10 +1449,10 @@ async function cancelarFacturaUI(){
   const r=remActual();if(!r||!r.facturada)return;
   if(!await _autorizarFact_('cancelar_factura','libre'))return;
   const opciones=Object.entries(MOTIVOS_CANCELACION).map(([k,v])=>k+': '+v).join('\n');
-  const motivo=prompt('Motivo de cancelación (SAT):\n'+opciones+'\n\nEscribe la clave (02, 03 o 04):','02');
+  const motivo=await sumetecPedirTexto('Motivo de cancelación (SAT):\n'+opciones+'\n\nEscribe la clave (02, 03 o 04):','02');
   if(motivo===null)return;
   if(!MOTIVOS_CANCELACION[motivo]){toast('Motivo inválido — usa 02, 03 o 04','err',4000);return;}
-  if(!confirm('¿Cancelar la factura de '+r.folio+'? Esta acción se registra en la hoja "Facturas".'))return;
+  if(!await sumetecConfirmar('¿Cancelar la factura de '+r.folio+'? Esta acción se registra en la hoja "Facturas".'))return;
   try{
     const res=await api.cancelar(r.folio,motivo);
     if(res&&res.ok){
@@ -1615,7 +1615,7 @@ async function facturar(){
   }
   // Confirmación con resumen: timbrar es irreversible (consume folio fiscal).
   const t = _ultimoCFDI.totales;
-  const ok = confirm(
+  const ok = await sumetecConfirmar(
     `¿Timbrar esta factura?\n\n`+
     `Cliente: ${r.cliente.razonSocial||r.cliente.nombre}\n`+
     `RFC: ${r.cliente.rfc}\n`+

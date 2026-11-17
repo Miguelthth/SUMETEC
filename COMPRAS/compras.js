@@ -336,7 +336,7 @@ function _reintentarCompra_(id) {
 }
 async function _descartarCompra_(id) {
   if (!await _autorizarCompras_('descartar_compra', 'libre')) return;
-  if (!confirm('¿Descartar esta compra? NO llegará al ERP y esta acción no se puede deshacer.')) return;
+  if (!await sumetecConfirmar('¿Descartar esta compra? NO llegará al ERP y esta acción no se puede deshacer.')) return;
   localStorage.setItem(COLAS.compras, JSON.stringify(leer(COLAS.compras).filter(c => c.id !== id)));
   _renderHistorialComprasDireccion_(); if (typeof estado === 'function') estado();
 }
@@ -351,7 +351,7 @@ function _renderHistorialComprasDireccion_() {
   const items = _historialComprasDireccion_(leer(COLAS.compras), leer(CLAVE_HISTORIAL_COMPRAS), _leerSnapshotCacheDireccion_());
   el.innerHTML = _htmlHistorialComprasDireccion_(items) + _htmlAbonosCompra_();
   el.querySelectorAll('[data-abonar-compra]').forEach(b=>b.onclick=()=>_abrirAbonoCompra_(b.dataset.abonarCompra));
-  el.querySelectorAll('[data-descartar-abono]').forEach(b=>b.onclick=async()=>{if(!await _autorizarCompras_('descartar_abono','libre'))return;if(confirm('El servidor rechazó este abono y no lo aplicó. ¿Descartar para capturarlo de nuevo?')){localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().filter(x=>x.id!==b.dataset.descartarAbono)));_renderHistorialComprasDireccion_();if(typeof estado==='function')estado();}});
+  el.querySelectorAll('[data-descartar-abono]').forEach(b=>b.onclick=async()=>{if(!await _autorizarCompras_('descartar_abono','libre'))return;if(await sumetecConfirmar('El servidor rechazó este abono y no lo aplicó. ¿Descartar para capturarlo de nuevo?')){localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().filter(x=>x.id!==b.dataset.descartarAbono)));_renderHistorialComprasDireccion_();if(typeof estado==='function')estado();}});
   el.querySelectorAll('[data-reintentar-abono]').forEach(b=>b.onclick=()=>{localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().map(x=>x.id===b.dataset.reintentarAbono?{...x,_retryAt:0,detenido:false}:x))); procesarColaCompras(true);});
 }
 
@@ -1042,7 +1042,7 @@ function activarComprasDireccion() {
       const d = Object.fromEntries(new FormData(f));
       // Confirmación extra: declarar factura sin UUID hace que su IVA se acredite en el ERP.
       if (d.situacionFactura === 'FACTURA_SIN_UUID' && !String(d.uuidCfdi || '').trim() &&
-          !confirm('Vas a declarar que SÍ tienes la factura de esta compra, sin capturar su UUID.\n\nSu IVA se va a acreditar y quedará pendiente hasta capturar el UUID.\n\n¿Confirmas que tienes la factura?')) return;
+          !await sumetecConfirmar('Vas a declarar que SÍ tienes la factura de esta compra, sin capturar su UUID.\n\nSu IVA se va a acreditar y quedará pendiente hasta capturar el UUID.\n\n¿Confirmas que tienes la factura?')) return;
       d.lineas = _leerLineasCompra(lineas);
       d.pagos = _leerPagosCompra(pagos);
       // La foto ya viaja comprimida (_comprimirImagenCompra_, cacheada al
@@ -1379,8 +1379,19 @@ async function _leerTicketCompraConIA_() {
 // que también confirma que la sesión sirve). Doble confirmación: aviso +
 // teclear BORRAR. Nunca toca colas, borrador de compra, PIN ni vinculación.
 const _CLAVES_CACHE_COMPRAS = ['sumetec_compras_snapshot_cache', 'sumetec_compras_listas_cache', 'sumetec_compras_historial_compras'];
+// Un borrador cuenta como pendiente solo si tiene algo capturado: la app lo guarda aunque esté vacío (solo con la fecha y los
+// valores de fábrica), y eso no es trabajo que se pierda.
+function _borradorCompraConContenido_() {
+  const b = _leerBorradorCompra_();
+  if (!b || typeof b !== 'object') return false;
+  const c = b.schema === 2 ? (b.campos || {}) : b;
+  const llena = fila => Object.entries(fila || {}).some(([k, v]) => ['factor', 'cprov'].indexOf(k) < 0 && String(v || '').trim() !== '');
+  if ((b.lineas || []).some(llena) || (b.pagos || []).some(llena)) return true;
+  if (['proveedor', 'folio', 'uuidCfdi', 'subtotal'].some(k => String(c[k] || '').trim() !== '')) return true;
+  return ['iva', 'total'].some(k => Number(c[k]) > 0);
+}
 function _pendientesParaLimpiar_() {
-  return leer(COLAS.compras).length + _leerColaEquiv_().length + (localStorage.getItem(CLAVE_BORRADOR_COMPRA) ? 1 : 0);
+  return leer(COLAS.compras).length + _leerColaEquiv_().length + (_borradorCompraConContenido_() ? 1 : 0);
 }
 async function _servidorEnLinea_() {
   const url = localStorage.getItem('sumetec_compras_url');
@@ -1403,8 +1414,8 @@ async function limpiarCacheLocal() {
   if (!(await sumetecAutorizarBorrado('compras', { nombre: 'Compras', documento: 'datos-locales', detalle: 'Borrar copias de este teléfono' }))) return;
   alert('Confirmando con el servidor…');
   if (!(await _servidorEnLinea_())) { alert('El servidor no contestó (o se canceló el PIN) — no se borró nada.'); return; }
-  if (!confirm('Se borrarán las copias guardadas en ESTE teléfono (resúmenes, listas y configuración en caché).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, PIN y vinculación NO se borran.\n\n¿Continuar?')) return;
-  const txt = prompt('Segunda confirmación: escribe BORRAR para continuar.');
+  if (!await sumetecConfirmar('Se borrarán las copias guardadas en ESTE teléfono (resúmenes, listas y configuración en caché).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, PIN y vinculación NO se borran.\n\n¿Continuar?')) return;
+  const txt = await sumetecPedirTexto('Segunda confirmación: escribe BORRAR para continuar.');
   if (String(txt || '').trim().toUpperCase() !== 'BORRAR') { alert('Cancelado — no se borró nada.'); return; }
   if (_pendientesParaLimpiar_() > 0) { alert('Entró algo a la cola mientras confirmabas — no se borró nada.'); return; }
   _CLAVES_CACHE_COMPRAS.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
@@ -1566,7 +1577,7 @@ async function _pendFacArchivoElegido_() {
       if (_PEND_FAC_UUID_RE_.test(uuid)) leido = { uuid, rfcEmisor: String((r.campos && r.campos.rfcEmisor) || '') };
     }
     if (!leido) { _pendFacDecir_('No pude leer el UUID en esa foto. Acerca la cámara al folio fiscal o al código QR, o usa «Tengo factura».'); return; }
-    if (!confirm('UUID leído de la factura:\n\n' + leido.uuid + (leido.rfcEmisor ? '\nRFC emisor: ' + leido.rfcEmisor : '') + '\n\n¿Es la factura de este documento?')) { _pendFacDecir_(''); if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar(); return; }
+    if (!await sumetecConfirmar('UUID leído de la factura:\n\n' + leido.uuid + (leido.rfcEmisor ? '\nRFC emisor: ' + leido.rfcEmisor : '') + '\n\n¿Es la factura de este documento?')) { _pendFacDecir_(''); if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar(); return; }
     await _pendFacContestar_(id, { uuidCfdi: leido.uuid, rfcEmisor: leido.rfcEmisor || '', origen });
     if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar();
     _pendFacDecir_('Enviado ✓ El ERP lo aplica al traer las facturas del celular.');
@@ -1577,7 +1588,7 @@ async function _pendFacArchivoElegido_() {
 
 async function _pendFacTengo_(id) {
   if (!navigator.onLine) { _pendFacDecir_('Sin señal: inténtalo cuando haya conexión.'); return; }
-  if (!confirm('Vas a declarar que SÍ tienes la factura de este documento, sin capturar su UUID.\n\nSu IVA se va a acreditar y quedará pendiente hasta capturar el UUID.\n\n¿Confirmas que tienes la factura?')) return;
+  if (!await sumetecConfirmar('Vas a declarar que SÍ tienes la factura de este documento, sin capturar su UUID.\n\nSu IVA se va a acreditar y quedará pendiente hasta capturar el UUID.\n\n¿Confirmas que tienes la factura?')) return;
   try {
     await _pendFacContestar_(id, { tengoFactura: true, origen: 'CONFIRMADO' });
     _pendFacDecir_('Enviado ✓ El ERP lo aplica al traer las facturas del celular.');

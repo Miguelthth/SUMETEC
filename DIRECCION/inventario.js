@@ -565,14 +565,14 @@ function _guardarConteoActual_() {
   else localStorage.removeItem(CLAVE_INV_CONTEO_ACTUAL);
 }
 
-function iniciarConteo() {
+async function iniciarConteo() {
   const todo = document.getElementById('chkTodo').checked;
   const categorias = _categoriasSeleccionadas_();
   if (!todo && !categorias.length) { toast('Marca al menos una categoría (o "Todo el catálogo").'); return; }
   // Contar bien contra un teórico viejo es peor que no contar.
   const cacheST = leerSeguro(CLAVE_INV_STOCK, null);
   const estadoST = _estadoFrescuraStock_(cacheST && cacheST.ts);
-  if (estadoST.bloquea && !confirm(estadoST.texto + '\n\n¿Contar de todos modos?')) return;
+  if (estadoST.bloquea && !await sumetecConfirmar(estadoST.texto + '\n\n¿Contar de todos modos?')) return;
   const productos = _productosDeCategorias(CATALOGO, categorias, todo);
   CONTEO_ACTUAL = {
     categoria: todo ? 'Todo el catálogo' : categorias.join(', '),
@@ -686,9 +686,9 @@ function _filtrarLista(v) {
 
 // Producto en el anaquel que no está en el catálogo descargado. El ERP ya
 // sabe qué hacer con un código que no reconoce al importar el conteo.
-function agregarProductoNuevo() {
+async function agregarProductoNuevo() {
   if (CONTEO_ACTUAL.cerrado) { toast('Este conteo ya está cerrado.'); return; }
-  const codigoRaw = prompt('Código del producto nuevo (como lo vas a usar de ahora en adelante):');
+  const codigoRaw = await sumetecPedirTexto('Código del producto nuevo (como lo vas a usar de ahora en adelante):');
   if (codigoRaw === null) return;
   const codigo = codigoRaw.trim();
   if (!codigo) { toast('Código vacío -- no se agregó nada.'); return; }
@@ -703,12 +703,12 @@ function agregarProductoNuevo() {
     return;
   }
 
-  const descripcionRaw = prompt('Descripción de ' + codigo + ':');
+  const descripcionRaw = await sumetecPedirTexto('Descripción de ' + codigo + ':');
   if (descripcionRaw === null) return;
   const descripcion = descripcionRaw.trim();
   if (!descripcion) { toast('Descripción vacía -- no se agregó nada.'); return; }
 
-  const cantidadRaw = prompt('¿Cuántas piezas contaste de ' + codigo + '?');
+  const cantidadRaw = await sumetecPedirTexto('¿Cuántas piezas contaste de ' + codigo + '?');
   if (cantidadRaw === null) return;
   const n = Number(cantidadRaw.trim());
   if (isNaN(n) || n < 0 || !Number.isInteger(n)) {
@@ -725,10 +725,10 @@ function _alCambiarSoloFaltan_(checked) {
   _refrescarListaConteo_();
 }
 
-function _volverASelector_() {
+async function _volverASelector_() {
   const contados = CONTEO_ACTUAL ? CONTEO_ACTUAL.items.filter(it => it.cantidad !== null).length : 0;
   if (!CONTEO_ACTUAL.cerrado && contados > 0 &&
-      !confirm('Tienes ' + contados + ' producto(s) contados sin cerrar. Si sales ahora, el conteo queda guardado y puedes retomarlo después. ¿Salir?')) {
+      !await sumetecConfirmar('Tienes ' + contados + ' producto(s) contados sin cerrar. Si sales ahora, el conteo queda guardado y puedes retomarlo después. ¿Salir?')) {
     return;
   }
   if (CONTEO_ACTUAL.cerrado) { CONTEO_ACTUAL = null; _guardarConteoActual_(); }
@@ -819,14 +819,14 @@ function _diferenciasOrdenadas_(items, stockTeoricoMap) {
   return filas;
 }
 
-function cerrarConteo() {
+async function cerrarConteo() {
   // Nunca abierto ≠ contado en 0: Miguel elige qué hacer con los no tocados.
   const sinTocar = CONTEO_ACTUAL.items.filter(it => it.cantidad === null);
   if (sinTocar.length) {
-    const marcarComoCero = confirm(
+    const marcarComoCero = await sumetecConfirmar(
       sinTocar.length + ' producto(s) nunca se abrieron (distinto de contarlos en 0).\n\n' +
-      'Aceptar = mandarlos como 0 (no hay existencia).\n' +
-      'Cancelar = dejarlos FUERA de este conteo (no se tocan, no se envían).');
+      'Mandar como 0 = no hay existencia.\n' +
+      'Dejar fuera = no se tocan y no se envían en este conteo.', 'Productos sin abrir', { si: 'Mandar como 0', no: 'Dejar fuera' });
     if (marcarComoCero) {
       sinTocar.forEach(it => { it.cantidad = 0; });
       _guardarConteoActual_();
@@ -879,13 +879,13 @@ async function _confirmarCierreConteo_() {
     `Diferencia neta en pesos (estimada; la oficial la calcula el ERP): ${netoTxt}\n` +
     `ERI estimado: ${r.eri.toFixed(1)}% (${r.nivel})\n\n` +
     '¿Cerrar este conteo?';
-  if (!confirm(msg)) return;
+  if (!await sumetecConfirmar(msg)) return;
   // 2026-10-21: el servidor de Google también exige el permiso; el envío lleva el documento sobre el que se pidió.
   const docPermiso = String(CONTEO_ACTUAL.id || ('conteo-' + Date.now().toString(36)));
   if (!await _autorizarDireccion_('cerrar_conteo', 'codigo', docPermiso, 'Cerrar conteo ' + (CONTEO_ACTUAL.categoria || '') + ' · ' + r.contados + ' contados')) return;
   if (!CONTEO_ACTUAL.contador) {
     const guardado = _contadorGuardado_();
-    const quien = (guardado || (prompt('Tus iniciales (para saber quién contó, opcional):') || '')).trim();
+    const quien = (guardado || (await sumetecPedirTexto('Tus iniciales (para saber quién contó, opcional):') || '')).trim();
     if (quien && !guardado) localStorage.setItem(CLAVE_INV_CONTADOR, quien);
     CONTEO_ACTUAL.contador = quien;
   }
@@ -896,7 +896,7 @@ async function _confirmarCierreConteo_() {
 
 async function editarCampoCerrado(idx) {
   if (!await _autorizarDireccion_('editar_conteo_cerrado', 'codigo', (CONTEO_ACTUAL.id || 'conteo') + '|' + idx, 'Editar ' + CONTEO_ACTUAL.items[idx].codigo + ' en un conteo cerrado')) return;
-  const nuevo = prompt('Nueva cantidad para ' + CONTEO_ACTUAL.items[idx].codigo + ':',
+  const nuevo = await sumetecPedirTexto('Nueva cantidad para ' + CONTEO_ACTUAL.items[idx].codigo + ':',
                        CONTEO_ACTUAL.items[idx].cantidad);
   if (nuevo === null) return;
   const v = nuevo.trim();
@@ -1083,7 +1083,7 @@ function _autorizarDireccion_(accion, porDefecto, documento, detalle) {
 }
 async function _descartarUno_(id) {
   if (!await _autorizarDireccion_('descartar_pendiente', 'libre', id, 'Descartar un conteo pendiente')) return;
-  if (!confirm('¿Descartar este conteo pendiente? Esos datos NO llegarán al ERP y esta acción no se puede deshacer.')) return;
+  if (!await sumetecConfirmar('¿Descartar este conteo pendiente? Esos datos NO llegarán al ERP y esta acción no se puede deshacer.')) return;
   guardarSeguro(CLAVE_INV_COLA, leerSeguro(CLAVE_INV_COLA, []).filter(e => e.id !== id));
   _avisarPendientesInventario_();
   verColaPendiente();

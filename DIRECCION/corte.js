@@ -197,8 +197,8 @@ function _pintarCortesRechazados_(out) {
     };
     p.appendChild(r2);
     b.textContent = 'Descartar y volver a contar';
-    b.onclick = () => {
-      if (!confirm('¿Descartar este corte pendiente? Esos datos NO llegarán al servidor y tendrás que contar de nuevo.')) return;
+    b.onclick = async () => {
+      if (!await sumetecConfirmar('¿Descartar este corte pendiente? Esos datos NO llegarán al servidor y tendrás que contar de nuevo.')) return;
       _quitarCorteCola_(c.id);
       _soltarCapturaCorte_();
       p.remove();
@@ -475,7 +475,7 @@ function activarCorteDireccion() {
         salidasEfectivo: p.salidasEfectivo, contado: f.contado.value
       });
       if (Math.abs(cSinGuardar.diferencia) >= UMBRAL_CONFIRMAR_DIFERENCIA) {
-        const sigue = confirm(`${_etiquetaDiferencia(cSinGuardar.diferencia)} ` +
+        const sigue = await sumetecConfirmar(`${_etiquetaDiferencia(cSinGuardar.diferencia)} ` +
           `$${Math.abs(cSinGuardar.diferencia).toFixed(2)}. ¿Cerrar el corte de todas formas?`);
         if (!sigue) return;
       }

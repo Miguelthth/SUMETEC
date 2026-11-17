@@ -4650,13 +4650,13 @@ function _docRemisionConCobros_(item){
 }
 // Respuesta del servidor a los cobros que viajaron con la remisión: cada uno se resuelve igual que si hubiera ido solo.
 // El que no quedó sigue en su cola y procesarCola lo manda aparte (mismo UUID: el servidor nunca lo duplica).
-function _resolverCobrosDeRemision_(rem,resultados){
+async function _resolverCobrosDeRemision_(rem,resultados){
   if(!Array.isArray(resultados)||!resultados.length)return 0;
   let resueltos=0;
   for(const c of resultados){
     const enCola=leerSeguro('cola_offline',[]).find(p=>p.pago&&String(p.pago.uuid)===String(c&&c.uuid));
     if(!enCola)continue;
-    if(_resolverRespuestaPago(rem,enCola.pago,c.resultado))resueltos++;
+    if(await _resolverRespuestaPago(rem,enCola.pago,c.resultado))resueltos++;
   }
   if(resueltos){actualizarBadgePendientes();_estado('✅ '+resueltos+' cobro(s) guardado(s) junto con la remisión');}
   return resueltos;
@@ -4706,7 +4706,7 @@ async function procesarColaRemisiones(){
             if(r){
               if(d.folio)_aplicarFolioDefinitivo(r,d.folio);
               if(d.revision!=null)r.serverRevision=Number(d.revision)||0;
-              _resolverCobrosDeRemision_(r,d.cobros);   // V2: los cobros que viajaron adentro
+              await _resolverCobrosDeRemision_(r,d.cobros);   // V2: los cobros que viajaron adentro
               // 2026-09-10 (M-01): solo se da por sincronizada la versión que de verdad
               // se envió. Si la remisión se editó mientras el POST viajaba, lo que llegó
               // al servidor es la versión vieja -- NO se marca como sincronizada y la
@@ -6073,8 +6073,8 @@ async function reenviarDevoluciones(manual){
 async function abrirDevolucionParcial(folio){
  try{
   const pendiente=_colaDevoluciones().find(x=>x.documento===folio);
-  if(pendiente&&pendiente.estadoServidor==='RECHAZADO'){if(confirm('El servidor rechazó esta devolución sin aplicarla. ¿Descartarla y volver a consultar?')){guardarSeguro('cola_devoluciones',JSON.stringify(_colaDevoluciones().filter(x=>x.id!==pendiente.id)));return abrirDevolucionParcial(folio);}return;}
-  if(pendiente){if(confirm('Esta devolución sigue pendiente: '+(pendiente.error||'enviar')+'. ¿Reintentar la misma operación?'))await reenviarDevoluciones(true);return;}
+  if(pendiente&&pendiente.estadoServidor==='RECHAZADO'){if(await sumetecConfirmar('El servidor rechazó esta devolución sin aplicarla. ¿Descartarla y volver a consultar?')){guardarSeguro('cola_devoluciones',JSON.stringify(_colaDevoluciones().filter(x=>x.id!==pendiente.id)));return abrirDevolucionParcial(folio);}return;}
+  if(pendiente){if(await sumetecConfirmar('Esta devolución sigue pendiente: '+(pendiente.error||'enviar')+'. ¿Reintentar la misma operación?'))await reenviarDevoluciones(true);return;}
   if(!navigator.onLine)throw Error('Conecta para consultar las cantidades disponibles antes de devolver.');
   const r=await _postDevolucion({tipo:'detalle_devolucion',folio});if(!r.ok)throw Error(r.error);
   const hdr=r.hdr,qi=hdr.indexOf('Cant.'),di=hdr.indexOf('Descripción'),ci=hdr.indexOf('Código');
@@ -9162,7 +9162,7 @@ function _alertarNoAutorizado(d){
 // (sacar de la cola), false si debe reintentarse. Maneja el blindaje de sobrecobro:
 //   ok:true  + ajustado     → el servidor recortó el monto al saldo real restante
 //   ok:false + yaPagada     → el otro dispositivo ya la cobró → NO duplicar
-function _resolverRespuestaPago(r,pago,d){
+async function _resolverRespuestaPago(r,pago,d){
   if(!d) return false;
   if(d.buzonPendiente){_estado('📥 Cobro recibido; esperando aplicación en el servidor');return false;}
   if(d.ok){
@@ -9195,7 +9195,7 @@ function _resolverRespuestaPago(r,pago,d){
     if(d.cajaPendiente&&d.cajaMotivo==='CORTE_CERRADO'&&pago&&pago.tipo==='anulacion'&&!pago.confirma_corte&&!pago._corteSinConfirmar){
       // El cobro ya quedó anulado en la cartera, pero ese día tiene el corte de Caja cerrado: anularlo en Caja lo MODIFICA.
       // Se pide confirmar una sola vez; con el sí, el mismo UUID se reenvía con confirma_corte y el servidor ajusta el día original.
-      const _si=typeof confirm==='function'&&confirm('El día de este cobro ya tiene el corte de caja cerrado.\n\nAnular el cobro en Caja MODIFICARÁ ese corte (cambia su esperado, su diferencia y su huella).\n\n¿Confirmas el ajuste?');
+      const _si=await sumetecConfirmar('El día de este cobro ya tiene el corte de caja cerrado.\n\nAnular el cobro en Caja MODIFICARÁ ese corte (cambia su esperado, su diferencia y su huella).\n\n¿Confirmas el ajuste?');
       const _cola=leerSeguro('cola_offline',[]);
       _cola.forEach(q=>{if(q.pago&&q.pago.uuid===pago.uuid){if(_si)q.pago.confirma_corte=true;else q.pago._corteSinConfirmar=true;}});
       guardarSeguro('cola_offline',JSON.stringify(_cola));
@@ -9266,7 +9266,7 @@ async function procesarCola(){
         const d=await res.json();
         // Reconciliar contra la remisión local correcta (maneja sobrecobro: ajustado / ya_pagada)
         const remLoc=remisiones.find(x=>String(x.id)===String(item.id)||x.folio===item.folio)||null;
-        if(_resolverRespuestaPago(remLoc,item.pago,d)) enviados++;
+        if(await _resolverRespuestaPago(remLoc,item.pago,d)) enviados++;
         else{
           // El servidor CONTESTÓ y no quedó resuelto. Un conflicto de Caja no cambia con reintentar: se detiene
           // de una vez (el cobro sí quedó guardado en Remisiones); el resto cuenta hacia el tope.
@@ -9588,12 +9588,12 @@ function _actualizarBadgeExcepciones(n){
 }
 // Auditoría D08: un pendiente en conflicto ya no se queda omitido para siempre. Con confirmación, o se reenvía SOBRE
 // la versión que hoy tiene el servidor (reemplaza el cambio del otro equipo), o se descarta el cambio local.
-function _resolverConflicto_(id,cola,conservar){
+async function _resolverConflicto_(id,cola,conservar){
   const q=leerSeguro(cola,[]);
   const item=q.find(e=>String(e.id||e.folio)===String(id));
   if(!item)return;
   if(conservar){
-    if(!confirm('Tu versión REEMPLAZARÁ lo que cambió el otro equipo en '+(item.folio||'esta remisión')+'. ¿Continuar?'))return;
+    if(!await sumetecConfirmar('Tu versión REEMPLAZARÁ lo que cambió el otro equipo en '+(item.folio||'esta remisión')+'. ¿Continuar?'))return;
     delete item._conflict;item._srv=0;item._try=0;delete item._detenido;delete item._retryAt;
     // La revisión aceptada cambia el documento: el buzón conserva el rechazo
     // anterior bajo su ID y esta decisión necesita una operación nueva.
@@ -9616,7 +9616,7 @@ function _resolverConflicto_(id,cola,conservar){
     if(rem)persistirRemisiones();
     if(cola==='cola_pdf')procesarColaPDF();else procesarColaRemisiones();
   }else{
-    if(!confirm('Se BORRA tu cambio pendiente de '+(item.folio||'esta remisión')+' y queda la versión del otro equipo. ¿Continuar?'))return;
+    if(!await sumetecConfirmar('Se BORRA tu cambio pendiente de '+(item.folio||'esta remisión')+' y queda la versión del otro equipo. ¿Continuar?'))return;
     if(cola==='cola_remisiones'){_descartarConflictoRemision_(item);return;}
     guardarSeguro(cola,JSON.stringify(q.filter(e=>e!==item)));
   }

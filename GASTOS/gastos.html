@@ -972,7 +972,7 @@ async function _pendFacArchivoElegido_() {
       if (_PEND_FAC_UUID_RE_.test(uuid)) leido = { uuid, rfcEmisor: String((r.campos && r.campos.rfcEmisor) || '') };
     }
     if (!leido) { _pendFacDecir_('No pude leer el UUID en esa foto. Acerca la cámara al folio fiscal o al código QR, o usa «Tengo factura».'); return; }
-    if (!confirm('UUID leído de la factura:\n\n' + leido.uuid + (leido.rfcEmisor ? '\nRFC emisor: ' + leido.rfcEmisor : '') + '\n\n¿Es la factura de este documento?')) { _pendFacDecir_(''); if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar(); return; }
+    if (!await sumetecConfirmar('UUID leído de la factura:\n\n' + leido.uuid + (leido.rfcEmisor ? '\nRFC emisor: ' + leido.rfcEmisor : '') + '\n\n¿Es la factura de este documento?')) { _pendFacDecir_(''); if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar(); return; }
     await _pendFacContestar_(id, { uuidCfdi: leido.uuid, rfcEmisor: leido.rfcEmisor || '', origen });
     if (typeof SumetecFoto !== 'undefined') SumetecFoto.cerrar();
     _pendFacDecir_('Enviado ✓ El ERP lo aplica al traer las facturas del celular.');
@@ -983,7 +983,7 @@ async function _pendFacArchivoElegido_() {
 
 async function _pendFacTengo_(id) {
   if (!navigator.onLine) { _pendFacDecir_('Sin señal: inténtalo cuando haya conexión.'); return; }
-  if (!confirm('Vas a declarar que SÍ tienes la factura de este documento, sin capturar su UUID.\n\nSu IVA se va a acreditar y quedará pendiente hasta capturar el UUID.\n\n¿Confirmas que tienes la factura?')) return;
+  if (!await sumetecConfirmar('Vas a declarar que SÍ tienes la factura de este documento, sin capturar su UUID.\n\nSu IVA se va a acreditar y quedará pendiente hasta capturar el UUID.\n\n¿Confirmas que tienes la factura?')) return;
   try {
     await _pendFacContestar_(id, { tengoFactura: true, origen: 'CONFIRMADO' });
     _pendFacDecir_('Enviado ✓ El ERP lo aplica al traer las facturas del celular.');
@@ -1401,7 +1401,7 @@ async function _guardarGasto_() {
   if (r.errores && r.errores.length) { toast(r.errores[0]); return; }
   // Mejora (2026-09-02): un total grande suele ser un cero de más al teclear
   // -- una sola confirmación explícita, no bloquea gastos grandes reales.
-  if (r.total >= UMBRAL_GASTO_ATIPICO && !confirm(_mensajeConfirmacionAtipico_(r.total, tipoGasto))) return;
+  if (r.total >= UMBRAL_GASTO_ATIPICO && !await sumetecConfirmar(_mensajeConfirmacionAtipico_(r.total, tipoGasto))) return;
 
   const fotoInput = document.getElementById('gas_foto');
   const fotoFile = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
@@ -1718,7 +1718,7 @@ function _htmlConteoHuerfano_() {
 async function _enviarConteoHuerfano_() {
   const h = _conteoHuerfano_();
   if (!h) return;
-  if (!confirm('¿Cerrar y enviar este conteo con los ' + h.contados + ' producto(s) que contaste? Lo que no tocaste NO se envía.')) return;
+  if (!await sumetecConfirmar('¿Cerrar y enviar este conteo con los ' + h.contados + ' producto(s) que contaste? Lo que no tocaste NO se envía.')) return;
   // 2026-10-14: el ERP decide si pide permiso, pasa sin pedirlo o no se permite (Ecosistema → Gastos → Permisos).
   // 2026-10-21: el servidor de Google también exige el permiso; el envío lleva el documento sobre el que se pidió.
   const docPermiso = String(h.conteo.id || ('conteo-' + Date.now().toString(36)));
@@ -1862,8 +1862,8 @@ async function limpiarCacheLocal() {
   if (!(await sumetecAutorizarBorrado('gastos', { nombre: 'Gastos', documento: 'datos-locales', detalle: 'Borrar copias de este teléfono', avisar: m => toast(m, 5000) }))) return;
   toast('Confirmando con el servidor…', 2500);
   if (!(await _servidorEnLinea_())) { toast('El servidor no contestó — no se borró nada.', 5000); return; }
-  if (!confirm('Se borrarán las copias guardadas en ESTE teléfono (listas, configuración, stock teórico y últimos gastos).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, token y vendedor NO se borran.\n\n¿Continuar?')) return;
-  const txt = prompt('Segunda confirmación: escribe BORRAR para continuar.');
+  if (!await sumetecConfirmar('Se borrarán las copias guardadas en ESTE teléfono (listas, configuración, stock teórico y últimos gastos).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, token y vendedor NO se borran.\n\n¿Continuar?')) return;
+  const txt = await sumetecPedirTexto('Segunda confirmación: escribe BORRAR para continuar.');
   if (String(txt || '').trim().toUpperCase() !== 'BORRAR') { toast('Cancelado — no se borró nada.', 3000); return; }
   if (_pendientesParaLimpiar_() > 0) { toast('Entró algo a la cola mientras confirmabas — no se borró nada.', 5000); return; }
   _CLAVES_CACHE_GASTOS.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
@@ -1924,7 +1924,7 @@ function _autorizarGastos_(accion, porDefecto, documento, detalle) {
 }
 async function _descartarUno_(id, tipoCola) {
   if (!await _autorizarGastos_('descartar_pendiente', 'libre', id, 'Descartar un pendiente sin enviar (' + (tipoCola === 'gasto' ? 'gasto' : 'conteo') + ')')) return;
-  if (!confirm('¿Descartar este pendiente? Esos datos NO llegarán al ERP y esta acción no se puede deshacer.')) return;
+  if (!await sumetecConfirmar('¿Descartar este pendiente? Esos datos NO llegarán al ERP y esta acción no se puede deshacer.')) return;
   const clave = tipoCola === 'gasto' ? 'cola_gastos' : 'cola_conteo';
   const cola = leerSeguro(clave, []).filter(e => e.id !== id);
   guardarSeguro(clave, cola);

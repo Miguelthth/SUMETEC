@@ -978,7 +978,7 @@ async function sumetecBorrarDatosLocales(app, op = {}) {
   const permitido = await sumetecAutorizarBorrado(app, Object.assign({}, op, {
     nombre: op.nombre || app, documento: 'datos-locales', detalle: 'Borrar los datos guardados en este teléfono', avisar }));
   if (!permitido) return { ok: false, motivo: 'SIN_PERMISO' };
-  if (typeof op.confirmar === 'function' ? !(await op.confirmar()) : (typeof confirm === 'function' && !confirm('Se borrarán los datos guardados en este teléfono (catálogo, clientes, historial). La app seguirá vinculada. ¿Continuar?')))
+  if (typeof op.confirmar === 'function' ? !(await op.confirmar()) : !(await sumetecConfirmar('Se borrarán los datos guardados en este teléfono (catálogo, clientes, historial). La app seguirá vinculada. ¿Continuar?', 'Borrar datos de este teléfono', { peligro: true, si: 'Borrar' })))
     return { ok: false, motivo: 'CANCELADO' };
   const resumen = { claves: 0, sesion: 0, caches: 0, bases: 0 };
   try {
@@ -1027,3 +1027,77 @@ async function sumetecComprobarVinculo(url, token) {
     return (d && d.ok !== false) ? 'vigente' : 'sin_respuesta';
   } catch (_) { return 'sin_respuesta'; } finally { if (t) clearTimeout(t); }
 }
+
+// ═══ Popups de la app (2026-11-17, pedido de Miguel) ═══
+// NINGUNA app usa los cuadros genéricos del navegador (alert / confirm / prompt): todo aviso, confirmación o captura sale
+// como popup propio de la app. alert() queda reemplazado aquí mismo (no espera respuesta); confirm() y prompt() se usan como
+//   if (!(await sumetecConfirmar('texto'))) return;      const t = await sumetecPedirTexto('texto', 'valor inicial');
+// Es un <dialog> modal, así que queda por encima de cualquier otra ventana abierta (PIN, vincular, etc.).
+function _sumetecPopupEstilos() {
+  if (typeof document === 'undefined' || document.getElementById('sumetec-popup-css')) return;
+  const st = document.createElement('style'); st.id = 'sumetec-popup-css';
+  st.textContent = [
+    'dialog.sumetec-popup{border:0;padding:0;border-radius:18px;max-width:min(92vw,400px);width:100%;background:#fff;color:#0D3B66;box-shadow:0 18px 48px rgba(13,59,102,.28);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}',
+    'dialog.sumetec-popup::backdrop{background:rgba(8,24,40,.55);backdrop-filter:blur(2px)}',
+    'dialog.sumetec-popup .sp-caja{padding:22px 20px 16px}',
+    'dialog.sumetec-popup .sp-icono{font-size:30px;text-align:center;margin-bottom:6px}',
+    'dialog.sumetec-popup .sp-titulo{margin:0 0 8px;font-size:17px;font-weight:800;text-align:center;color:#0D3B66}',
+    'dialog.sumetec-popup .sp-msg{margin:0 0 14px;white-space:pre-line;word-break:break-word;color:#33475b;max-height:46vh;overflow:auto;text-align:left}',
+    'dialog.sumetec-popup .sp-input{width:100%;box-sizing:border-box;padding:11px 12px;margin:0 0 14px;border:1.5px solid #c9d3de;border-radius:10px;font:inherit;background:#fff;color:#0D3B66}',
+    'dialog.sumetec-popup .sp-input:focus{outline:2px solid #057448;border-color:#057448}',
+    'dialog.sumetec-popup .sp-botones{display:flex;gap:10px}',
+    'dialog.sumetec-popup .sp-btn{flex:1;padding:12px;border:0;border-radius:11px;font:inherit;font-weight:700;cursor:pointer;background:#eef2f6;color:#0D3B66}',
+    'dialog.sumetec-popup .sp-btn.sp-ok{background:#057448;color:#fff}',
+    'dialog.sumetec-popup .sp-btn.sp-peligro{background:#b3261e;color:#fff}',
+    ':root[data-theme="dark"] dialog.sumetec-popup,html.dark dialog.sumetec-popup,body.dark dialog.sumetec-popup{background:#16202b;color:#e8eef5}',
+    ':root[data-theme="dark"] dialog.sumetec-popup .sp-titulo,html.dark dialog.sumetec-popup .sp-titulo,body.dark dialog.sumetec-popup .sp-titulo{color:#e8eef5}',
+    ':root[data-theme="dark"] dialog.sumetec-popup .sp-msg,html.dark dialog.sumetec-popup .sp-msg,body.dark dialog.sumetec-popup .sp-msg{color:#b9c6d4}',
+    ':root[data-theme="dark"] dialog.sumetec-popup .sp-input,html.dark dialog.sumetec-popup .sp-input,body.dark dialog.sumetec-popup .sp-input{background:#0f1720;color:#e8eef5;border-color:#33475b}',
+    ':root[data-theme="dark"] dialog.sumetec-popup .sp-btn:not(.sp-ok):not(.sp-peligro),html.dark dialog.sumetec-popup .sp-btn:not(.sp-ok):not(.sp-peligro),body.dark dialog.sumetec-popup .sp-btn:not(.sp-ok):not(.sp-peligro){background:#243242;color:#e8eef5}'
+  ].join('\n');
+  (document.head || document.documentElement).appendChild(st);
+}
+// cfg: { icono, titulo, mensaje, input:{valor}, botones:[{texto, valor, clase, usaInput}], cancelar: valor al pulsar Esc }
+function _sumetecPopup(cfg) {
+  return new Promise(resolve => { try {
+    if (typeof document === 'undefined' || !document.body) { resolve(cfg.cancelar); return; }
+    _sumetecPopupEstilos();
+    const dlg = document.createElement('dialog'); dlg.className = 'sumetec-popup'; dlg.setAttribute('aria-modal', 'true');
+    const caja = document.createElement('div'); caja.className = 'sp-caja';
+    const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+    if (cfg.icono) caja.appendChild(mk('div', 'sp-icono', cfg.icono));
+    if (cfg.titulo) caja.appendChild(mk('h2', 'sp-titulo', cfg.titulo));
+    caja.appendChild(mk('p', 'sp-msg', cfg.mensaje == null ? '' : String(cfg.mensaje)));
+    let input = null;
+    if (cfg.input) { input = mk('input', 'sp-input'); input.type = 'text'; input.autocomplete = 'off'; input.value = cfg.input.valor == null ? '' : String(cfg.input.valor); caja.appendChild(input); }
+    const fila = mk('div', 'sp-botones');
+    let cerrado = false;
+    const cerrar = v => { if (cerrado) return; cerrado = true; try { dlg.close(); } catch (_) {} dlg.remove(); resolve(v); };
+    (cfg.botones || [{ texto: 'Entendido', valor: true, clase: 'sp-ok' }]).forEach(b => {
+      const btn = mk('button', 'sp-btn' + (b.clase ? ' ' + b.clase : ''), b.texto); btn.type = 'button';
+      btn.onclick = () => cerrar(b.usaInput && input ? input.value : b.valor); fila.appendChild(btn);
+    });
+    caja.appendChild(fila); dlg.appendChild(caja);
+    dlg.addEventListener('cancel', e => { e.preventDefault(); cerrar(cfg.cancelar); });
+    if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); cerrar(input.value); } });
+    document.body.appendChild(dlg);
+    try { dlg.showModal(); } catch (_) { dlg.setAttribute('open', ''); }
+    setTimeout(() => { try { (input || fila.lastElementChild).focus(); } catch (_) {} }, 30);
+  } catch (_) { resolve(cfg.cancelar); } });
+}
+// Aviso con un solo botón. No hace falta esperarlo.
+function sumetecAviso(mensaje, titulo) {
+  return _sumetecPopup({ icono: 'ℹ️', titulo: titulo || 'Aviso', mensaje, cancelar: true, botones: [{ texto: 'Entendido', valor: true, clase: 'sp-ok' }] });
+}
+// Sí / No. Devuelve true o false. opts: { si, no, peligro }
+function sumetecConfirmar(mensaje, titulo, opts) {
+  opts = opts || {};
+  return _sumetecPopup({ icono: opts.peligro ? '⚠️' : '❓', titulo: titulo || '¿Confirmar?', mensaje, cancelar: false,
+    botones: [{ texto: opts.no || 'Cancelar', valor: false }, { texto: opts.si || 'Continuar', valor: true, clase: opts.peligro ? 'sp-peligro' : 'sp-ok' }] });
+}
+// Captura de texto. Devuelve el texto, o null si cancela.
+function sumetecPedirTexto(mensaje, valor, titulo) {
+  return _sumetecPopup({ icono: '✏️', titulo: titulo || 'Escribe', mensaje, input: { valor }, cancelar: null,
+    botones: [{ texto: 'Cancelar', valor: null }, { texto: 'Aceptar', usaInput: true, clase: 'sp-ok' }] });
+}
+if (typeof window !== 'undefined') { window.alert = function (m) { sumetecAviso(m == null ? '' : String(m)); }; }

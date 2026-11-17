@@ -203,9 +203,9 @@ function pedirCodigoSeguridad(texto, validar) {
 
 // A4 (2026-09-23): "olvidé mi PIN" -- el PIN no se puede recuperar; se vincula de nuevo.
 // Borra SOLO el vínculo (token cifrado); las colas pendientes de enviar se conservan.
-function reiniciarVinculo(sinPreguntar) {
+async function reiniciarVinculo(sinPreguntar) {
   // sinPreguntar: ya lo confirmó en la pantalla «¿Olvidaste tu PIN?» del teclado.
-  if (!sinPreguntar && !confirm('Se borrará el vínculo de este teléfono para vincularlo otra vez con un PIN nuevo. Lo pendiente de enviar NO se pierde. ¿Continuar?')) return;
+  if (!sinPreguntar && !await sumetecConfirmar('Se borrará el vínculo de este teléfono para vincularlo otra vez con un PIN nuevo. Lo pendiente de enviar NO se pierde. ¿Continuar?')) return;
   bloquearDireccion();
   if (typeof _accesoInicialValidado !== 'undefined') _accesoInicialValidado = false;
   const m = document.querySelector('#pin-modal');
@@ -213,6 +213,7 @@ function reiniciarVinculo(sinPreguntar) {
   document.body.classList.add('sin-sesion');
   document.querySelector('#vincular').showModal();
 }
+
 
 // D1 (2026-10-21): sin señal el navegador contesta con su texto técnico («Failed to fetch», «Load failed»,
 // «NetworkError…»). A la pantalla va un aviso claro; los mensajes del servidor y del propio código pasan igual.

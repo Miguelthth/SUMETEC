@@ -103,8 +103,8 @@ async function limpiarCacheLocal() {
   if (!(await sumetecAutorizarBorrado('direccion', { nombre: 'Dirección', documento: 'datos-locales', detalle: 'Borrar copias de este teléfono', avisar: _avisoLimpiar_ }))) return;
   _avisoLimpiar_('Confirmando con el servidor…');
   if (!(await _servidorEnLinea_())) { _avisoLimpiar_('El servidor no contestó (o se canceló el PIN) — no se borró nada.'); return; }
-  if (!confirm('Se borrarán las copias guardadas en ESTE teléfono (resúmenes, listas y configuración en caché).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, PIN y vinculación NO se borran.\n\n¿Continuar?')) return;
-  const txt = prompt('Segunda confirmación: escribe BORRAR para continuar.');
+  if (!await sumetecConfirmar('Se borrarán las copias guardadas en ESTE teléfono (resúmenes, listas y configuración en caché).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, PIN y vinculación NO se borran.\n\n¿Continuar?')) return;
+  const txt = await sumetecPedirTexto('Segunda confirmación: escribe BORRAR para continuar.');
   if (String(txt || '').trim().toUpperCase() !== 'BORRAR') { _avisoLimpiar_('Cancelado — no se borró nada.'); return; }
   if (_pendientesParaLimpiar_() > 0) { _avisoLimpiar_('Entró algo a la cola mientras confirmabas — no se borró nada.'); return; }
   _CLAVES_CACHE_DIRECCION.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });

@@ -156,9 +156,9 @@ function clasificarErrorAcceso(err) {
 
 // A4 (2026-09-23): "olvidé mi PIN" -- el PIN no se puede recuperar; se vincula de nuevo.
 // Borra SOLO el vínculo (token cifrado); las colas pendientes de enviar se conservan.
-function reiniciarVinculo(sinPreguntar) {
+async function reiniciarVinculo(sinPreguntar) {
   // sinPreguntar: ya lo confirmó en la pantalla «¿Olvidaste tu PIN?» del teclado.
-  if (!sinPreguntar && !confirm('Se borrará el vínculo de este teléfono para vincularlo otra vez con un PIN nuevo. Lo pendiente de enviar NO se pierde. ¿Continuar?')) return;
+  if (!sinPreguntar && !await sumetecConfirmar('Se borrará el vínculo de este teléfono para vincularlo otra vez con un PIN nuevo. Lo pendiente de enviar NO se pierde. ¿Continuar?')) return;
   bloquearDireccion();
   if (typeof _accesoInicialValidado !== 'undefined') _accesoInicialValidado = false;
   const m = document.querySelector('#pin-modal');
@@ -166,3 +166,4 @@ function reiniciarVinculo(sinPreguntar) {
   document.body.classList.add('sin-sesion');
   document.querySelector('#vincular').showModal();
 }
+
