@@ -1010,3 +1010,20 @@ function sumetecMostrarVersionInstalada(app) {
   const msg = 'Versión del software: ' + (codigo ? codigo + ' · ' : '') + v + ' — Última actualización: ' + u;
   if (typeof toast === 'function') toast(msg, 6000); else if (typeof alert === 'function') alert(msg);
 }
+
+// ═══ Vínculo vigente (2026-11-17, pedido de Miguel: las 6 apps se comportan igual) ═══
+// Al abrir, cada app le pregunta al servidor si ESTE teléfono sigue reconocido (lectura «configuracion», la puede hacer cualquier
+// teléfono vinculado). Si contesta «no autorizado» el vínculo se da por muerto y la app vuelve a pedir vincular, como hace Gastos.
+// Sin respuesta (sin señal, servidor ocupado) NO se desvincula nada. Devuelve 'vigente' | 'rechazado' | 'sin_respuesta'.
+async function sumetecComprobarVinculo(url, token) {
+  if (!url || !token) return 'sin_respuesta';
+  let t = null;
+  try {
+    const ctrl = new AbortController(); t = setTimeout(() => ctrl.abort(), 12000);
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ tipo: 'configuracion', token }), signal: ctrl.signal });
+    if (!r.ok) return 'sin_respuesta';
+    const d = await r.json();
+    if (d && d.ok === false && /no autorizado/i.test(String(d.error || ''))) return 'rechazado';
+    return (d && d.ok !== false) ? 'vigente' : 'sin_respuesta';
+  } catch (_) { return 'sin_respuesta'; } finally { if (t) clearTimeout(t); }
+}

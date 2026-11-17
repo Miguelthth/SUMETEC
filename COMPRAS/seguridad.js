@@ -56,8 +56,28 @@ async function abrirSesionDireccion(pin) {
   r.ts = Date.now();
   localStorage.setItem(SESION_KEY, JSON.stringify(r));
   if (typeof sumetecRecordarPin === 'function') sumetecRecordarPin(APP_ACCESO, pin);   // solo lo guarda si el ERP autorizó este equipo
-  return new TextDecoder().decode(plano);
+  const _tokenPlano = new TextDecoder().decode(plano);
+  _comprobarVinculoUnaVez(_tokenPlano);
+  return _tokenPlano;
 }
+
+// Vínculo vigente: una vez por apertura, en el primer desbloqueo, se confirma con el servidor que este teléfono sigue reconocido.
+// Si lo rechaza (p. ej. se vació el libro) se borra SOLO el vínculo y la app pide vincular; las colas pendientes se conservan.
+let _vinculoComprobado = false;
+function _comprobarVinculoUnaVez(token) {
+  if (_vinculoComprobado || typeof sumetecComprobarVinculo !== 'function') return;
+  const url = localStorage.getItem('sumetec_' + APP_ACCESO + '_url');
+  if (!url || !token) return;
+  _vinculoComprobado = true;
+  sumetecComprobarVinculo(url, token).then(e => {
+    if (e === 'sin_respuesta') { _vinculoComprobado = false; return; }
+    if (e !== 'rechazado') return;
+    if (typeof sumetecOlvidarPinGuardado === 'function') sumetecOlvidarPinGuardado(APP_ACCESO);
+    if (typeof toast === 'function') toast('El servidor ya no reconoce este teléfono: vincúlalo de nuevo con un código.', 7000);
+    reiniciarVinculo(true);
+  }).catch(() => { _vinculoComprobado = false; });
+}
+
 
 function bloquearDireccion() {
   localStorage.removeItem(SESION_KEY);
