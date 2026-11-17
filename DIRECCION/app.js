@@ -100,6 +100,7 @@ async function limpiarCacheLocal() {
   if (!navigator.onLine) { _avisoLimpiar_('Sin conexión — conéctate para poder borrar.'); return; }
   const pend = _pendientesParaLimpiar_();
   if (pend > 0) { _avisoLimpiar_('Hay ' + pend + ' pendiente(s) sin enviar o algo a medio capturar — no se borró nada.'); return; }
+  if (!(await sumetecAutorizarBorrado('direccion', { nombre: 'Dirección', documento: 'datos-locales', detalle: 'Borrar copias de este teléfono', avisar: _avisoLimpiar_ }))) return;
   _avisoLimpiar_('Confirmando con el servidor…');
   if (!(await _servidorEnLinea_())) { _avisoLimpiar_('El servidor no contestó (o se canceló el PIN) — no se borró nada.'); return; }
   if (!confirm('Se borrarán las copias guardadas en ESTE teléfono (resúmenes, listas y configuración en caché).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, PIN y vinculación NO se borran.\n\n¿Continuar?')) return;

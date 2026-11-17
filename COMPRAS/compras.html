@@ -59,14 +59,14 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
        menú (mismo patrón que Dirección y Gastos). -->
   <div id="masMenu" class="mas-menu" hidden>
     <div class="mas-menu-grupo">
-      <span class="mas-menu-titulo">Este celular</span>
+      <span class="mas-menu-titulo">Este teléfono</span>
       <button type="button" id="enviar-compras"><i class="bi bi-cloud-arrow-up"></i> Enviar compras pendientes</button>
     </div>
     <div class="mas-menu-grupo">
       <span class="mas-menu-titulo">Ajustes</span>
       <button type="button" onclick="_cerrarMasMenu_();alternarTemaSumetec()"><i class="bi bi-moon-stars"></i> Modo claro / oscuro</button>
-      <button type="button" onclick="_cerrarMasMenu_();limpiarCacheLocal()" title="Borrar copias guardadas en este teléfono"><i class="bi bi-eraser"></i> Borrar copias de este teléfono</button>
       <button type="button" id="badgeVersion" onclick="_cerrarMasMenu_();_mostrarVersionInstalada()" title="Ver actualización de software"><i class="bi bi-info-circle"></i> Actualización de software</button>
+      <button type="button" onclick="_cerrarMasMenu_();limpiarCacheLocal()" title="Borrar los datos guardados en este teléfono"><i class="bi bi-eraser"></i> Borrar datos de este teléfono</button>
     </div>
   </div>
 

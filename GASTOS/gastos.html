@@ -277,9 +277,11 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <span class="gasto-menu-titulo">Este teléfono</span>
   <button type="button" onclick="_cerrarMenuGastos_();verColaPendiente()"><i class="bi bi-cloud-arrow-up"></i> Cola pendiente de envío</button>
   <button type="button" onclick="_cerrarMenuGastos_();exportarGastosCSV()"><i class="bi bi-download"></i> Exportar gastos (.csv)</button>
-  <button type="button" onclick="_cerrarMenuGastos_();_mostrarVersionInstalada()" title="Ver actualización de software"><i class="bi bi-info-circle"></i> Versión instalada</button>
   <div class="gasto-menu-separador"></div>
-  <button type="button" class="gasto-menu-peligro" onclick="_cerrarMenuGastos_();limpiarCacheLocal()"><i class="bi bi-trash"></i> Borrar copias de este teléfono</button>
+  <span class="gasto-menu-titulo">Ajustes</span>
+  <button type="button" onclick="_cerrarMenuGastos_();alternarTemaSumetec()"><i class="bi bi-moon-stars"></i> Modo claro / oscuro</button>
+  <button type="button" onclick="_cerrarMenuGastos_();_mostrarVersionInstalada()" title="Ver actualización de software"><i class="bi bi-info-circle"></i> Actualización de software</button>
+  <button type="button" class="gasto-menu-peligro" onclick="_cerrarMenuGastos_();limpiarCacheLocal()" title="Borrar los datos guardados en este teléfono"><i class="bi bi-eraser"></i> Borrar datos de este teléfono</button>
 </div>
 
 <div id="app"></div>
@@ -1857,6 +1859,7 @@ async function limpiarCacheLocal() {
   if (!navigator.onLine) { toast('Sin conexión — conéctate para poder borrar.', 4000); return; }
   const pend = _pendientesParaLimpiar_();
   if (pend > 0) { toast('Hay ' + pend + ' pendiente(s) sin enviar (o un conteo en curso) — no se borró nada.', 5000); return; }
+  if (!(await sumetecAutorizarBorrado('gastos', { nombre: 'Gastos', documento: 'datos-locales', detalle: 'Borrar copias de este teléfono', avisar: m => toast(m, 5000) }))) return;
   toast('Confirmando con el servidor…', 2500);
   if (!(await _servidorEnLinea_())) { toast('El servidor no contestó — no se borró nada.', 5000); return; }
   if (!confirm('Se borrarán las copias guardadas en ESTE teléfono (listas, configuración, stock teórico y últimos gastos).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, token y vendedor NO se borran.\n\n¿Continuar?')) return;

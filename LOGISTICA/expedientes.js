@@ -108,6 +108,8 @@ async function bloquearLogistica(){tokenLogistica='';apiComercial=null;demoLogis
 function cerrarMenuLogistica(){$('menu-opciones').hidden=true;$('mas-opciones').setAttribute('aria-expanded','false');}
 $('mas-opciones').onclick=()=>{const abierto=$('menu-opciones').hidden;$('menu-opciones').hidden=!abierto;$('mas-opciones').setAttribute('aria-expanded',String(abierto));};
 $('menu-tema').onclick=()=>{cerrarMenuLogistica();alternarTemaSumetec();};
+$('menu-version').onclick=()=>{cerrarMenuLogistica();sumetecMostrarVersionInstalada('logistica');};
+$('menu-borrar-datos').onclick=async()=>{cerrarMenuLogistica();await sumetecBorrarDatosLocales('logistica',{nombre:'Logística',pendientes:async()=>(await baseLocal.pendientes()).length,avisar});};
 $('menu-sincronizar').onclick=()=>{cerrarMenuLogistica();sincronizarComercial();};
 $('menu-ajustes').onclick=()=>{cerrarMenuLogistica();seleccionado=null;mostrarPantalla('ajustes');};
 $('menu-respaldo').onclick=()=>{cerrarMenuLogistica();$('exportar').click();};

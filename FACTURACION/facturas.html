@@ -339,9 +339,11 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 
 <!-- Rediseño 2026-09-24: versión y token salen de la barra a este menú. -->
 <div id="menuFact" class="menu-fact" hidden>
+  <span class="menu-fact-titulo">Este teléfono</span>
+  <button type="button" id="btnTokenFact" onclick="_cerrarMenuFact_();configurarTokenFact()" title="Configurar el token de acceso (solo hace falta si esta app se publica fuera de Apps Script)">Token de acceso</button>
   <span class="menu-fact-titulo">Ajustes</span>
   <button type="button" id="badgeVersionFact" onclick="_cerrarMenuFact_();_mostrarVersionInstaladaFact()" title="Ver información de la actualización">Actualización de software</button>
-  <button type="button" id="btnTokenFact" onclick="_cerrarMenuFact_();configurarTokenFact()" title="Configurar el token de acceso (solo hace falta si esta app se publica fuera de Apps Script)">Token de acceso</button>
+  <button type="button" id="btnBorrarDatosFact" onclick="_cerrarMenuFact_();sumetecBorrarDatosLocales('fact',{nombre:'Facturación'})" title="Borrar los datos guardados en este dispositivo (sigue vinculada)">Borrar datos de este teléfono</button>
 </div>
 
 <div class="wrap">

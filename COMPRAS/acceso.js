@@ -48,7 +48,7 @@ async function _sumetecClavePin(pin, salt) {
 }
 async function sumetecGuardarTokenCifrado(app,token,pin) {
   if (!crypto.subtle) throw Error('Este navegador no permite cifrar el token');
-  if (!pin || pin.length<4) throw Error('El PIN debe tener al menos 4 caracteres');
+  if (!/^[0-9]{6}$/.test(String(pin || ''))) throw Error('El PIN debe ser de 6 dígitos');
   const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
   const key=await _sumetecClavePin(pin,salt);
   const c=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(token));
@@ -506,16 +506,18 @@ async function sumetecResolverPermiso(app, id, aprobar, respaldo) {
 let _sumetecPinPromesa = null;
 // ═══ Teclado de PIN estándar v3 (2026-10, propuesta 1b «pantalla completa») ═══
 // UNA sola pantalla para los 4 usos: crear (2 pasos: escribir → Continuar → confirmar), desbloquear,
-// código de seguridad (Dirección, Gastos) y código de borrado (Cotizador). Largo libre de 4 a 12, con botón.
+// código de seguridad (Dirección, Gastos) y código de borrado (Cotizador). PIN de 6 dígitos fijos (el modo 'codigo' tiene su propio largo).
 // sumetecTecladoPin(dlg, op) solo pinta y conecta el teclado dentro de un <dialog>; quien lo llama lo abre
 // y lee el PRIMER <input> al cerrarse con returnValue 'ok', igual que antes. inputId/errorId/textoId
 // conservan los IDs de #pin-modal y #codigo-modal. Con teclado físico: dígitos, Borrar y Enter.
 // op: { modo:'crear'|'desbloquear'|'codigo', nombre, mensaje, titulo, texto, min, max, olvidar(), inputId, errorId, textoId }
 const SUMETEC_ACENTO_PIN = {Cotizador:'#2aaeeb', Remisiones:'#2aaeeb', Gastos:'#f06452', 'Facturación':'#d99c2b', 'Dirección':'#8750df', Compras:'#54c99a', 'Logística':'#e5609f'};
 const SUMETEC_APP_TOKEN = {Cotizador:'cotizador', Remisiones:'cotizador', Gastos:'gastos', 'Facturación':'fact', 'Logística':'logistica'};
+// PIN de las apps: SIEMPRE 6 dígitos (2026-11-16, pedido de Miguel); sin selector de longitud. El modo 'codigo' conserva su largo propio.
+const SUMETEC_PIN_LARGO = 6;
 function sumetecTecladoPin(dlg, op = {}) {
   const modo = op.modo || 'desbloquear', crear = modo === 'crear', codigo = modo === 'codigo';
-  const nombre = op.nombre || 'SUMETEC', min = op.min || (codigo ? 1 : 4), max = op.max || 12;
+  const nombre = op.nombre || 'SUMETEC', min = op.min || (codigo ? 1 : SUMETEC_PIN_LARGO), max = op.max || (codigo ? 12 : SUMETEC_PIN_LARGO);
   // Huella o Face ID (2026-10-20): al desbloquear, si este teléfono ya la activó para esta app.
   const appHuella = modo === 'desbloquear' ? (op.app || SUMETEC_APP_NOMBRE[nombre] || '') : '';
   const conHuella = !!appHuella && sumetecHuellaActiva(appHuella);
@@ -563,14 +565,14 @@ function sumetecTecladoPin(dlg, op = {}) {
     const marcas = q('.sumetec-pin-pasos').children;
     marcas[0].className = 'activa'; marcas[1].className = paso ? 'activa' : '';
     let t = '', nota = false;
-    if (crear) { t = paso ? '← Cambiar el PIN' : 'De ' + min + ' a ' + max + ' dígitos · no se puede recuperar'; nota = !paso; }
+    if (crear) { t = paso ? '← Cambiar el PIN' : (min === max ? min : 'De ' + min + ' a ' + max) + ' dígitos · no se puede recuperar'; nota = !paso; }
     else if (codigo) t = libre ? 'Usar el teclado numérico' : 'Usar el teclado del teléfono';
     else if (op.olvidar) t = '¿Olvidaste tu PIN?';
     enlace.textContent = t; enlace.classList.toggle('nota', nota); enlace.disabled = nota;
     enlace.style.visibility = t ? '' : 'hidden';
   };
   const pintar = () => {
-    const v = ins[paso].value, n = Math.max(4, v.length), hijos = [];
+    const v = ins[paso].value, n = (codigo && !op.max) ? Math.max(4, v.length) : max, hijos = [];
     for (let k = 0; k < n; k++) {
       const i = document.createElement('i');
       if (k < v.length) { i.className = 'lleno'; if (visible) i.textContent = v[k]; }
@@ -619,7 +621,7 @@ function sumetecTecladoPin(dlg, op = {}) {
     const v = ins[paso].value;
     const parar = m => { e.preventDefault(); e.stopImmediatePropagation(); error.textContent = m; };
     if (libre) { if (!v.trim()) parar('Escribe el código'); return; }
-    if (v.length < min) { parar(codigo ? 'Escribe el código' : 'El PIN debe tener al menos ' + min + ' dígitos'); return; }
+    if (v.length < min) { parar(codigo ? 'Escribe el código' : (min === max ? 'El PIN debe tener ' + min : 'El PIN debe tener al menos ' + min) + ' dígitos'); return; }
     if (crear && !paso) { e.preventDefault(); e.stopImmediatePropagation(); irPaso(1); return; }
     if (crear && ins[0].value !== ins[1].value) { ins[1].value = ''; parar('Los PIN no coinciden. Escríbelo otra vez.'); }
   });
@@ -921,4 +923,90 @@ async function sumetecVersionesTimbre(url, token) {
     return {datos:r.ver, catalogo:r.catVer, erp:r.erpVer,
       configuracion:r.configVer, pendientes:r.pendientesVer, resumen:r.resumenVer};
   } catch (_) { return null; }
+}
+
+// ═══ Borrar los datos guardados en este teléfono (2026-11-16, pedido de Miguel) ═══
+// Botón de «Configuración» de cada app. Pide el permiso de la acción `borrar_datos_locales` (ERP o Dirección → Permisos:
+// 'codigo' = permiso del dueño con su huella, 'libre' o 'bloqueado') y, con él, deja el teléfono como recién instalado
+// PERO SIN DESVINCULARLO: se conservan el nombre, la dirección del servidor, el token cifrado, el id del dispositivo, el PIN
+// y la huella. No borra nada si hay cosas sin enviar (`op.pendientes()` devuelve cuántas) para no perder ventas ni gastos.
+const SUMETEC_CONSERVAR_LOCAL = [
+  /^sumetec_(cotizador|gastos|compras|direccion|logistica|fact)_(dispositivo|token_cifrado|url|nombre)$/,
+  /^sumetec_sinpin_/, /^sumetec_huella_/, /^sumetec_sync_equipo$/, /^sumetec_acceso_cfg$/,
+  /^device_id$/, /^drive_url$/, /^gs_url$/
+];
+const SUMETEC_IDB_CONSERVAR = ['sumetec-huella'];
+function sumetecClaveConservada(clave) { return SUMETEC_CONSERVAR_LOCAL.some(r => r.test(String(clave))); }
+// Autoriza borrar los datos de ESTE teléfono (2026-11-16). 'libre'/'bloqueado' como cualquier permiso. En 'codigo' (lo normal):
+// el teléfono pide a Dirección un código de 6 DÍGITOS de un solo uso; el dueño lo ve en Dirección → Permisos y se lo
+// dicta al teléfono; al usarse, el servidor lo borra (vale 10 min, 5 intentos). El código nunca viaja a este teléfono.
+function _sumetecTecladoCodigoDireccion(nombre, texto) {
+  return new Promise(resolve => {
+    const dlg = document.createElement('dialog');
+    sumetecTecladoPin(dlg, { modo: 'codigo', nombre, titulo: 'Código de Dirección', texto, min: 6, max: 6 });
+    const input = dlg.querySelector('input');
+    dlg.addEventListener('close', () => { const ok = dlg.returnValue === 'ok', v = input ? input.value : ''; if (input) input.value = ''; dlg.remove(); resolve(ok ? v : null); }, { once: true });
+    document.body.appendChild(dlg); dlg.showModal();
+  });
+}
+async function sumetecAutorizarBorrado(app, op = {}) {
+  const modo = sumetecPermiso(app, 'borrar_datos_locales', 'codigo');
+  if (modo !== 'codigo') return sumetecAutorizarAccion(app, 'borrar_datos_locales', 'codigo', op);
+  const avisar = m => { if (typeof op.avisar === 'function') op.avisar(m); else if (typeof alert === 'function') alert(m); };
+  const equipo = localStorage.getItem('sumetec_' + _sumetecAppAcceso(app) + '_dispositivo') || 'equipo';
+  const base = { app, accion: 'borrar_datos_locales', documento: ('datos-locales-' + equipo).slice(0, 100), detalle: 'Borrar los datos guardados en este teléfono' };
+  const r = await _sumetecPostPermiso(app, Object.assign({ tipo: 'solicitar_aprobacion' }, base));
+  if (r.sinRed) { avisar('Se necesita señal para pedir el código a Dirección. Intenta cuando haya internet.'); return false; }
+  if (!r.ok || !r.aprobacion) { avisar(r.error || 'No se pudo pedir el código a Dirección.'); return false; }
+  for (let intento = 0; intento < 5; intento++) {
+    const codigo = await _sumetecTecladoCodigoDireccion(op.nombre || app, 'Dirección tiene un código de 6 dígitos para este teléfono (Dirección → Permisos). Escríbelo aquí.');
+    if (codigo === null) return false;
+    const v = await _sumetecPostPermiso(app, Object.assign({ tipo: 'validar_codigo_borrado', codigo }, base));
+    if (v.sinRed) { avisar('Sin señal: no se pudo validar el código.'); return false; }
+    if (v.ok) return true;
+    avisar(v.error || 'Código incorrecto.');
+    if (!v.incorrecto) return false;
+  }
+  return false;
+}
+async function sumetecBorrarDatosLocales(app, op = {}) {
+  const avisar = m => { if (typeof op.avisar === 'function') op.avisar(m); else if (typeof alert === 'function') alert(m); };
+  _sumetecAppAcceso(app);
+  let pend = 0;
+  try { pend = typeof op.pendientes === 'function' ? Number(await op.pendientes()) || 0 : 0; } catch (_) { pend = 1; }
+  if (pend > 0) { avisar('Hay ' + pend + ' cosa(s) sin enviar en este teléfono. Envíalas o descártalas antes de borrar los datos.'); return { ok: false, motivo: 'PENDIENTES' }; }
+  const permitido = await sumetecAutorizarBorrado(app, Object.assign({}, op, {
+    nombre: op.nombre || app, documento: 'datos-locales', detalle: 'Borrar los datos guardados en este teléfono', avisar }));
+  if (!permitido) return { ok: false, motivo: 'SIN_PERMISO' };
+  if (typeof op.confirmar === 'function' ? !(await op.confirmar()) : (typeof confirm === 'function' && !confirm('Se borrarán los datos guardados en este teléfono (catálogo, clientes, historial). La app seguirá vinculada. ¿Continuar?')))
+    return { ok: false, motivo: 'CANCELADO' };
+  const resumen = { claves: 0, sesion: 0, caches: 0, bases: 0 };
+  try {
+    for (const k of Object.keys(localStorage)) if (!sumetecClaveConservada(k)) { localStorage.removeItem(k); resumen.claves++; }
+    try { resumen.sesion = sessionStorage.length; sessionStorage.clear(); } catch (_) {}
+    if (typeof caches !== 'undefined' && caches.keys) for (const n of await caches.keys()) { if (await caches.delete(n)) resumen.caches++; }
+    if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
+      for (const b of await indexedDB.databases()) if (b && b.name && !SUMETEC_IDB_CONSERVAR.includes(b.name)) {
+        await new Promise(ok => { const r = indexedDB.deleteDatabase(b.name); r.onsuccess = r.onerror = r.onblocked = () => ok(); });
+        resumen.bases++;
+      }
+    }
+  } catch (e) { avisar('No se pudo borrar todo: ' + (e && e.message || e)); return { ok: false, motivo: 'ERROR', resumen }; }
+  if (op.recargar !== false && typeof location !== 'undefined' && location.reload) location.reload();
+  return { ok: true, resumen };
+}
+
+// ═══ Menú de Ajustes estándar (2026-11-16, pedido de Miguel) ═══
+// Las 6 apps tienen el MISMO grupo «Ajustes» en su menú: Modo claro / oscuro (donde la app ya tiene tema), Actualización de
+// software y Borrar datos de este teléfono. Esta función es la «Actualización de software» común.
+const SUMETEC_CLAVE_ULTIMA_ACTUALIZACION = { cotizador: 'rem_ultima_actualizacion', gastos: 'inv_ultima_actualizacion', compras: 'compras_ultima_actualizacion',
+  direccion: 'direccion_ultima_actualizacion', logistica: 'logistica_ultima_actualizacion', fact: 'sumetec_fact_ultima_actualizacion' };
+function sumetecMostrarVersionInstalada(app) {
+  const codigo = (typeof VERSION_CODIGO !== 'undefined' && VERSION_CODIGO) ? VERSION_CODIGO : null;
+  const v = (typeof VERSION_DEPLOY !== 'undefined' && VERSION_DEPLOY)
+    ? new Date(VERSION_DEPLOY).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : 'Sin información';
+  let ultima = 0; try { ultima = Number(localStorage.getItem(SUMETEC_CLAVE_ULTIMA_ACTUALIZACION[_sumetecAppAcceso(app)]) || 0); } catch (_) {}
+  const u = ultima ? new Date(ultima).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : 'Aún no se ha detectado una actualización nueva en este dispositivo.';
+  const msg = 'Versión del software: ' + (codigo ? codigo + ' · ' : '') + v + ' — Última actualización: ' + u;
+  if (typeof toast === 'function') toast(msg, 6000); else if (typeof alert === 'function') alert(msg);
 }

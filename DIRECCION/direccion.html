@@ -56,15 +56,15 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 
   <div id="masMenu" class="mas-menu" style="display:none" hidden>
     <div class="mas-menu-grupo">
-      <span class="mas-menu-titulo">Este celular</span>
+      <span class="mas-menu-titulo">Este teléfono</span>
       <button type="button" id="menuEnviarPendientes"><i class="bi bi-cloud-arrow-up"></i> Enviar movimientos pendientes</button>
-      <button type="button" onclick="document.getElementById('masMenu').hidden = true; document.getElementById('masMenu').style.display = 'none'; limpiarCacheLocal()"><i class="bi bi-eraser"></i> Borrar copias guardadas</button>
+      <button type="button" id="menuVincular"><i class="bi bi-phone"></i> Vincular otro teléfono</button>
     </div>
     <div class="mas-menu-grupo">
       <span class="mas-menu-titulo">Ajustes</span>
       <button type="button" onclick="alternarTemaSumetec()"><i class="bi bi-moon-stars"></i> Modo claro / oscuro</button>
       <button type="button" onclick="_mostrarVersionInstalada()"><i class="bi bi-info-circle"></i> Actualización de software</button>
-      <button type="button" id="menuVincular"><i class="bi bi-phone"></i> Vincular otro teléfono</button>
+      <button type="button" onclick="document.getElementById('masMenu').hidden = true; document.getElementById('masMenu').style.display = 'none'; limpiarCacheLocal()" title="Borrar los datos guardados en este teléfono"><i class="bi bi-eraser"></i> Borrar datos de este teléfono</button>
     </div>
   </div>
 

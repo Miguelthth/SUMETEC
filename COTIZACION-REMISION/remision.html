@@ -798,11 +798,16 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <button onclick="_cerrarMenuMas();abrirCorteCaja()" title="Efectivo cobrado en ESTE celular en el turno -- no incluye fondo, retiros ni otros dispositivos">🧮 Corte de caja</button>
   </div>
   <div class="menu-mas-grp">
-  <div class="menu-mas-h">Ajustes</div>
+  <div class="menu-mas-h">Este teléfono</div>
   <button onclick="_cerrarMenuMas();abrirEmpresa()">🏢 Mi empresa</button>
   <button onclick="_cerrarMenuMas();abrirCatalogos()" id="btnTokenTab">⚙️ Configuración</button>
   <button onclick="_cerrarMenuMas();abrirExcepciones()">⚠ Excepciones <span id="badgeExcepciones" style="display:none;background:#c0392b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">•</span></button>
   <button onclick="_cerrarMenuMas();window.print()">🖨️ Imprimir</button>
+  </div>
+  <div class="menu-mas-grp">
+  <div class="menu-mas-h">Ajustes</div>
+  <button onclick="_cerrarMenuMas();_mostrarVersionInstalada()" title="Ver actualización de software">ℹ️ Actualización de software</button>
+  <button onclick="_cerrarMenuMas();restablecerDatosLocales()" title="Borrar los datos guardados en este teléfono">🧹 Borrar datos de este teléfono</button>
   </div>
 </div>
 <div id="mobileAction" class="mobile-action no-print" aria-live="polite">
@@ -7013,6 +7018,24 @@ function _mostrarVersionInstalada(){
 function _postLectura(url,tipo){
   return fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo,token:API_TOKEN})});
 }
+// La generación solo se conserva si las filas recibidas y el catálogo aplicado siguen idénticos.
+async function _guardarGeneracionCache_(filas,meta,clave,claveCache,aplicado){
+  try{
+    if(!Array.isArray(filas)||!filas.length||!meta||!crypto.subtle||!/^\d{1,16}$/.test(String(meta.secuencia||''))||
+       !/^[0-9a-f-]{36}$/i.test(String(meta.operation_id||''))||!/^[0-9a-f]{64}$/.test(String(meta.checksum||''))||
+       !/^[0-9a-f]{64}$/.test(String(meta.filas_sha256||'')))throw Error('Generación no disponible');
+    const digest=async s=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),b=>b.toString(16).padStart(2,'0')).join('');
+    if(await digest(JSON.stringify(filas))!==meta.filas_sha256)throw Error('La respuesta del catálogo cambió');
+    const cache=localStorage.getItem(claveCache),actual=JSON.stringify(aplicado());
+    if(!cache||cache!==actual)throw Error('El catálogo aplicado no coincide con la caché');
+    const cache_sha256=await digest(cache);
+    if(localStorage.getItem(claveCache)!==cache||JSON.stringify(aplicado())!==actual)throw Error('El catálogo cambió durante la lectura');
+    localStorage.setItem(clave,JSON.stringify({operation_id:meta.operation_id,secuencia:String(meta.secuencia),checksum:meta.checksum,cache_sha256}));
+  }catch(_){localStorage.removeItem(clave);}
+}
+const _guardarGeneracionProductos_=(filas,meta)=>_guardarGeneracionCache_(filas,meta,'sumetec_productos_generacion','gs_cp',()=>PRODUCTOS);
+const _guardarGeneracionClientes_=(filas,meta)=>_guardarGeneracionCache_(filas,meta,'sumetec_clientes_generacion','gs_cc',()=>CLIENTES);
+const _pingGeneracion_=url=>Promise.race([_postLectura(url,'ping').catch(()=>null),new Promise(resolve=>setTimeout(()=>resolve(null),5000))]);
 async function conectarGS(){
   const url=document.getElementById('gs_url').value.trim();
   const st=document.getElementById('gsStatus');
@@ -7025,15 +7048,17 @@ async function conectarGS(){
   }
   st.innerHTML='<span style="color:var(--muted)">⏳ Conectando…</span>';
   try{
-    const [rP,rC]=await Promise.all([_postLectura(url,'catalogo'),_postLectura(url,'clientes')]);
+    const [rP,rC,rPing]=await Promise.all([_postLectura(url,'catalogo'),_postLectura(url,'clientes'),_pingGeneracion_(url)]);
     if(!rP.ok)throw new Error('HTTP '+rP.status+' al cargar catálogo');
     if(!rC.ok)throw new Error('HTTP '+rC.status+' al cargar clientes');
     const jP=await rP.json(),jC=await rC.json();
+    const jPing=rPing&&rPing.ok?await rPing.json().catch(()=>null):null;
     if(jP.error)throw new Error(jP.error);
     if(jC.error)throw new Error(jC.error);
     // 2026-09-10: mismo guardián que refrescarCatalogo() — un catálogo vacío no
     // sobrescribe uno bueno que ya tenías cargado.
     if(Array.isArray(jP)&&jP.length===0&&PRODUCTOS.length>0){
+      localStorage.removeItem('sumetec_productos_generacion');
       st.innerHTML='<span style="color:#C0392B">⚠️ El ERP todavía no ha publicado catálogo (0 productos) — se conserva el que ya tenías</span>';
       return;
     }
@@ -7044,7 +7069,9 @@ async function conectarGS(){
     // (mejora 2026-09-10: antes eran dos campos idénticos que confundían).
     localStorage.setItem('drive_url',url);
     localStorage.setItem('gs_cp',JSON.stringify(PRODUCTOS));
+    await _guardarGeneracionProductos_(jP,jPing&&jPing.generacionProductos);
     localStorage.setItem('gs_cc',JSON.stringify(CLIENTES));
+    await _guardarGeneracionClientes_(jC,jPing&&jPing.generacionClientes);
     const now=new Date().toLocaleString('es-MX');localStorage.setItem('gs_sync',now);
     document.getElementById('gsSync').textContent=now;
     st.innerHTML='<span style="color:var(--green)">✓ '+PRODUCTOS.length+' productos y '+CLIENTES.length+' clientes cargados</span>';toast('Catálogos actualizados ✓','ok');
@@ -7052,7 +7079,7 @@ async function conectarGS(){
 }
 async function limpiarGS(){
   if(!(await popupConfirmar('¿Desconectar Apps Script?','🔌 Desconectar')))return;
-  ['gs_url','drive_url','gs_cp','gs_cc','gs_sync','gs_hp'].forEach(k=>localStorage.removeItem(k));
+  ['gs_url','drive_url','gs_cp','gs_cc','gs_sync','gs_hp','sumetec_productos_generacion','sumetec_clientes_generacion'].forEach(k=>localStorage.removeItem(k));
   PRODUCTOS=[];CLIENTES=[];HISTORIAL_PRECIOS=new Map();
   document.getElementById('gs_url').value='';
   document.getElementById('gsStatus').textContent='Desconectado';document.getElementById('gsSync').textContent='—';toast('Desconectado');
@@ -7116,6 +7143,7 @@ function _actualizarSyncLocalStatus(){
 }
 async function limpiarHistorialLocal(){
   if(!isOnline||_pendientesParaLimpiar()>0){toast('Todavía hay pendientes por sincronizar','warn',4000);return;}
+  if(!(await sumetecAutorizarBorrado('cotizador', {nombre:'Cotizador',documento:'datos-locales',detalle:'Borrar copias de este celular',avisar:m=>toast(m,'warn',5000)})))return;
   const nRem=(leerSeguro('r_rems',[])||[]).length, nCob=(leerSeguro('cache_cobros',[])||[]).length;
   if(!nRem&&!nCob){toast('No hay copias locales que borrar','warn',3000);return;}
   toast('Confirmando con el servidor…','warn',2500);
@@ -7138,9 +7166,10 @@ async function limpiarHistorialLocal(){
 //  1) bloqueado con cualquier cola pendiente o sin conexión; 2) ping real al servidor + doble confirmación;
 //  3) NUNCA toca colas, borradores, folios (r_fn, tmp_n, tmp_letras, _cot_fn), token, device_id, PIN ni la
 //     vinculación; 4) el catálogo nunca queda en blanco: si la descarga nueva falla, se RESTAURA la copia anterior.
-const _CLAVES_CACHE_CATALOGO=['gs_cp','gs_cc','gs_hp','gs_cfg','gs_cfg_ts','gs_sync','gs_sync_ts','cat_ver','cat_ok_ts','data_ver','erp_catalogo_ts'];
+const _CLAVES_CACHE_CATALOGO=['gs_cp','gs_cc','gs_hp','gs_cfg','gs_cfg_ts','gs_sync','gs_sync_ts','cat_ver','cat_ok_ts','data_ver','erp_catalogo_ts','sumetec_productos_generacion','sumetec_clientes_generacion'];
 async function restablecerDatosLocales(){
   if(!isOnline||_pendientesParaLimpiar()>0){toast('Todavía hay pendientes por sincronizar','warn',4000);return;}
+  if(!(await sumetecAutorizarBorrado('cotizador', {nombre:'Cotizador',documento:'datos-locales',detalle:'Borrar copias de este celular',avisar:m=>toast(m,'warn',5000)})))return;
   toast('Confirmando con el servidor…','warn',2500);
   if(!(await _confirmarServidorEnLinea())){toast('No hay respuesta del servidor — no se borró nada','warn',5000);return;}
   if(!(await popupConfirmar('Se van a quitar de ESTE celular las remisiones y cobros en caché, y la copia del catálogo, clientes, historial de precios y configuración.\n\nTodo se vuelve a bajar del servidor; si la descarga falla, se conserva la copia anterior. Colas, borradores, folios, token y PIN NO se borran.','♻️ Restablecer datos')))return;
@@ -7231,16 +7260,18 @@ async function refrescarCatalogo(silencioso,catVer){
   _catEnCurso=true;
   try{
     // Traer catálogo, clientes del ERP y clientes de la hoja maestra en paralelo
-    const [rP,rC,rCM,rPM,rHP,rCfg]=await Promise.all([
+    const [rP,rC,rCM,rPM,rHP,rCfg,rPing]=await Promise.all([
       _postLectura(url,'catalogo'),
       _postLectura(url,'clientes'),
       _postLectura(url,'clientes_maestro').catch(()=>null),   // no falla si backend viejo
       _postLectura(url,'productos_maestro').catch(()=>null),  // productos agregados en campo
       _postLectura(url,'historial_precios').catch(()=>null),  // #8: tendencia de costo real
-      _postLectura(url,'configuracion').catch(()=>null)       // ecosistema centralizado (2026-09)
+      _postLectura(url,'configuracion').catch(()=>null),      // ecosistema centralizado (2026-09)
+      _pingGeneracion_(url)
     ]);
     if(!rP.ok||!rC.ok)return;
     const jP=await rP.json(),jC=await rC.json();
+    const jPing=rPing&&rPing.ok?await rPing.json().catch(()=>null):null;
     const jCM=rCM&&rCM.ok?await rCM.json().catch(()=>null):null;
     const jPM=rPM&&rPM.ok?await rPM.json().catch(()=>null):null;
     const jHP=rHP&&rHP.ok?await rHP.json().catch(()=>null):null;
@@ -7321,7 +7352,9 @@ async function refrescarCatalogo(silencioso,catVer){
     });
     CLIENTES=[...porNombre.values()];
     localStorage.setItem('gs_cp',JSON.stringify(PRODUCTOS));
+    await _guardarGeneracionProductos_(jP,jPing&&jPing.generacionProductos);
     localStorage.setItem('gs_cc',JSON.stringify(CLIENTES));
+    await _guardarGeneracionClientes_(jC,jPing&&jPing.generacionClientes);
     localStorage.setItem('gs_sync',new Date().toLocaleString('es-MX'));
     localStorage.setItem('gs_sync_ts',String(Date.now())); // para calcular horas de desactualización
     // N16R (5/nov): si alguna de las lecturas salió de la foto ANTERIOR del diario (el servidor contestó «pendiente» porque aún armaba la nueva),

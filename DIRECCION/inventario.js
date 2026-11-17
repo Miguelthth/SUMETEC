@@ -173,8 +173,8 @@ function _resumenConteo_(items, stockTeoricoMap) {
 }
 
 // "ts" es SIEMPRE el que publicó el ERP, nunca cuándo lo bajó este celular.
-function _guardarStockTeoricoCache_(filas, ts) {
-  guardarSeguro(CLAVE_INV_STOCK, { ts: ts || '', filas });
+function _guardarStockTeoricoCache_(filas, ts, generacion) {
+  guardarSeguro(CLAVE_INV_STOCK, { ts: ts || '', filas, generacion: generacion || null });
 }
 
 // Best-effort, nunca bloquea: sin señal o sin PIN, se queda con el caché.
@@ -188,7 +188,7 @@ async function _cargarStockTeorico_(pedir) {
     const d = await _postInventario_({ tipo: 'stock_teorico' }, !!pedir);
     if (!d || !Array.isArray(d.filas)) throw new Error('respuesta inválida');
     STOCK_TEORICO = _construirStockTeoricoMap(d.filas);
-    _guardarStockTeoricoCache_(d.filas, d.ts || '');
+    _guardarStockTeoricoCache_(d.filas, d.ts || '', d.generacion || null);
   } catch (_) {
     usarCache();
   }

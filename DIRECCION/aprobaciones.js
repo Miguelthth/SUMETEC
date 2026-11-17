@@ -12,6 +12,7 @@ if (typeof sumetecRegistrarServidor === 'function') sumetecRegistrarServidor('di
 });
 
 const _ACCIONES_PERMISO_ = {
+  borrar_datos_locales: 'Borrar los datos de un teléfono',
   cancelar_remision: 'Cancelar remisión', eliminar_remision: 'Eliminar remisión', modificar_remision: 'Modificar remisión',
   anular_pago: 'Anular un pago', abrir_cotizacion: 'Abrir cotización', convertir_cotizacion: 'Convertir cotización',
   quitar_cotizacion: 'Quitar cotización', cerrar_conteo: 'Cerrar conteo', editar_conteo_cerrado: 'Editar conteo cerrado',
@@ -44,16 +45,23 @@ function _pintarPermisos_(caja, lista) {
   _marcarInsigniaPermisos_(pendientes.length);
   const tarjeta = (a, conBotones) => {
     const accion = _ACCIONES_PERMISO_[a.accion] || String(a.accion || '').replace(/_/g, ' ');
-    const estado = { APROBADA: '✔ Aprobado', RECHAZADA: '✖ Rechazado', VENCIDA: 'Vencido' }[a.estado] || '';
+    const estado = { APROBADA: '✔ Aprobado', RECHAZADA: '✖ Rechazado', VENCIDA: 'Vencido', USADA: '✔ Código usado' }[a.estado] || '';
+    const esBorrado = a.accion === 'borrar_datos_locales' && a.estado === 'PENDIENTE';
+    const bloqueCodigo = esBorrado
+      ? '<div style="margin:10px 0;text-align:center">' + (a.codigo
+        ? '<div style="font-size:34px;font-weight:800;letter-spacing:6px" data-codigo-borrado>' + _escPermiso_(String(a.codigo).slice(0, 3) + ' ' + String(a.codigo).slice(3)) + '</div><small class="text-muted">Díctalo en el teléfono que lo pidió. Vale 10 minutos y se borra al usarlo.</small>'
+        : '<small class="text-muted">El código venció: el teléfono debe pedir uno nuevo.</small>') + '</div>'
+      : '';
     return '<div class="card" style="margin-bottom:10px"><div class="card-body">'
       + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><strong>' + _escPermiso_(accion) + '</strong>'
       + '<small class="text-muted">' + _escPermiso_(_APPS_PERMISO_[a.app] || a.app) + '</small></div>'
       + (a.detalle ? '<div style="margin-top:4px">' + _escPermiso_(a.detalle) + '</div>' : '')
       + '<small class="text-muted">' + _escPermiso_(a.pedidoPor || 'Un teléfono') + ' · ' + _haceCuanto_(a.pedido) + '</small>'
+      + bloqueCodigo
       + (conBotones
-        ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'
+        ? '<div style="display:grid;grid-template-columns:' + (esBorrado ? '1fr' : '1fr 1fr') + ';gap:8px;margin-top:10px">'
           + '<button type="button" class="btn btn-outline-secondary" data-rechazar="' + _escPermiso_(a.id) + '">Rechazar</button>'
-          + '<button type="button" class="btn btn-success" data-aprobar="' + _escPermiso_(a.id) + '">Aprobar</button></div>'
+          + (esBorrado ? '' : '<button type="button" class="btn btn-success" data-aprobar="' + _escPermiso_(a.id) + '">Aprobar</button>') + '</div>'
         : '<div style="margin-top:6px;font-weight:600">' + _escPermiso_(estado) + (a.resueltoPor ? ' <small class="text-muted">· ' + _escPermiso_(a.resueltoPor) + '</small>' : '') + '</div>')
       + '</div></div>';
   };
