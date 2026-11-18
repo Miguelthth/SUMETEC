@@ -108,8 +108,8 @@ async function limpiarCacheLocal() {
   if (String(txt || '').trim().toUpperCase() !== 'BORRAR') { _avisoLimpiar_('Cancelado — no se borró nada.'); return; }
   if (_pendientesParaLimpiar_() > 0) { _avisoLimpiar_('Entró algo a la cola mientras confirmabas — no se borró nada.'); return; }
   _CLAVES_CACHE_DIRECCION.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-  _avisoLimpiar_('Copias borradas ✓ — recargando…');
-  setTimeout(() => location.reload(), 900);
+  await sumetecAvisoContenidoBorrado();
+  location.reload();
 }
 function _avisoLimpiar_(m) { if (typeof toast === 'function') toast(m); else alert(m); }
 
@@ -337,7 +337,9 @@ function _mostrarVersionInstalada() {
     ? new Date(ultima).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
     : 'Aún no se ha detectado una actualización nueva en este dispositivo.';
   const msg = `Versión del software: ${codigo ? codigo + ' · ' : ''}${v} — Última actualización: ${u}`;
-  if (typeof toast === 'function') toast(msg, 6000); else alert(msg);
+  // 2026-11-17: el botón BUSCA la actualización (acceso.js); la versión instalada se muestra en el mismo resultado.
+  if (typeof sumetecBuscarActualizacion === 'function') sumetecBuscarActualizacion('direccion');
+  else if (typeof toast === 'function') toast(msg, 6000); else alert(msg);
 }
 
 // Bug #1 (2026-09-23): antes cualquier campo con valor contaba como captura en curso, y la

@@ -89,6 +89,13 @@ function _ajusteCompras_(clave, fabrica) {
     return (typeof v === 'number' && isFinite(v) && v > 0) ? v : fabrica;
   } catch (_) { return fabrica; }
 }
+// Igual que _ajusteCompras_ pero un 0 es un valor válido (interruptores 0/1): sin dato publicado, la fábrica.
+function _ajusteCompras01_(clave, fabrica) {
+  try {
+    const a = JSON.parse(localStorage.getItem(CLAVE_AJUSTES_COMPRAS) || 'null'), v = a && a[clave];
+    return (v === 0 || v === 1) ? v : fabrica;
+  } catch (_) { return fabrica; }
+}
 // Permisos por acción (Ecosistema → Compras → Permisos). Sin nada publicado: lo de siempre (`porDefecto`).
 // 2026-10-20: «pide» = permiso del dueño, que lo aprueba desde su teléfono con su huella (acceso.js).
 function _autorizarCompras_(accion, porDefecto, documento, detalle) {
@@ -267,7 +274,7 @@ if (typeof setInterval === 'function') setInterval(() => { procesarColaCompras(f
 // fotografía todavía) e IMPORTADO (el snapshot SÍ la reporta integrada).
 // Puro y testable: recibe la cola, el historial y el caché de snapshot ya
 // leídos, no toca localStorage ni el DOM.
-function _historialComprasDireccion_(cola, historialEnviadas, snapshotCache) {
+function _historialComprasDireccion_(cola, historialEnviadas, snapshotCache, opciones) {
   const recientesERP = (snapshotCache && snapshotCache.snapshot && snapshotCache.snapshot.comprasRecientes) || [];
   const porId = new Map(recientesERP.map(r => [r.id, r]));
   const snapshotTs = snapshotCache ? snapshotCache.ts : '';
@@ -290,7 +297,14 @@ function _historialComprasDireccion_(cola, historialEnviadas, snapshotCache) {
     };
   });
 
-  return pendientes.concat(enviadas);
+  // H4 (17/nov, decisión de Miguel): también se muestran las compras que otros teléfonos mandaron al ERP (las que este teléfono no
+  // envió). Se enciende o apaga en el ERP: Ecosistema → Compras → «Mostrar compras de otros teléfonos» (1 = sí, 0 = no).
+  const propias = new Set(pendientes.concat(enviadas).map(x => x.id));
+  const otras = (opciones && opciones.otrosTelefonos) ? recientesERP.filter(r => r && r.id && !propias.has(r.id)).map(r => ({
+    id: r.id, proveedor: r.proveedor || '', total: Number(r.total || 0), estado: r.estado || 'ESPERANDO_REVISION',
+    folio: r.folio || '', fecha: r.actualizadoEn || '', snapshotTs, otroTelefono: true,
+  })) : [];
+  return pendientes.concat(enviadas, otras);
 }
 
 function _badgeEstadoCompraDireccion_(estado) {
@@ -319,7 +333,9 @@ function _htmlHistorialComprasDireccion_(items) {
     ${it.estado === 'RECHAZADA' ? `<small class="motivo" style="color:#c0392b">Motivo: ${_escHtmlCompra_(it.motivo)}</small>
       <button type="button" class="btn btn-outline-secondary" onclick="_reintentarCompra_('${_escHtmlCompra_(it.id)}')">Reintentar</button>
       <button type="button" class="btn btn-outline-secondary" onclick="_descartarCompra_('${_escHtmlCompra_(it.id)}')">Descartar</button>` : ''}
+    ${it.estado === 'PENDIENTE_ENVIO' ? `<button type="button" class="btn btn-outline-secondary" onclick="_descartarCompra_('${_escHtmlCompra_(it.id)}')">Descartar</button>` : ''}
     ${!['PENDIENTE_ENVIO','RECHAZADA','ANULADA'].includes(it.estado) ? `<button type="button" class="btn btn-outline-secondary" data-abonar-compra="${_escHtmlCompra_(it.id)}">Abonar / liquidar</button>` : ''}
+    ${it.otroTelefono ? '<small class="otro-telefono">📱 Enviada desde otro teléfono</small>' : ''}
     ${it.folio ? `<small class="folio">Folio ERP: ${_escHtmlCompra_(it.folio)}</small>` : ''}
     ${it.fecha ? `<small class="fecha">${_escHtmlCompra_(String(it.fecha).replace('T', ' '))}</small>` : ''}
   </li>`).join('');
@@ -343,7 +359,11 @@ function _reintentarCompra_(id) {
 }
 async function _descartarCompra_(id) {
   if (!await _autorizarCompras_('descartar_compra', 'libre')) return;
-  if (!await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'esta compra',detalle:'NO llegará al ERP.',irreversible:true})) return;
+  // 2026-11-17 (Miguel): también se puede descartar una compra que sigue PENDIENTE de envío (sin señal o aún sin acuse), no sólo una rechazada.
+  const _c = leer(COLAS.compras).find(c => c.id === id);
+  if (!_c) { _renderHistorialComprasDireccion_(); if (typeof estado === 'function') estado(); return; }
+  const _detalle = _c.rechazo ? 'NO llegará al ERP.' : 'NO llegará al ERP. Si el teléfono ya la estaba enviando en este momento, puede llegar de todos modos.';
+  if (!await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'esta compra',detalle:_detalle,irreversible:true})) return;
   localStorage.setItem(COLAS.compras, JSON.stringify(leer(COLAS.compras).filter(c => c.id !== id)));
   _renderHistorialComprasDireccion_(); if (typeof estado === 'function') estado();
 }
@@ -389,7 +409,7 @@ function _renderHistorialComprasDireccion_() {
     el.querySelector('#hc-barra').addEventListener('input', cambio);
     el.querySelector('#hc-barra').addEventListener('change', cambio);
   }
-  const todos = _historialComprasDireccion_(leer(COLAS.compras), leer(CLAVE_HISTORIAL_COMPRAS), _leerSnapshotCacheDireccion_());
+  const todos = _historialComprasDireccion_(leer(COLAS.compras), leer(CLAVE_HISTORIAL_COMPRAS), _leerSnapshotCacheDireccion_(), { otrosTelefonos: _ajusteCompras01_('ver_compras_otros_telefonos', 1) === 1 });
   const items = _filtrarHistorialCompras_(todos, _filtroHistCompras_);
   const cuenta = el.querySelector('#hc-cuenta');
   if (cuenta) cuenta.textContent = items.length + ' de ' + todos.length + ' compra(s) · total $' + items.reduce((a, x) => a + Number(x.total || 0), 0).toFixed(2);
@@ -1464,8 +1484,8 @@ async function limpiarCacheLocal() {
   if (String(txt || '').trim().toUpperCase() !== 'BORRAR') { alert('Cancelado — no se borró nada.'); return; }
   if (_pendientesParaLimpiar_() > 0) { alert('Entró algo a la cola mientras confirmabas — no se borró nada.'); return; }
   _CLAVES_CACHE_COMPRAS.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-  alert('Copias borradas ✓ — recargando…');
-  setTimeout(() => location.reload(), 900);
+  await sumetecAvisoContenidoBorrado();
+  location.reload();
 }
 
 // En Compras abrir sesión pide el PIN: el token se recuerda 2 minutos SOLO en memoria para que

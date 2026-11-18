@@ -280,7 +280,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <div class="gasto-menu-separador"></div>
   <span class="gasto-menu-titulo">Ajustes</span>
   <button type="button" onclick="_cerrarMenuGastos_();alternarTemaSumetec()"><i class="bi bi-moon-stars"></i> Modo claro / oscuro</button>
-  <button type="button" onclick="_cerrarMenuGastos_();_mostrarVersionInstalada()" title="Ver actualización de software"><i class="bi bi-info-circle"></i> Actualización de software</button>
+  <button type="button" onclick="_cerrarMenuGastos_();_mostrarVersionInstalada()" title="Buscar actualización de software"><i class="bi bi-info-circle"></i> Actualización de software</button>
   <button type="button" class="gasto-menu-peligro" onclick="_cerrarMenuGastos_();limpiarCacheLocal()" title="Borrar los datos guardados en este teléfono"><i class="bi bi-eraser"></i> Borrar datos de este teléfono</button>
 </div>
 
@@ -1940,8 +1940,8 @@ async function limpiarCacheLocal() {
   if (String(txt || '').trim().toUpperCase() !== 'BORRAR') { toast('Cancelado — no se borró nada.', 3000); return; }
   if (_pendientesParaLimpiar_() > 0) { toast('Entró algo a la cola mientras confirmabas — no se borró nada.', 5000); return; }
   _CLAVES_CACHE_GASTOS.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-  toast('Copias borradas ✓ — recargando…', 2000);
-  setTimeout(() => location.reload(), 900);
+  await sumetecAvisoContenidoBorrado();
+  location.reload();
 }
 
 // UI de la cola pendiente (F6 + mejora #8, unificada J-1): ve qué falta por
@@ -2061,7 +2061,9 @@ function _mostrarVersionInstalada() {
   const u = ultima
     ? new Date(ultima).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
     : 'Aún no se ha detectado una actualización nueva en este dispositivo.';
-  alert(`Versión del software: ${codigo ? codigo + ' · ' : ''}${v}\nÚltima actualización: ${u}`);
+  // 2026-11-17: el botón BUSCA la actualización (acceso.js); la versión instalada se muestra en el mismo resultado.
+  if (typeof sumetecBuscarActualizacion === 'function') sumetecBuscarActualizacion('gastos');
+  else alert(`Versión del software: ${codigo ? codigo + ' · ' : ''}${v}\nÚltima actualización: ${u}`);
 }
 
 // Registro del service worker, revisión cada 5 min y el aviso «Actualizar»: todo en

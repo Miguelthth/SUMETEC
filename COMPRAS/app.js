@@ -177,7 +177,9 @@ function _mostrarVersionInstalada() {
   const u = ultima
     ? new Date(ultima).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
     : 'Aún no se ha detectado una actualización nueva en este dispositivo.';
-  alert(`Versión del software: ${codigo ? codigo + ' · ' : ''}${v}\nÚltima actualización: ${u}`);
+  // 2026-11-17: el botón BUSCA la actualización (acceso.js); la versión instalada se muestra en el mismo resultado.
+  if (typeof sumetecBuscarActualizacion === 'function') sumetecBuscarActualizacion('compras');
+  else alert(`Versión del software: ${codigo ? codigo + ' · ' : ''}${v}\nÚltima actualización: ${u}`);
 }
 
 // Bug #1 (2026-09-23): antes cualquier campo con valor contaba como captura en curso, y la

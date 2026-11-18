@@ -994,6 +994,15 @@ async function sumetecAutorizarBorrado(app, op = {}) {
   const hecho = await _sumetecTecladoCodigoDireccion(op.nombre || app, 'Dirección tiene un código de 6 dígitos para este teléfono (Dirección → Permisos). Escríbelo aquí. Sirve una sola vez.', validar);
   return hecho !== null;
 }
+// 2026-11-17 (Miguel): al terminar de borrar los datos de un teléfono SIEMPRE se dice «Contenido borrado» en un popup centrado
+// (antes era un aviso que se iba solo o la app recargaba sin decir nada). Devuelve una promesa que se cumple al tocar Entendido.
+function sumetecAvisoContenidoBorrado(detalle) {
+  return new Promise(resolve => {
+    const dlg = _sumetecDialogoSimple('🗑️', 'Contenido borrado', detalle || 'Los datos de este teléfono se borraron. Lo enviado sigue en el servidor y se vuelve a bajar.', [['ok', 'Entendido']]);
+    dlg.querySelector('[data-r="ok"]').onclick = () => dlg.close('ok');
+    dlg.addEventListener('close', () => resolve(true), { once: true });
+  });
+}
 async function sumetecBorrarDatosLocales(app, op = {}) {
   const avisar = m => { if (typeof op.avisar === 'function') op.avisar(m); else if (typeof alert === 'function') alert(m); };
   _sumetecAppAcceso(app);
@@ -1017,6 +1026,7 @@ async function sumetecBorrarDatosLocales(app, op = {}) {
       }
     }
   } catch (e) { avisar('No se pudo borrar todo: ' + (e && e.message || e)); return { ok: false, motivo: 'ERROR', resumen }; }
+  await sumetecAvisoContenidoBorrado();
   if (op.recargar !== false && typeof location !== 'undefined' && location.reload) location.reload();
   return { ok: true, resumen };
 }
@@ -1026,15 +1036,46 @@ async function sumetecBorrarDatosLocales(app, op = {}) {
 // software y Borrar datos de este teléfono. Esta función es la «Actualización de software» común.
 const SUMETEC_CLAVE_ULTIMA_ACTUALIZACION = { cotizador: 'rem_ultima_actualizacion', gastos: 'inv_ultima_actualizacion', compras: 'compras_ultima_actualizacion',
   direccion: 'direccion_ultima_actualizacion', logistica: 'logistica_ultima_actualizacion', fact: 'sumetec_fact_ultima_actualizacion' };
-function sumetecMostrarVersionInstalada(app) {
+function sumetecTextoVersionInstalada(app) {
   const codigo = (typeof VERSION_CODIGO !== 'undefined' && VERSION_CODIGO) ? VERSION_CODIGO : null;
   const v = (typeof VERSION_DEPLOY !== 'undefined' && VERSION_DEPLOY)
     ? new Date(VERSION_DEPLOY).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : 'Sin información';
   let ultima = 0; try { ultima = Number(localStorage.getItem(SUMETEC_CLAVE_ULTIMA_ACTUALIZACION[_sumetecAppAcceso(app)]) || 0); } catch (_) {}
   const u = ultima ? new Date(ultima).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : 'Aún no se ha detectado una actualización nueva en este dispositivo.';
-  const msg = 'Versión del software: ' + (codigo ? codigo + ' · ' : '') + v + ' — Última actualización: ' + u;
-  if (typeof toast === 'function') toast(msg, 6000); else if (typeof alert === 'function') alert(msg);
+  return 'Versión instalada: ' + (codigo ? codigo + ' · ' : '') + v + '. Última actualización: ' + u;
 }
+// 2026-11-17 (Miguel): «Actualización de software» ya NO solo muestra la versión: BUSCA la actualización de verdad. Le pide al
+// navegador que revise sw.js en el servidor; si hay versión nueva, la propia app abre su aviso «Actualizar» (actualizacion.js);
+// si no, un popup dice que ya tiene la última. Recargar con F5 también la busca, pero la versión nueva solo se aplica al pulsar «Actualizar».
+async function sumetecBuscarActualizacion(app) {
+  const final = (titulo, texto, icono) => new Promise(r => {
+    const d = _sumetecDialogoSimple(icono || 'ℹ️', titulo, texto, [['ok', 'Entendido']]);
+    d.querySelector('[data-r="ok"]').onclick = () => d.close('ok'); d.addEventListener('close', () => r(true), { once: true });
+  });
+  const info = sumetecTextoVersionInstalada(app);
+  if (!('serviceWorker' in navigator)) { await final('Actualización de software', info); return; }
+  if (navigator.onLine === false) { await final('Sin internet', 'Conéctate para buscar actualizaciones. ' + info, '📡'); return; }
+  const espera = _sumetecDialogoSimple('🔄', 'Buscando actualización…', 'Un momento, preguntando al servidor por una versión nueva.', []);
+  const cerrarEspera = () => { try { if (espera.open) espera.close(); } catch (_) {} };
+  let reg = null;
+  try {
+    reg = await navigator.serviceWorker.getRegistration();
+    if (reg) await Promise.race([reg.update(), new Promise((_, no) => setTimeout(() => no(new Error('tiempo')), 15000))]);
+  } catch (_) { /* sin respuesta: se avisa abajo */ }
+  const hayAviso = () => { const b = document.getElementById('sumetecActualizarBoton'); return !!b && !b.hidden; };
+  if (reg) {
+    try { window.dispatchEvent(new Event('online')); } catch (_) {}   // hace que actualizacion.js vuelva a revisar y abra el aviso si toca
+    for (let i = 0; i < 24 && !hayAviso(); i++) {     // hasta ~12 s: da tiempo a que la versión nueva se descargue y se instale
+      if (i > 3 && !reg.installing && !reg.waiting) break;
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+  cerrarEspera();
+  if (hayAviso()) return;   // la app ya muestra «Actualización disponible»
+  if (!reg) { await final('Actualización de software', info); return; }
+  await final('Ya tienes la última versión', info, '✅');
+}
+function sumetecMostrarVersionInstalada(app) { return sumetecBuscarActualizacion(app); }
 
 // ═══ Vínculo vigente (2026-11-17, pedido de Miguel: las 6 apps se comportan igual) ═══
 // Al abrir, cada app le pregunta al servidor si ESTE teléfono sigue reconocido (lectura «configuracion», la puede hacer cualquier

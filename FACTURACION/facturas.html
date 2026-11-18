@@ -342,7 +342,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <span class="menu-fact-titulo">Este teléfono</span>
   <button type="button" id="btnTokenFact" onclick="_cerrarMenuFact_();configurarTokenFact()" title="Configurar el token de acceso (solo hace falta si esta app se publica fuera de Apps Script)">Token de acceso</button>
   <span class="menu-fact-titulo">Ajustes</span>
-  <button type="button" id="badgeVersionFact" onclick="_cerrarMenuFact_();_mostrarVersionInstaladaFact()" title="Ver información de la actualización">Actualización de software</button>
+  <button type="button" id="badgeVersionFact" onclick="_cerrarMenuFact_();_mostrarVersionInstaladaFact()" title="Buscar actualización de software">Actualización de software</button>
   <button type="button" id="btnBorrarDatosFact" onclick="_cerrarMenuFact_();sumetecBorrarDatosLocales('fact',{nombre:'Facturación'})" title="Borrar los datos guardados en este dispositivo (sigue vinculada)">Borrar datos de este teléfono</button>
 </div>
 
@@ -458,7 +458,9 @@ function _mostrarVersionInstaladaFact(){
   const u = ultima
     ? new Date(ultima).toLocaleString('es-MX', { dateStyle:'medium', timeStyle:'short' })
     : 'Aún no se ha detectado una actualización nueva en este dispositivo.';
-  alert(`Versión del software: ${codigo ? codigo + ' · ' : ''}${v}\nÚltima actualización detectada: ${u}`);
+  // 2026-11-17: el botón BUSCA la actualización (acceso.js); la versión instalada se muestra en el mismo resultado.
+  if (typeof sumetecBuscarActualizacion === 'function') sumetecBuscarActualizacion('fact');
+  else alert(`Versión del software: ${codigo ? codigo + ' · ' : ''}${v}\nÚltima actualización detectada: ${u}`);
 }
 // F1 (2026-09-23): el botón dice "Act. <fecha>" (última actualización detectada
 // en este dispositivo; si nunca hubo una, la fecha del build). El detalle sale al tocarlo.

@@ -806,7 +806,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   </div>
   <div class="menu-mas-grp">
   <div class="menu-mas-h">Ajustes</div>
-  <button onclick="_cerrarMenuMas();_mostrarVersionInstalada()" title="Ver actualización de software">ℹ️ Actualización de software</button>
+  <button onclick="_cerrarMenuMas();_mostrarVersionInstalada();sumetecBuscarActualizacion('cotizador')" title="Buscar actualización de software">🔄 Actualización de software</button>
   <button onclick="_cerrarMenuMas();restablecerDatosLocales()" title="Borrar los datos guardados en este teléfono">🧹 Borrar datos de este teléfono</button>
   </div>
 </div>
@@ -7197,8 +7197,8 @@ async function limpiarHistorialLocal(){
   remisiones=[];
   if(document.getElementById('ovHist')?.classList.contains('open'))_renderHistCombinado();
   _actualizarSyncLocalStatus();
-  toast('Copias locales borradas ✓ — bajando lo del servidor…','ok');
   try{ if(typeof bajarCobros==='function') bajarCobros(); }catch(_){}
+  await sumetecAvisoContenidoBorrado('Las copias de remisiones y cobros de este celular se borraron. Lo enviado sigue en el servidor y se vuelve a bajar.');
 }
 // ── Restablecer datos de este celular (mejora 6, revisión de conexiones 2026-10-01) ────────────────
 // Lo mismo que «Borrar copias de remisiones» MÁS el caché de catálogo, clientes, historial de precios y
@@ -7236,7 +7236,7 @@ async function restablecerDatosLocales(){
   try{ await bajarCobros(); }catch(_){}
   if(document.getElementById('ovHist')?.classList.contains('open'))_renderHistCombinado();
   _actualizarSyncLocalStatus();
-  toast('Datos restablecidos ✓ — catálogo, clientes y cobros bajados del servidor','ok',5000);
+  await sumetecAvisoContenidoBorrado('Datos restablecidos: el catálogo, los clientes y los cobros se volvieron a bajar del servidor.');
 }
 // Migración 2026-07-20: el proyecto de Apps Script cambió (uno nuevo, con el
 // puente ERP). Celulares con la URL VIEJA guardada en 'gs_url'/'drive_url'
