@@ -1127,6 +1127,7 @@ function renderGastos() {
     <div class="card">
       <span class="gasto-recientes-titulo">Recientes · toca para repetir</span>
       ${filasRecientes}
+      <button type="button" class="btn secondary" style="width:100%;margin-top:8px" onclick="_abrirHistorialGastos_()"><i class="bi bi-clock-history"></i> Historial y filtros (${recientes.length})</button>
     </div>
     </div>
     </div>
@@ -1153,6 +1154,78 @@ function _toggleMasCamposGasto_(btn) {
 // gastos que se repiten seguido (gasolina, casetas). El total se pasa a modo
 // B (Total con IVA) porque gastos_recientes solo guarda el total, no el
 // desglose monto/IVA original -- el usuario confirma la tasa de IVA.
+// ── Historial de gastos con filtros (2026-11-17, pedido de Miguel) ──────────────────────────
+// Lo capturado en ESTE teléfono (hasta 200) con su estado real: «Pendiente de envío» si todavía está en la cola, «Enviado» si ya salió.
+function _periodoGastos_(clave) {
+  const hoy = _fechaLocal_(), d = new Date(hoy + 'T00:00:00');
+  const iso = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+  if (clave === 'hoy') return [hoy, hoy];
+  if (clave === '7d') { const a = new Date(d); a.setDate(a.getDate() - 6); return [iso(a), hoy]; }
+  if (clave === 'mes') return [hoy.slice(0, 8) + '01', hoy];
+  return ['', ''];
+}
+function _filtrarGastos_(lista, f) {
+  let desde = f.desde || '', hasta = f.hasta || '';
+  if (f.periodo && f.periodo !== 'rango') [desde, hasta] = _periodoGastos_(f.periodo);
+  const txt = (f.texto || '').trim().toLowerCase();
+  return lista.filter(g => {
+    if (desde && String(g.fecha) < desde) return false;
+    if (hasta && String(g.fecha) > hasta) return false;
+    if (f.tipo && g.tipoGasto !== f.tipo) return false;
+    if (f.forma && g.formaPago !== f.forma) return false;
+    if (f.estado === 'pendiente' && !g._pendiente) return false;
+    if (f.estado === 'enviado' && g._pendiente) return false;
+    if (txt && !((g.concepto || '') + ' ' + (g.proveedor || '') + ' ' + (g.tipoGasto || '')).toLowerCase().includes(txt)) return false;
+    return true;
+  });
+}
+function _abrirHistorialGastos_() {
+  const ids = new Set((leerSeguro('cola_gastos', []) || []).map(x => x && x.id));
+  const todos = (leerSeguro('gastos_recientes', []) || []).map((g, i) => Object.assign({}, g, { _i: i, _pendiente: !!(g.id && ids.has(g.id)) }));
+  const dlg = document.createElement('dialog');
+  dlg.className = 'sumetec-popup';
+  if (!document.getElementById('hist-gastos-css')) {
+    const st = document.createElement('style'); st.id = 'hist-gastos-css';
+    st.textContent = 'dialog.hist-gastos{width:min(96vw,560px);max-height:92vh;padding:0;border:0;border-radius:18px;overflow:hidden;background:var(--sm-card,#fff);color:var(--sm-text,#0D3B66)}' +
+      'dialog.hist-gastos::backdrop{background:rgba(8,24,40,.55)}' +
+      '.hg-caja{display:flex;flex-direction:column;max-height:92vh}.hg-cab{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;font-weight:800}' +
+      '.hg-filtros{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 10px}.hg-filtros .hg-ancho{grid-column:1/-1}' +
+      '.hg-filtros input,.hg-filtros select{width:100%;box-sizing:border-box;padding:9px;border:1px solid #c9d3de;border-radius:9px;font:inherit;background:transparent;color:inherit}' +
+      '.hg-tot{padding:8px 16px;font-size:13px;display:flex;justify-content:space-between;background:rgba(13,59,102,.07)}' +
+      '.hg-lista{overflow:auto;padding:4px 16px 14px}.hg-fila{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.2);cursor:pointer}' +
+      '.hg-fila small{display:block;opacity:.7}.hg-pend{color:#b3261e;font-weight:700}.hg-ok{color:#057448;font-weight:700}';
+    document.head.appendChild(st);
+  }
+  dlg.classList.add('hist-gastos');
+  const opts = (arr, vacio) => '<option value="">' + vacio + '</option>' + arr.map(x => '<option>' + esc(x) + '</option>').join('');
+  dlg.innerHTML = '<div class="hg-caja"><div class="hg-cab"><span>Historial de gastos</span><button type="button" class="btn secondary" id="hgCerrar">Cerrar</button></div>' +
+    '<div class="hg-filtros">' +
+    '<input class="hg-ancho" id="hgTexto" type="search" placeholder="Buscar concepto o proveedor" autocomplete="off">' +
+    '<select id="hgPeriodo"><option value="todo">Todo</option><option value="hoy">Hoy</option><option value="7d">Últimos 7 días</option><option value="mes">Este mes</option><option value="rango">Rango…</option></select>' +
+    '<select id="hgEstado"><option value="">Todos</option><option value="pendiente">Pendientes de envío</option><option value="enviado">Enviados</option></select>' +
+    '<select id="hgTipo">' + opts(TIPOS_GASTO, 'Todos los tipos') + '</select>' +
+    '<select id="hgForma">' + opts(FORMAS_PAGO, 'Todas las formas') + '</select>' +
+    '<input id="hgDesde" type="date" hidden><input id="hgHasta" type="date" hidden></div>' +
+    '<div class="hg-tot"><span id="hgN"></span><strong id="hgSuma"></strong></div><div class="hg-lista" id="hgLista"></div></div>';
+  const q = s => dlg.querySelector(s);
+  const pintar = () => {
+    const rango = q('#hgPeriodo').value === 'rango';
+    q('#hgDesde').hidden = q('#hgHasta').hidden = !rango;
+    const r = _filtrarGastos_(todos, { texto: q('#hgTexto').value, periodo: q('#hgPeriodo').value, desde: q('#hgDesde').value, hasta: q('#hgHasta').value,
+      tipo: q('#hgTipo').value, forma: q('#hgForma').value, estado: q('#hgEstado').value });
+    q('#hgN').textContent = r.length + ' gasto' + (r.length === 1 ? '' : 's');
+    q('#hgSuma').textContent = '$' + r.reduce((s, g) => s + (+g.total || 0), 0).toFixed(2);
+    q('#hgLista').innerHTML = r.length ? r.map(g => '<div class="hg-fila" data-i="' + g._i + '"><div><div>' + esc(g.concepto) + '</div><small>' + esc(g.tipoGasto || '') +
+      ' · ' + esc(g.fecha) + (g.formaPago ? ' · ' + esc(g.formaPago) : '') + (g.proveedor ? ' · ' + esc(g.proveedor) : '') + '</small>' +
+      (g.id ? '<small class="' + (g._pendiente ? 'hg-pend' : 'hg-ok') + '">' + (g._pendiente ? 'Pendiente de envío' : 'Enviado') + '</small>' : '') +
+      '</div><strong>$' + (+g.total || 0).toFixed(2) + '</strong></div>').join('') : '<p style="opacity:.7;padding:12px 0">Ningún gasto con esos filtros.</p>';
+  };
+  dlg.addEventListener('input', pintar); dlg.addEventListener('change', pintar);
+  q('#hgLista').addEventListener('click', e => { const f = e.target.closest('.hg-fila'); if (!f) return; dlg.close(); _duplicarGastoReciente_(+f.dataset.i); });
+  q('#hgCerrar').onclick = () => dlg.close();
+  dlg.addEventListener('close', () => dlg.remove(), { once: true });
+  document.body.appendChild(dlg); dlg.showModal(); pintar();
+}
 function _duplicarGastoReciente_(indice) {
   const recientes = leerSeguro('gastos_recientes', []);
   const g = recientes[indice];
@@ -1425,8 +1498,8 @@ async function _guardarGasto_() {
   const guardadoEnCola = _encolarGasto_(payload);
 
   const recientes = leerSeguro('gastos_recientes', []);
-  recientes.unshift({ concepto, tipoGasto, fecha, total: r.total, formaPago: forma });
-  guardarSeguro('gastos_recientes', recientes.slice(0, 20));
+  recientes.unshift({ id, concepto, tipoGasto, fecha, total: r.total, formaPago: forma, proveedor: proveedor || '' });
+  guardarSeguro('gastos_recientes', recientes.slice(0, 200));   // 2026-11-17: antes 20; el historial con filtros necesita más
 
   // Bug real corregido (2026-09-02): cuando la cola no cabía en localStorage,
   // _encolarGasto_ YA avisaba "puede perderse" (8s) -- pero esta línea de
@@ -1862,7 +1935,7 @@ async function limpiarCacheLocal() {
   if (!(await sumetecAutorizarBorrado('gastos', { nombre: 'Gastos', documento: 'datos-locales', detalle: 'Borrar copias de este teléfono', avisar: m => toast(m, 5000) }))) return;
   toast('Confirmando con el servidor…', 2500);
   if (!(await _servidorEnLinea_())) { toast('El servidor no contestó — no se borró nada.', 5000); return; }
-  if (!await sumetecConfirmar('Se borrarán las copias guardadas en ESTE teléfono (listas, configuración, stock teórico y últimos gastos).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, token y vendedor NO se borran.\n\n¿Continuar?')) return;
+  if (!await sumetecConfirmarBorrado({verbo:'Borrar',objeto:'los datos de este teléfono',detalle:'Se borran las copias guardadas aquí (listas, configuración, stock teórico y últimos gastos). Todo lo enviado sigue en el servidor y se vuelve a bajar. Colas, token y vendedor NO se borran.',irreversible:false})) return;
   const txt = await sumetecPedirTexto('Segunda confirmación: escribe BORRAR para continuar.');
   if (String(txt || '').trim().toUpperCase() !== 'BORRAR') { toast('Cancelado — no se borró nada.', 3000); return; }
   if (_pendientesParaLimpiar_() > 0) { toast('Entró algo a la cola mientras confirmabas — no se borró nada.', 5000); return; }
@@ -1924,7 +1997,7 @@ function _autorizarGastos_(accion, porDefecto, documento, detalle) {
 }
 async function _descartarUno_(id, tipoCola) {
   if (!await _autorizarGastos_('descartar_pendiente', 'libre', id, 'Descartar un pendiente sin enviar (' + (tipoCola === 'gasto' ? 'gasto' : 'conteo') + ')')) return;
-  if (!await sumetecConfirmar('¿Descartar este pendiente? Esos datos NO llegarán al ERP y esta acción no se puede deshacer.')) return;
+  if (!await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'este pendiente',detalle:'Esos datos NO llegarán al ERP.',irreversible:true})) return;
   const clave = tipoCola === 'gasto' ? 'cola_gastos' : 'cola_conteo';
   const cola = leerSeguro(clave, []).filter(e => e.id !== id);
   guardarSeguro(clave, cola);

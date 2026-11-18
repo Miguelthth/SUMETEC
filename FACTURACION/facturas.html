@@ -1452,7 +1452,7 @@ async function cancelarFacturaUI(){
   const motivo=await sumetecPedirTexto('Motivo de cancelación (SAT):\n'+opciones+'\n\nEscribe la clave (02, 03 o 04):','02');
   if(motivo===null)return;
   if(!MOTIVOS_CANCELACION[motivo]){toast('Motivo inválido — usa 02, 03 o 04','err',4000);return;}
-  if(!await sumetecConfirmar('¿Cancelar la factura de '+r.folio+'? Esta acción se registra en la hoja "Facturas".'))return;
+  if(!await sumetecConfirmarBorrado({verbo:'Cancelar',objeto:'la factura de '+r.folio,detalle:'La cancelación se registra en la hoja "Facturas".',irreversible:true}))return;
   try{
     const res=await api.cancelar(r.folio,motivo);
     if(res&&res.ok){

@@ -198,7 +198,7 @@ function _pintarCortesRechazados_(out) {
     p.appendChild(r2);
     b.textContent = 'Descartar y volver a contar';
     b.onclick = async () => {
-      if (!await sumetecConfirmar('¿Descartar este corte pendiente? Esos datos NO llegarán al servidor y tendrás que contar de nuevo.')) return;
+      if (!await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'este corte pendiente',detalle:'Esos datos NO llegarán al servidor y tendrás que contar de nuevo.',irreversible:true})) return;
       _quitarCorteCola_(c.id);
       _soltarCapturaCorte_();
       p.remove();

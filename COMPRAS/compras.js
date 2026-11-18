@@ -79,7 +79,7 @@ function _pedirEvidenciaCompra_() {
 // snapshot del ERP, que puede tardar en publicarse). Acotado a las últimas
 // MAX_HISTORIAL_COMPRAS: es un historial reciente, no un archivo completo.
 const CLAVE_HISTORIAL_COMPRAS = 'sumetec_compras_historial_compras';
-const MAX_HISTORIAL_COMPRAS = 30;
+const MAX_HISTORIAL_COMPRAS = 200;   // 2026-11-17: antes 30; el historial ahora se filtra
 // 2026-10-14 (Ecosistema → Compras → Ajustes): el ERP publica COMPRAS {foto_tope_kb, max_historial}; se guarda al
 // llegar la configuración y se lee al usarlo. Sin dato válido, el valor de fábrica de este archivo.
 const CLAVE_AJUSTES_COMPRAS = 'sumetec_compras_ajustes';
@@ -336,7 +336,7 @@ function _reintentarCompra_(id) {
 }
 async function _descartarCompra_(id) {
   if (!await _autorizarCompras_('descartar_compra', 'libre')) return;
-  if (!await sumetecConfirmar('¿Descartar esta compra? NO llegará al ERP y esta acción no se puede deshacer.')) return;
+  if (!await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'esta compra',detalle:'NO llegará al ERP.',irreversible:true})) return;
   localStorage.setItem(COLAS.compras, JSON.stringify(leer(COLAS.compras).filter(c => c.id !== id)));
   _renderHistorialComprasDireccion_(); if (typeof estado === 'function') estado();
 }
@@ -345,13 +345,51 @@ function _leerSnapshotCacheDireccion_() {
   catch (_) { return null; }
 }
 
+// 2026-11-17 (Miguel): el historial de compras se puede filtrar (texto/folio, estado y periodo), igual que el de Gastos.
+const _filtroHistCompras_ = { texto: '', estado: '', periodo: 'todo' };
+function _filtrarHistorialCompras_(items, f) {
+  const hoy = new Date().toISOString().slice(0, 10), txt = (f.texto || '').trim().toLowerCase();
+  let desde = '';
+  if (f.periodo === 'hoy') desde = hoy;
+  else if (f.periodo === '7d') { const d = new Date(); d.setDate(d.getDate() - 6); desde = d.toISOString().slice(0, 10); }
+  else if (f.periodo === 'mes') desde = hoy.slice(0, 8) + '01';
+  return items.filter(it => {
+    if (f.estado && it.estado !== f.estado) return false;
+    if (desde && !(String(it.fecha || '').slice(0, 10) >= desde)) return false;
+    if (txt && !((it.proveedor || '') + ' ' + (it.folio || '')).toLowerCase().includes(txt)) return false;
+    return true;
+  });
+}
+function _htmlBarraHistorialCompras_() {
+  const f = _filtroHistCompras_, op = (v, t, a) => '<option value="' + v + '"' + (a === v ? ' selected' : '') + '>' + t + '</option>';
+  return '<div id="hc-barra" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px">' +
+    '<input id="hc-texto" type="search" placeholder="Buscar proveedor o folio" autocomplete="off" value="' + _escHtmlCompra_(f.texto) + '" style="grid-column:1/-1;padding:9px;border:1px solid #c9d3de;border-radius:9px;font:inherit">' +
+    '<select id="hc-periodo" style="padding:9px;border:1px solid #c9d3de;border-radius:9px;font:inherit">' + op('todo', 'Todo', f.periodo) + op('hoy', 'Hoy', f.periodo) + op('7d', 'Últimos 7 días', f.periodo) + op('mes', 'Este mes', f.periodo) + '</select>' +
+    '<select id="hc-estado" style="padding:9px;border:1px solid #c9d3de;border-radius:9px;font:inherit">' + op('', 'Todos los estados', f.estado) + op('PENDIENTE_ENVIO', 'Pendientes de envío', f.estado) + op('RECHAZADA', 'Detenidas', f.estado) + op('IMPORTADO', 'Integradas en el ERP', f.estado) + op('ANULADA', 'Anuladas', f.estado) + '</select></div>' +
+    '<p id="hc-cuenta" class="leyenda" style="margin:0 0 6px"></p>';
+}
 function _renderHistorialComprasDireccion_() {
   const el = document.querySelector('#historial-compras');
   if (!el) return;
-  const items = _historialComprasDireccion_(leer(COLAS.compras), leer(CLAVE_HISTORIAL_COMPRAS), _leerSnapshotCacheDireccion_());
-  el.innerHTML = _htmlHistorialComprasDireccion_(items) + _htmlAbonosCompra_();
+  if (!el.querySelector('#hc-barra')) {
+    el.innerHTML = _htmlBarraHistorialCompras_() + '<div id="hc-lista"></div>';
+    const cambio = () => {
+      _filtroHistCompras_.texto = el.querySelector('#hc-texto').value;
+      _filtroHistCompras_.periodo = el.querySelector('#hc-periodo').value;
+      _filtroHistCompras_.estado = el.querySelector('#hc-estado').value;
+      _renderHistorialComprasDireccion_();
+    };
+    el.querySelector('#hc-barra').addEventListener('input', cambio);
+    el.querySelector('#hc-barra').addEventListener('change', cambio);
+  }
+  const todos = _historialComprasDireccion_(leer(COLAS.compras), leer(CLAVE_HISTORIAL_COMPRAS), _leerSnapshotCacheDireccion_());
+  const items = _filtrarHistorialCompras_(todos, _filtroHistCompras_);
+  const cuenta = el.querySelector('#hc-cuenta');
+  if (cuenta) cuenta.textContent = items.length + ' de ' + todos.length + ' compra(s) · total $' + items.reduce((a, x) => a + Number(x.total || 0), 0).toFixed(2);
+  const lista = el.querySelector('#hc-lista');
+  lista.innerHTML = (todos.length && !items.length ? '<p class="vacio">Ninguna compra con esos filtros.</p>' : _htmlHistorialComprasDireccion_(items)) + _htmlAbonosCompra_();
   el.querySelectorAll('[data-abonar-compra]').forEach(b=>b.onclick=()=>_abrirAbonoCompra_(b.dataset.abonarCompra));
-  el.querySelectorAll('[data-descartar-abono]').forEach(b=>b.onclick=async()=>{if(!await _autorizarCompras_('descartar_abono','libre'))return;if(await sumetecConfirmar('El servidor rechazó este abono y no lo aplicó. ¿Descartar para capturarlo de nuevo?')){localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().filter(x=>x.id!==b.dataset.descartarAbono)));_renderHistorialComprasDireccion_();if(typeof estado==='function')estado();}});
+  el.querySelectorAll('[data-descartar-abono]').forEach(b=>b.onclick=async()=>{if(!await _autorizarCompras_('descartar_abono','libre'))return;if(await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'este abono',detalle:'El servidor lo rechazó y no lo aplicó. Podrás capturarlo de nuevo.',irreversible:true})){localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().filter(x=>x.id!==b.dataset.descartarAbono)));_renderHistorialComprasDireccion_();if(typeof estado==='function')estado();}});
   el.querySelectorAll('[data-reintentar-abono]').forEach(b=>b.onclick=()=>{localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().map(x=>x.id===b.dataset.reintentarAbono?{...x,_retryAt:0,detenido:false}:x))); procesarColaCompras(true);});
 }
 
@@ -1414,7 +1452,7 @@ async function limpiarCacheLocal() {
   if (!(await sumetecAutorizarBorrado('compras', { nombre: 'Compras', documento: 'datos-locales', detalle: 'Borrar copias de este teléfono' }))) return;
   alert('Confirmando con el servidor…');
   if (!(await _servidorEnLinea_())) { alert('El servidor no contestó (o se canceló el PIN) — no se borró nada.'); return; }
-  if (!await sumetecConfirmar('Se borrarán las copias guardadas en ESTE teléfono (resúmenes, listas y configuración en caché).\n\nTodo lo enviado sigue en el servidor y se vuelve a bajar. Colas, PIN y vinculación NO se borran.\n\n¿Continuar?')) return;
+  if (!await sumetecConfirmarBorrado({verbo:'Borrar',objeto:'los datos de este teléfono',detalle:'Se borran las copias guardadas aquí (resúmenes, listas y configuración en caché). Todo lo enviado sigue en el servidor y se vuelve a bajar. Colas, PIN y vinculación NO se borran.',irreversible:false})) return;
   const txt = await sumetecPedirTexto('Segunda confirmación: escribe BORRAR para continuar.');
   if (String(txt || '').trim().toUpperCase() !== 'BORRAR') { alert('Cancelado — no se borró nada.'); return; }
   if (_pendientesParaLimpiar_() > 0) { alert('Entró algo a la cola mientras confirmabas — no se borró nada.'); return; }

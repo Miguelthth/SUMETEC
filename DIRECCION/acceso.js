@@ -191,7 +191,8 @@ function sumetecPedirCodigoAccion(nombre, texto, hash) {
     form.addEventListener('submit', async ev => {
       ev.preventDefault();
       if ((await sumetecHuellaAcceso('sumetec-campo|' + input.value.trim())) === h) { dlg.close('ok'); return; }
-      error.textContent = 'Código incorrecto, intenta de nuevo.'; input.value = '';
+      dlg.dispatchEvent(new Event('sumetec-limpiar'));
+      error.textContent = 'Código incorrecto, intenta de nuevo.';
     });
     dlg.addEventListener('close', () => { const ok = dlg.returnValue === 'ok'; input.value = ''; dlg.remove(); resolve(ok); }, { once: true });
     document.body.appendChild(dlg); dlg.showModal(); const t = dlg.querySelector('.sumetec-tecla'); if (t) t.focus();
@@ -525,9 +526,11 @@ function sumetecTecladoPin(dlg, op = {}) {
   if (dlg._sumetecObs) dlg._sumetecObs.disconnect();
   if (dlg._sumetecTeclas) dlg.removeEventListener('keydown', dlg._sumetecTeclas);
   dlg.style.cssText = '';
-  dlg.style.setProperty('--acento', SUMETEC_ACENTO_PIN[nombre] || '#76b82a');
-  dlg.style.setProperty('--pin-texto', nombre === 'Dirección' ? '#fff' : '#102335');
+  // 2026-11-17 (Miguel): la pantalla del código de Dirección NO debe verse como el bloqueo de la app: ámbar + escudo + «No es tu PIN».
+  dlg.style.setProperty('--acento', codigo ? '#f5a623' : (SUMETEC_ACENTO_PIN[nombre] || '#76b82a'));
+  dlg.style.setProperty('--pin-texto', codigo ? '#2b1a00' : (nombre === 'Dirección' ? '#fff' : '#102335'));
   dlg.classList.add('sumetec-pin-dialogo', 'sumetec-pin-teclado');
+  dlg.classList.toggle('sumetec-pin-autoriza', codigo);
   const id = (n, v) => v ? ' ' + n + '="' + v + '"' : '';
   const campo = (i, etiqueta) => '<input type="password" maxlength="' + max + '" autocomplete="off" inputmode="none" tabindex="-1" class="sumetec-pin-oculto" aria-label="' + etiqueta + '"' + (i ? ' name="sumetec-pin-confirmar"' : id('id', op.inputId)) + '>';
   const teclas = ['1','2','3','4','5','6','7','8','9','ver','0','borrar'].map(k =>
@@ -551,14 +554,14 @@ function sumetecTecladoPin(dlg, op = {}) {
   const enLinea = typeof navigator === 'undefined' || navigator.onLine !== false;
   q('.sumetec-pin-app strong').textContent = nombre + ' · SUMETEC';
   const conexion = q('.sumetec-pin-app small');
-  conexion.textContent = enLinea ? '● En línea' : '● Sin conexión';
+  conexion.textContent = codigo ? '⚠ Autorización requerida' : (enLinea ? '● En línea' : '● Sin conexión');
   if (!enLinea) conexion.style.color = '#ffce82';
   q('.sumetec-pin-pasos').hidden = !crear;
   if (!crear) q('.sumetec-pin-texto').textContent = op.texto || (codigo ? 'Escribe el código de seguridad.' : 'Desbloquea ' + nombre + ' en este teléfono.');
   let paso = 0, visible = false, libre = false;
   const animar = (el, cuadros, ms) => { if (!quieto && el && el.animate) el.animate(cuadros, { duration: ms, easing: 'ease-out' }); };
   const textos = () => {
-    q('.sumetec-pin-eyebrow').textContent = crear ? 'Paso ' + (paso + 1) + ' de 2' : codigo ? 'Autorización' : nombre;
+    q('.sumetec-pin-eyebrow').textContent = crear ? 'Paso ' + (paso + 1) + ' de 2' : codigo ? 'No es tu PIN · Autorización' : nombre;
     form.querySelector('h2').textContent = crear ? (paso ? 'Confirma tu PIN' : 'Crea tu PIN') : (op.titulo || (codigo ? 'Código de seguridad' : 'Ingresa tu PIN'));
     if (crear) q('.sumetec-pin-texto').textContent = paso ? 'Escríbelo otra vez para confirmarlo.' : 'Lo usarás para abrir ' + nombre + ' en este teléfono.';
     guardar.textContent = crear ? (paso ? 'Guardar PIN' : 'Continuar') : codigo ? 'Autorizar' : 'Desbloquear';
@@ -640,6 +643,7 @@ function sumetecTecladoPin(dlg, op = {}) {
     else if (e.key === 'Enter') { e.preventDefault(); guardar.click(); }
   };
   dlg.addEventListener('keydown', dlg._sumetecTeclas);
+  dlg.addEventListener('sumetec-limpiar', () => irPaso(0));   // 2026-11-17: borra lo escrito Y repinta los puntos (tras un código incorrecto)
   ins[0].addEventListener('input', pintar);
   textos(); pintar();
   if (op.mensaje) error.textContent = op.mensaje;
@@ -940,12 +944,27 @@ function sumetecClaveConservada(clave) { return SUMETEC_CONSERVAR_LOCAL.some(r =
 // Autoriza borrar los datos de ESTE teléfono (2026-11-16). 'libre'/'bloqueado' como cualquier permiso. En 'codigo' (lo normal):
 // el teléfono pide a Dirección un código de 6 DÍGITOS de un solo uso; el dueño lo ve en Dirección → Permisos y se lo
 // dicta al teléfono; al usarse, el servidor lo borra (vale 10 min, 5 intentos). El código nunca viaja a este teléfono.
-function _sumetecTecladoCodigoDireccion(nombre, texto) {
+// 2026-11-17 (Miguel): un código equivocado SE AVISA ADENTRO de la misma pantalla (mensaje rojo, puntos sacudidos y limpios)
+// en vez de cerrarla y avisar con un alert que muchas veces no se ve. `validar(codigo)` -> {ok, error, fatal}.
+function _sumetecTecladoCodigoDireccion(nombre, texto, validar) {
   return new Promise(resolve => {
     const dlg = document.createElement('dialog');
     sumetecTecladoPin(dlg, { modo: 'codigo', nombre, titulo: 'Código de Dirección', texto, min: 6, max: 6 });
-    const input = dlg.querySelector('input');
-    dlg.addEventListener('close', () => { const ok = dlg.returnValue === 'ok', v = input ? input.value : ''; if (input) input.value = ''; dlg.remove(); resolve(ok ? v : null); }, { once: true });
+    const form = dlg.querySelector('form'), input = dlg.querySelector('input'), error = dlg.querySelector('.sumetec-pin-error'), boton = dlg.querySelector('.sumetec-pin-guardar');
+    let ocupado = false;
+    form.addEventListener('submit', async ev => {
+      if (typeof validar !== 'function') return;
+      ev.preventDefault();
+      if (ocupado) return;
+      ocupado = true; boton.disabled = true; error.textContent = 'Verificando…';
+      let r; try { r = await validar(input.value); } catch (_) { r = { ok: false, error: 'No se pudo validar el código. Intenta de nuevo.' }; }
+      ocupado = false; boton.disabled = false;
+      if (r && r.ok) { dlg.close('ok'); return; }
+      dlg.dispatchEvent(new Event('sumetec-limpiar'));
+      error.textContent = (r && r.error) || 'Código incorrecto.';
+      if (r && r.fatal) setTimeout(() => { if (dlg.open) dlg.close('cancelar'); }, 2500);
+    });
+    dlg.addEventListener('close', () => { const ok = dlg.returnValue === 'ok', v = input ? input.value : ''; if (input) input.value = ''; dlg.remove(); resolve(ok ? (v || 'ok') : null); }, { once: true });
     document.body.appendChild(dlg); dlg.showModal();
   });
 }
@@ -958,16 +977,16 @@ async function sumetecAutorizarBorrado(app, op = {}) {
   const r = await _sumetecPostPermiso(app, Object.assign({ tipo: 'solicitar_aprobacion' }, base));
   if (r.sinRed) { avisar('Se necesita señal para pedir el código a Dirección. Intenta cuando haya internet.'); return false; }
   if (!r.ok || !r.aprobacion) { avisar(r.error || 'No se pudo pedir el código a Dirección.'); return false; }
-  for (let intento = 0; intento < 5; intento++) {
-    const codigo = await _sumetecTecladoCodigoDireccion(op.nombre || app, 'Dirección tiene un código de 6 dígitos para este teléfono (Dirección → Permisos). Escríbelo aquí.');
-    if (codigo === null) return false;
+  // El servidor guarda el código de UN SOLO USO: se borra al validarse bien, vale 10 min y se agota a los 5 intentos.
+  const validar = async codigo => {
     const v = await _sumetecPostPermiso(app, Object.assign({ tipo: 'validar_codigo_borrado', codigo }, base));
-    if (v.sinRed) { avisar('Sin señal: no se pudo validar el código.'); return false; }
-    if (v.ok) return true;
-    avisar(v.error || 'Código incorrecto.');
-    if (!v.incorrecto) return false;
-  }
-  return false;
+    if (v.sinRed) return { ok: false, error: 'Sin señal: no se pudo validar el código. Intenta con internet.' };
+    if (v.ok) return { ok: true };
+    return { ok: false, fatal: !v.incorrecto,
+      error: v.incorrecto ? 'Código incorrecto. Revisa los 6 dígitos con Dirección e inténtalo otra vez.' : (v.error || 'Código incorrecto.') };
+  };
+  const hecho = await _sumetecTecladoCodigoDireccion(op.nombre || app, 'Dirección tiene un código de 6 dígitos para este teléfono (Dirección → Permisos). Escríbelo aquí. Sirve una sola vez.', validar);
+  return hecho !== null;
 }
 async function sumetecBorrarDatosLocales(app, op = {}) {
   const avisar = m => { if (typeof op.avisar === 'function') op.avisar(m); else if (typeof alert === 'function') alert(m); };
@@ -978,7 +997,7 @@ async function sumetecBorrarDatosLocales(app, op = {}) {
   const permitido = await sumetecAutorizarBorrado(app, Object.assign({}, op, {
     nombre: op.nombre || app, documento: 'datos-locales', detalle: 'Borrar los datos guardados en este teléfono', avisar }));
   if (!permitido) return { ok: false, motivo: 'SIN_PERMISO' };
-  if (typeof op.confirmar === 'function' ? !(await op.confirmar()) : !(await sumetecConfirmar('Se borrarán los datos guardados en este teléfono (catálogo, clientes, historial). La app seguirá vinculada. ¿Continuar?', 'Borrar datos de este teléfono', { peligro: true, si: 'Borrar' })))
+  if (typeof op.confirmar === 'function' ? !(await op.confirmar()) : !(await sumetecConfirmarBorrado({ verbo: 'Borrar', objeto: 'los datos de este teléfono', detalle: 'Se borran las copias guardadas aquí (catálogo, clientes, historial). La app sigue vinculada y todo lo enviado sigue en el servidor.', irreversible: false })))
     return { ok: false, motivo: 'CANCELADO' };
   const resumen = { claves: 0, sesion: 0, caches: 0, bases: 0 };
   try {
@@ -1094,6 +1113,17 @@ function sumetecConfirmar(mensaje, titulo, opts) {
   opts = opts || {};
   return _sumetecPopup({ icono: opts.peligro ? '⚠️' : '❓', titulo: titulo || '¿Confirmar?', mensaje, cancelar: false,
     botones: [{ texto: opts.no || 'Cancelar', valor: false }, { texto: opts.si || 'Continuar', valor: true, clase: opts.peligro ? 'sp-peligro' : 'sp-ok' }] });
+}
+// 2026-11-17 (Miguel): UN SOLO formato para todo lo que borra, descarta, cancela o desvincula, igual en las 6 apps:
+// icono 🗑️, título «¿Verbo objeto?», detalle de qué pasa y, si no hay vuelta atrás, la línea fija «Esta acción no se puede deshacer.»
+// Botones: «Volver» (izquierda, neutro) y el verbo en rojo (derecha). «Volver» y no «Cancelar» para no confundirse con «Cancelar factura».
+// o: { verbo:'Borrar'|'Descartar'|'Cancelar'|'Desvincular'|'Anular', objeto:'esta compra', detalle:'qué pasa', irreversible:true|false }
+function sumetecConfirmarBorrado(o) {
+  o = o || {};
+  const verbo = o.verbo || 'Borrar', objeto = o.objeto || 'esto';
+  const msg = [o.detalle || '', o.irreversible ? 'Esta acción no se puede deshacer.' : ''].filter(Boolean).join('\n\n');
+  return _sumetecPopup({ icono: '🗑️', titulo: '¿' + verbo + ' ' + objeto + '?', mensaje: msg, cancelar: false,
+    botones: [{ texto: 'Volver', valor: false }, { texto: verbo, valor: true, clase: 'sp-peligro' }] });
 }
 // Captura de texto. Devuelve el texto, o null si cancela.
 function sumetecPedirTexto(mensaje, valor, titulo) {

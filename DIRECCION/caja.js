@@ -352,7 +352,7 @@ function _pintarRechazadosCaja_(despuesDe) {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'btn btn-outline-secondary'; b.textContent = 'Descartar';
     b.onclick = async () => {
-      if (!await sumetecConfirmar('¿Descartar esta captura pendiente? NO llegará al servidor.')) return;
+      if (!await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'esta captura pendiente',detalle:'NO llegará al servidor.',irreversible:true})) return;
       _quitarDeCola_(COLAS[k], x.id); p.remove();
     };
     // «Reintentar» suelta el freno (sirve cuando el rechazo fue por fallos del servidor, no por datos distintos).

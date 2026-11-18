@@ -158,7 +158,7 @@ function clasificarErrorAcceso(err) {
 // Borra SOLO el vínculo (token cifrado); las colas pendientes de enviar se conservan.
 async function reiniciarVinculo(sinPreguntar) {
   // sinPreguntar: ya lo confirmó en la pantalla «¿Olvidaste tu PIN?» del teclado.
-  if (!sinPreguntar && !await sumetecConfirmar('Se borrará el vínculo de este teléfono para vincularlo otra vez con un PIN nuevo. Lo pendiente de enviar NO se pierde. ¿Continuar?')) return;
+  if (!sinPreguntar && !await sumetecConfirmarBorrado({verbo:'Desvincular',objeto:'este teléfono',detalle:'Se borra el vínculo para vincularlo otra vez con un PIN nuevo. Lo pendiente de enviar NO se pierde.',irreversible:false})) return;
   bloquearDireccion();
   if (typeof _accesoInicialValidado !== 'undefined') _accesoInicialValidado = false;
   const m = document.querySelector('#pin-modal');

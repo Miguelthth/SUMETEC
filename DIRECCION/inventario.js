@@ -1083,7 +1083,7 @@ function _autorizarDireccion_(accion, porDefecto, documento, detalle) {
 }
 async function _descartarUno_(id) {
   if (!await _autorizarDireccion_('descartar_pendiente', 'libre', id, 'Descartar un conteo pendiente')) return;
-  if (!await sumetecConfirmar('¿Descartar este conteo pendiente? Esos datos NO llegarán al ERP y esta acción no se puede deshacer.')) return;
+  if (!await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'este conteo pendiente',detalle:'Esos datos NO llegarán al ERP.',irreversible:true})) return;
   guardarSeguro(CLAVE_INV_COLA, leerSeguro(CLAVE_INV_COLA, []).filter(e => e.id !== id));
   _avisarPendientesInventario_();
   verColaPendiente();

@@ -6073,7 +6073,7 @@ async function reenviarDevoluciones(manual){
 async function abrirDevolucionParcial(folio){
  try{
   const pendiente=_colaDevoluciones().find(x=>x.documento===folio);
-  if(pendiente&&pendiente.estadoServidor==='RECHAZADO'){if(await sumetecConfirmar('El servidor rechazó esta devolución sin aplicarla. ¿Descartarla y volver a consultar?')){guardarSeguro('cola_devoluciones',JSON.stringify(_colaDevoluciones().filter(x=>x.id!==pendiente.id)));return abrirDevolucionParcial(folio);}return;}
+  if(pendiente&&pendiente.estadoServidor==='RECHAZADO'){if(await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'esta devolución',detalle:'El servidor la rechazó sin aplicarla. Después se vuelve a consultar.',irreversible:true})){guardarSeguro('cola_devoluciones',JSON.stringify(_colaDevoluciones().filter(x=>x.id!==pendiente.id)));return abrirDevolucionParcial(folio);}return;}
   if(pendiente){if(await sumetecConfirmar('Esta devolución sigue pendiente: '+(pendiente.error||'enviar')+'. ¿Reintentar la misma operación?'))await reenviarDevoluciones(true);return;}
   if(!navigator.onLine)throw Error('Conecta para consultar las cantidades disponibles antes de devolver.');
   const r=await _postDevolucion({tipo:'detalle_devolucion',folio});if(!r.ok)throw Error(r.error);
@@ -9616,7 +9616,7 @@ async function _resolverConflicto_(id,cola,conservar){
     if(rem)persistirRemisiones();
     if(cola==='cola_pdf')procesarColaPDF();else procesarColaRemisiones();
   }else{
-    if(!await sumetecConfirmar('Se BORRA tu cambio pendiente de '+(item.folio||'esta remisión')+' y queda la versión del otro equipo. ¿Continuar?'))return;
+    if(!await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'tu cambio de '+(item.folio||'esta remisión'),detalle:'Queda la versión del otro equipo.',irreversible:true}))return;
     if(cola==='cola_remisiones'){_descartarConflictoRemision_(item);return;}
     guardarSeguro(cola,JSON.stringify(q.filter(e=>e!==item)));
   }

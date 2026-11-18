@@ -243,3 +243,15 @@ dialog.sumetec-permiso h2{margin:0 0 8px;font-size:20px;line-height:1.25;color:#
 .sumetec-permiso-botones .secundario{border:1px solid rgb(255 255 255 / .28);background:transparent;color:#f6fbff}
 .sumetec-permiso-botones button[hidden]{display:none}
 .sumetec-permiso-botones button:disabled{opacity:.55}
+
+/* ═══ Pantalla de AUTORIZACIÓN (código de Dirección) — 2026-11-17 ═══
+   Debe distinguirse del bloqueo/PIN de la app: fondo cálido, escudo, franja ámbar y aviso «No es tu PIN». */
+dialog.sumetec-pin-autoriza{background:linear-gradient(170deg,#3a2a08 0%,#2a1c05 55%,#1c1203 100%)}
+dialog.sumetec-pin-autoriza::backdrop{background:#1c1203}
+.sumetec-pin-autoriza .sumetec-pin-panel{border-top:6px solid #f5a623}
+.sumetec-pin-autoriza .sumetec-pin-logo{background:#f5a623;display:grid;place-items:center}
+.sumetec-pin-autoriza .sumetec-pin-logo::before{content:"\1F6E1";font-size:20px;line-height:1}
+.sumetec-pin-autoriza .sumetec-pin-cuerpo::before{content:"NO ES TU PIN · LO PIDE DIRECCIÓN";display:block;margin-bottom:14px;padding:6px 12px;border:1px solid #f5a623;border-radius:999px;background:rgb(245 166 35 / .14);color:#ffd58a;font:600 10.5px/1.2 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.06em}
+.sumetec-pin-autoriza .sumetec-tecla{background:rgb(245 166 35 / .10)}
+.sumetec-pin-autoriza .sumetec-pin-puntos i{border-radius:4px}
+.sumetec-pin-autoriza .sumetec-pin-texto{color:#e8d4ac}
