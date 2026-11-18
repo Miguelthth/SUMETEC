@@ -2976,9 +2976,11 @@ function _revisarEpocaFolio_(epoca){
   return true;
 }
 // Al abrir: consulta la época sin apartar nada (una petición barata) por si reiniciaron el contador con el teléfono cerrado.
+let _epocaVerificadaTs=0;
 async function _verificarEpocaFolio_(){
   const url=getScriptUrl();
-  if(!isOnline||!url)return;
+  if(!isOnline||!url||Date.now()-_epocaVerificadaTs<300000)return;   // una vez cada 5 min: no repetirla en cada ＋
+  _epocaVerificadaTs=Date.now();
   try{
     const ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),10000);
     const r=await fetch(url+'?tipo=reservar_folio&solo_epoca=1',{signal:ctrl.signal,cache:'no-store'});
@@ -6708,7 +6710,15 @@ function _limpiarFormulario(){
   const nLocal=parseInt(localStorage.getItem('r_fn')||'0')+1;
   const folioLocal='REM-'+String(nLocal).padStart(4,'0');
   const fb=document.getElementById('folioBadge');
-  if(fb){fb.innerText=folioLocal;syncFolio(folioLocal);}
+  // 2026-11-17: sin folio apartado y con señal, no se enseña un número adivinado (parecía que ＋ no hacía nada y se tocaba varias veces):
+  // se avisa que se está pidiendo; si en 16 s no llegó, se vuelve al folio local de siempre.
+  const _pidiendoFolio=!folioApartado()&&isOnline&&!!getScriptUrl();
+  if(fb){
+    if(_pidiendoFolio){
+      fb.innerText='Pidiendo folio…';
+      setTimeout(()=>{const b=document.getElementById('folioBadge');if(b&&b.innerText==='Pidiendo folio…'){b.innerText=folioLocal;syncFolio(folioLocal);}},16000);
+    }else{fb.innerText=folioLocal;syncFolio(folioLocal);}
+  }
   cargarFolioRemoto(); // actualiza con el valor real del servidor
   _calentarGPS_();     // V1: ubicación lista antes de REGISTRAR
   localStorage.removeItem('r_draft');

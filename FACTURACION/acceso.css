@@ -254,3 +254,10 @@ dialog.sumetec-pin-autoriza::backdrop{background:#1c1203}
 .sumetec-pin-autoriza .sumetec-tecla{background:rgb(245 166 35 / .10)}
 .sumetec-pin-autoriza .sumetec-pin-puntos i{border-radius:4px}
 .sumetec-pin-autoriza .sumetec-pin-texto{color:#e8d4ac}
+
+/* ═══ Popups SIEMPRE al centro + código de Dirección como popup (2026-11-17, estándar de las apps) ═══
+   Un reset global (* {margin:0}) o una regla de la app dejaba algunos <dialog> modales pegados a una esquina: este bloque los centra todos. */
+dialog[open]:not(.sumetec-acceso):not(.sumetec-pin-teclado){position:fixed;inset:0;margin:auto;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}
+dialog.sumetec-codigo-popup .sumetec-codigo-campo{display:block;box-sizing:border-box;width:100%;min-height:54px;margin:16px 0 0;padding:8px 12px;border:1px solid rgb(255 255 255 / .28);border-radius:14px;background:rgb(255 255 255 / .08);color:#fff;font:700 26px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.35em;text-align:center}
+dialog.sumetec-codigo-popup .sumetec-codigo-campo:focus{outline:2px solid #f5a623;outline-offset:1px}
+dialog.sumetec-codigo-popup .sumetec-permiso-icono{background:rgb(245 166 35 / .18)}

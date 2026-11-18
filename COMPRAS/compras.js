@@ -96,11 +96,18 @@ function _autorizarCompras_(accion, porDefecto, documento, detalle) {
   return sumetecAutorizarAccion('compras', accion, porDefecto, { nombre: 'Compras', documento, detalle });
 }
 // A qué servidor y con qué token pedir permiso: el token sale con el PIN (o la huella) de este teléfono.
-if (typeof sumetecRegistrarServidor === 'function') sumetecRegistrarServidor('compras', async () => {
-  const url = localStorage.getItem('sumetec_compras_url');
-  if (!url) return null;
-  return { url, token: await abrirSesionDireccion(await pedirPinDireccion()) };
-});
+// 2026-11-17: compras.html carga compras.js ANTES que acceso.js, así que aquí `sumetecRegistrarServidor` aún no existía y el registro
+// nunca corría («Esta app no puede pedir permiso al dueño» al borrar datos). Se registra al terminar de cargar todos los scripts.
+function _registrarServidorPermisosCompras_() {
+  if (typeof sumetecRegistrarServidor !== 'function') return;
+  sumetecRegistrarServidor('compras', async () => {
+    const url = localStorage.getItem('sumetec_compras_url');
+    if (!url) return null;
+    return { url, token: await abrirSesionDireccion(await pedirPinDireccion()) };
+  });
+}
+_registrarServidorPermisosCompras_();
+if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('DOMContentLoaded', _registrarServidorPermisosCompras_);
 const CLAVE_BORRADOR_COMPRA = 'sumetec_compras_borrador';
 
 function _leerBorradorCompra_() {

@@ -181,22 +181,10 @@ function sumetecHashCodigoPublicado() {
 // Pide el código de seguridad con el mismo teclado de las apps y lo compara con la huella publicada.
 // `hash` opcional: la app que ya tenía su propia copia de la huella la pasa. Devuelve true si es correcto.
 function sumetecPedirCodigoAccion(nombre, texto, hash) {
-  return new Promise(resolve => {
-    const h = hash || sumetecHashCodigoPublicado();
-    const avisar = m => { if (typeof alert === 'function') alert(m); };
-    if (!h) { avisar('Aún no hay código de seguridad en este teléfono: en el ERP entra a Administración → Ecosistema y sincroniza; luego abre la app con señal.'); resolve(false); return; }
-    const dlg = document.createElement('dialog');
-    sumetecTecladoPin(dlg, { modo: 'codigo', nombre, texto: texto || 'Escribe el código de seguridad.' });
-    const form = dlg.querySelector('form'), input = dlg.querySelector('input'), error = dlg.querySelector('.sumetec-pin-error');
-    form.addEventListener('submit', async ev => {
-      ev.preventDefault();
-      if ((await sumetecHuellaAcceso('sumetec-campo|' + input.value.trim())) === h) { dlg.close('ok'); return; }
-      dlg.dispatchEvent(new Event('sumetec-limpiar'));
-      error.textContent = 'Código incorrecto, intenta de nuevo.';
-    });
-    dlg.addEventListener('close', () => { const ok = dlg.returnValue === 'ok'; input.value = ''; dlg.remove(); resolve(ok); }, { once: true });
-    document.body.appendChild(dlg); dlg.showModal(); const t = dlg.querySelector('.sumetec-tecla'); if (t) t.focus();
-  });
+  const h = hash || sumetecHashCodigoPublicado();
+  if (!h) { if (typeof alert === 'function') alert('Aún no hay código de seguridad en este teléfono: en el ERP entra a Administración → Ecosistema y sincroniza; luego abre la app con señal.'); return Promise.resolve(false); }
+  return _sumetecPopupCodigo_({ titulo: 'Código de seguridad', texto: texto || 'Escribe el código de seguridad.', largo: 0,
+    validar: async v => (await sumetecHuellaAcceso('sumetec-campo|' + v.trim())) === h ? { ok: true } : { ok: false, error: 'Código incorrecto, intenta de nuevo.' } }).then(r => r !== null);
 }
 // Punto único para las acciones delicadas: true si puede seguir.
 // 2026-10-20: el modo 'codigo' ya no pide teclear un código (se adivinaba desde su huella pública, F2-COD-R): pide
@@ -946,27 +934,45 @@ function sumetecClaveConservada(clave) { return SUMETEC_CONSERVAR_LOCAL.some(r =
 // dicta al teléfono; al usarse, el servidor lo borra (vale 10 min, 5 intentos). El código nunca viaja a este teléfono.
 // 2026-11-17 (Miguel): un código equivocado SE AVISA ADENTRO de la misma pantalla (mensaje rojo, puntos sacudidos y limpios)
 // en vez de cerrarla y avisar con un alert que muchas veces no se ve. `validar(codigo)` -> {ok, error, fatal}.
-function _sumetecTecladoCodigoDireccion(nombre, texto, validar) {
+// 2026-11-17 (Miguel): pedir el código de Dirección ya NO es una pantalla completa tipo bloqueo: es un popup centrado, igual que
+// los demás avisos de las apps (dialog.sumetec-permiso), con un campo para el código y Autorizar / Cancelar.
+// `validar(codigo)` -> {ok, error, fatal}; un código equivocado se avisa ADENTRO del mismo popup. Devuelve el código (o 'ok') si
+// se autorizó, null si se canceló.
+function _sumetecPopupCodigo_({ titulo, texto, largo, validar }) {
   return new Promise(resolve => {
     const dlg = document.createElement('dialog');
-    sumetecTecladoPin(dlg, { modo: 'codigo', nombre, titulo: 'Código de Dirección', texto, min: 6, max: 6 });
-    const form = dlg.querySelector('form'), input = dlg.querySelector('input'), error = dlg.querySelector('.sumetec-pin-error'), boton = dlg.querySelector('.sumetec-pin-guardar');
+    dlg.className = 'sumetec-permiso sumetec-codigo-popup';
+    dlg.innerHTML = '<div class="sumetec-permiso-icono" aria-hidden="true"></div><h2></h2><p class="sumetec-permiso-texto"></p>' +
+      '<form class="sumetec-codigo-form" autocomplete="off"><input class="sumetec-codigo-campo" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" aria-label="Código" placeholder="Código">' +
+      '<p class="sumetec-permiso-estado" role="status"></p>' +
+      '<div class="sumetec-permiso-botones"><button type="submit" class="principal">Autorizar</button><button type="button" class="secundario" data-r="cancelar">Cancelar</button></div></form>';
+    dlg.querySelector('.sumetec-permiso-icono').textContent = '🔐';
+    dlg.querySelector('h2').textContent = titulo || 'Código de Dirección';
+    dlg.querySelector('.sumetec-permiso-texto').textContent = texto || '';
+    const form = dlg.querySelector('form'), input = dlg.querySelector('input'), estado = dlg.querySelector('.sumetec-permiso-estado'), boton = dlg.querySelector('.principal');
+    input.maxLength = largo || 12;
+    input.addEventListener('input', () => { input.value = input.value.replace(/\D/g, '').slice(0, largo || 12); estado.textContent = ''; });
+    dlg.querySelector('[data-r="cancelar"]').onclick = () => dlg.close('cancelar');
     let ocupado = false;
     form.addEventListener('submit', async ev => {
-      if (typeof validar !== 'function') return;
       ev.preventDefault();
       if (ocupado) return;
-      ocupado = true; boton.disabled = true; error.textContent = 'Verificando…';
+      if (input.value.length < (largo || 1)) { estado.textContent = largo ? 'Escribe los ' + largo + ' dígitos.' : 'Escribe el código.'; return; }
+      ocupado = true; boton.disabled = true; estado.textContent = 'Verificando…';
       let r; try { r = await validar(input.value); } catch (_) { r = { ok: false, error: 'No se pudo validar el código. Intenta de nuevo.' }; }
       ocupado = false; boton.disabled = false;
       if (r && r.ok) { dlg.close('ok'); return; }
-      dlg.dispatchEvent(new Event('sumetec-limpiar'));
-      error.textContent = (r && r.error) || 'Código incorrecto.';
+      input.value = ''; input.focus();
+      estado.textContent = (r && r.error) || 'Código incorrecto.';
+      estado.dataset.estado = 'RECHAZADA';
       if (r && r.fatal) setTimeout(() => { if (dlg.open) dlg.close('cancelar'); }, 2500);
     });
-    dlg.addEventListener('close', () => { const ok = dlg.returnValue === 'ok', v = input ? input.value : ''; if (input) input.value = ''; dlg.remove(); resolve(ok ? (v || 'ok') : null); }, { once: true });
-    document.body.appendChild(dlg); dlg.showModal();
+    dlg.addEventListener('close', () => { const ok = dlg.returnValue === 'ok', v = input.value; input.value = ''; dlg.remove(); resolve(ok ? (v || 'ok') : null); }, { once: true });
+    document.body.appendChild(dlg); dlg.showModal(); input.focus();
   });
+}
+function _sumetecTecladoCodigoDireccion(nombre, texto, validar) {
+  return _sumetecPopupCodigo_({ titulo: 'Código de Dirección', texto, largo: 6, validar });
 }
 async function sumetecAutorizarBorrado(app, op = {}) {
   const modo = sumetecPermiso(app, 'borrar_datos_locales', 'codigo');
