@@ -2939,12 +2939,14 @@ function apartarFolio(maxMs){
   const faltan=FOLIOS_COLCHON-_foliosApartados_().length;
   const url=getScriptUrl();
   if(faltan<=0||!isOnline||!url)return Promise.resolve(folioApartado());
+  let limpio=false;
   _apartandoFolio=(async()=>{
     try{
       const ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),maxMs||15000);
       const r=await fetch(url+'?tipo=reservar_folio&n='+faltan,{signal:ctrl.signal,cache:'no-store'});
       clearTimeout(t);
       const d=await r.json();
+      limpio=_revisarEpocaFolio_(d&&d.epoca);   // 2026-11-17: si reiniciaron el contador, se tiran los folios viejos
       const nuevos=(d&&Array.isArray(d.folios)?d.folios:[d&&d.folio]).filter(f=>/^REM-\d{4,}$/.test(String(f||'')));
       if(nuevos.length){
         const lista=_foliosApartados_();
@@ -2953,9 +2955,37 @@ function apartarFolio(maxMs){
       }
     }catch(_){/* sin señal: al registrar se usa folio temporal como siempre */}
     finally{_apartandoFolio=null;}
+    if(limpio){setTimeout(()=>apartarFolio(),50);const f=folioApartado();if(f)_mostrarFolioApartado_(f);}
     return folioApartado();
   })();
   return _apartandoFolio;
+}
+// 2026-11-17 (Miguel): al reiniciar el contador de remisiones, los folios que el teléfono tenía apartados son del contador viejo.
+// Google lleva una «época» que sube con cada reinicio; el teléfono guarda la que vio. Si cambió: se tiran los folios apartados
+// (las remisiones ya capturadas y en cola NO se tocan) y se aparta de nuevo desde el contador reiniciado. Sin época guardada = '0'.
+const CLAVE_EPOCA_FOLIO='sumetec_folio_epoca';
+function _revisarEpocaFolio_(epoca){
+  if(epoca===undefined||epoca===null)return false;
+  const nueva=String(epoca);
+  let vista='0';
+  try{vista=localStorage.getItem(CLAVE_EPOCA_FOLIO)||'0';}catch(_){}
+  try{localStorage.setItem(CLAVE_EPOCA_FOLIO,nueva);}catch(_){}
+  if(vista===nueva)return false;
+  _guardarFoliosApartados_([]);
+  try{localStorage.setItem('r_fn','99');}catch(_){}
+  return true;
+}
+// Al abrir: consulta la época sin apartar nada (una petición barata) por si reiniciaron el contador con el teléfono cerrado.
+async function _verificarEpocaFolio_(){
+  const url=getScriptUrl();
+  if(!isOnline||!url)return;
+  try{
+    const ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),10000);
+    const r=await fetch(url+'?tipo=reservar_folio&solo_epoca=1',{signal:ctrl.signal,cache:'no-store'});
+    clearTimeout(t);
+    const d=await r.json();
+    if(_revisarEpocaFolio_(d&&d.epoca)){const f=await apartarFolio();if(f)_mostrarFolioApartado_(f);}
+  }catch(_){/* sin señal: se revisa en la próxima apertura o reposición */}
 }
 function _mostrarFolioApartado_(folio){
   if(!folio)return;
@@ -2968,7 +2998,7 @@ function cargarFolioRemoto(){
   const url=getScriptUrl();if(!url)return;
   // El folio que se muestra es el que este teléfono ya tiene apartado (o el que aparta ahora).
   const yaApartado=folioApartado();
-  if(yaApartado){_mostrarFolioApartado_(yaApartado);_reponerFolioSiBajo_();return;}   // repone solo si queda 1 (auditoría envío completo 12/nov: antes pedía siempre)
+  if(yaApartado){_mostrarFolioApartado_(yaApartado);_reponerFolioSiBajo_();_verificarEpocaFolio_();return;}   // repone solo si queda 1 (auditoría envío completo 12/nov: antes pedía siempre)
   if(isOnline){apartarFolio().then(f=>{if(f)_mostrarFolioApartado_(f);else _cargarFolioSoloLectura_();});return;}
   _cargarFolioSoloLectura_();
 }
