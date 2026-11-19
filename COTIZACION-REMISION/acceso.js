@@ -1178,3 +1178,19 @@ function sumetecPedirTexto(mensaje, valor, titulo) {
     botones: [{ texto: 'Cancelar', valor: null }, { texto: 'Aceptar', usaInput: true, clase: 'sp-ok' }] });
 }
 if (typeof window !== 'undefined') { window.alert = function (m) { sumetecAviso(m == null ? '' : String(m)); }; }
+
+// 2026-11-18 (Miguel): vinculación por QR. La dirección trae ?vincular=CÓDIGO (lo genera Dirección o el ERP); se escribe en el campo del código y se quita de la barra de direcciones.
+(function () {
+  if (typeof window === 'undefined' || typeof location === 'undefined') return;
+  let codigo = '';
+  try { codigo = (new URLSearchParams(location.search).get('vincular') || '').trim().toUpperCase(); } catch (_) {}
+  if (!/^[A-Z0-9]{6,12}$/.test(codigo)) return;
+  try { const u = new URL(location.href); u.searchParams.delete('vincular'); history.replaceState(null, '', u.pathname + (u.search || '') + u.hash); } catch (_) {}
+  let intentos = 0;
+  const poner = () => {
+    const campo = ['#codigo', '#tg_codigo'].map(s => document.querySelector(s)).find(e => e && e.offsetParent !== null);
+    if (campo) { campo.value = codigo; campo.dispatchEvent(new Event('input', { bubbles: true })); return; }
+    if (++intentos < 40) setTimeout(poner, 500);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poner); else poner();
+})();

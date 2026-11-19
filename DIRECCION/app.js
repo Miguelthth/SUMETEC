@@ -257,6 +257,7 @@ window.addEventListener('offline', estado);
   });
   $('#menuEnviarPendientes').onclick = () => { masMenu.hidden = true; masMenu.style.display = 'none'; enviarPendientesDireccion(); };
   $('#menuVincular').onclick = () => { masMenu.hidden = true; masMenu.style.display = 'none'; $('#vincular').showModal(); };
+  $('#menuGenerarCodigo').onclick = () => { masMenu.hidden = true; masMenu.style.display = 'none'; generarCodigoVinculacionDireccion(); };
 }
 
 // El contenido se dibuja después de confirmar la vinculación o el PIN.
