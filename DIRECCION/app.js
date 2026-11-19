@@ -256,7 +256,18 @@ window.addEventListener('offline', estado);
     btnMasMenu.setAttribute('aria-expanded', 'false');
   });
   $('#menuEnviarPendientes').onclick = () => { masMenu.hidden = true; masMenu.style.display = 'none'; enviarPendientesDireccion(); };
-  $('#menuVincular').onclick = () => { masMenu.hidden = true; masMenu.style.display = 'none'; $('#vincular').showModal(); };
+  // «Vincular otro teléfono» abierto DESDE EL MENÚ con este teléfono ya vinculado: hay que poder regresar (antes la pantalla completa no tenía salida).
+  // Con el teléfono sin vincular la pantalla es obligatoria y el botón no se muestra.
+  $('#menuVincular').onclick = () => {
+    masMenu.hidden = true; masMenu.style.display = 'none';
+    const volver = $('#vincular-volver'), dlg = $('#vincular');
+    if (volver) volver.hidden = !localStorage.getItem(SESION_KEY);
+    dlg.showModal();
+  };
+  if ($('#vincular-volver')) {
+    $('#vincular-volver').onclick = () => $('#vincular').close();
+    $('#vincular').addEventListener('close', () => { $('#vincular-volver').hidden = true; });
+  }
   $('#menuGenerarCodigo').onclick = () => { masMenu.hidden = true; masMenu.style.display = 'none'; generarCodigoVinculacionDireccion(); };
 }
 

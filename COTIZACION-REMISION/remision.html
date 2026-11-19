@@ -2909,6 +2909,22 @@ function _guardarFoliosApartados_(lista){
   }catch(_){return false;}
 }
 function folioApartado(){return _foliosApartados_()[0]||null;}
+// 2026-11-19 (corrida real, CAM-COT-007): el teléfono estrenó REM-0158 cuando una remisión suya ya lo traía (la de CAM-COT-003). Servidor y colchón no
+// debían repetirlo, pero si algo lo repite (colchón viejo de antes de vaciar la nube, reserva duplicada, contador local), ESTE teléfono lo sabe: un folio que
+// ya usa una remisión suya (en el historial o en la cola) no se estrena nunca. Se toma el siguiente del colchón; sin uno libre, folio temporal (el servidor le da el definitivo).
+function _folioUsadoLocal_(folio,exceptoId){
+  const f=String(folio||'');if(!f)return false;
+  try{
+    if((remisiones||[]).some(r=>String(r.folio)===f&&String(r.id)!==String(exceptoId||'')))return true;
+    if(leerSeguro('cola_remisiones',[]).some(e=>String(e.folio)===f&&String(e.id)!==String(exceptoId||'')))return true;
+  }catch(_){}
+  return false;
+}
+function _tomarFolioLibre_(){
+  let f=tomarFolioApartado();
+  for(let i=0;f&&_folioUsadoLocal_(f)&&i<12;i++)f=tomarFolioApartado();   // el repetido se descarta; nunca se reutiliza
+  return (f&&!_folioUsadoLocal_(f))?f:null;
+}
 // Lo entrega y lo quita de la lista en el mismo paso: un folio apartado se usa UNA vez (si la app se cierra
 // justo después, se pierde ese número; nunca se repite). Luego repone el colchón sin que nadie espere.
 function tomarFolioApartado(){
@@ -4199,13 +4215,13 @@ async function registrarRemision(gpsParam){
   // ── Nueva remisión — folio desde el servidor ──
   const url=getScriptUrl();
   // Folio apartado al abrir la pantalla: registrar ya no espera a Google.
-  let folio=tomarFolioApartado();
+  let folio=_tomarFolioLibre_();   // 19/nov: nunca un folio que este teléfono ya usó (ver _folioUsadoLocal_)
   if(!folio&&isOnline&&url){
     // Sin folio en el colchón: se espera la reserva que ya va en camino (o se pide una), máx 15 s
     // (2026-09-11: con 5 s se rendía antes de lo que a veces tarda Apps Script).
     _estado('🔢 Obteniendo folio…',8000);
     await apartarFolio(15000);
-    folio=tomarFolioApartado();
+    folio=_tomarFolioLibre_();
     if(folio){
       // Sincronizar contador local
       try{const m=folio.match(/(\d+)$/);if(m)localStorage.setItem('r_fn',String(parseInt(m[1])));}catch(_){}
@@ -9499,7 +9515,13 @@ function verEstado(){
       const intentos=(e._try||0);
       const tag=e._conflict?' <span style="color:#b91c1c;font-weight:700">⚠️ requiere revisión</span>':(e._detenido?' <span style="color:#b91c1c;font-weight:700">⛔ detenido tras '+intentos+' intentos</span>':intentos>=3?' <span style="color:#b91c1c;font-weight:700">⚠️ '+intentos+' intentos</span>':(intentos>0?' <span style="color:#b45309">'+intentos+' intento(s)</span>':''));
       const motivo=(e._lastError&&(intentos>0||e._conflict||e._detenido))?'<div style="font-size:11px;color:#b91c1c;padding-left:10px">Motivo: '+esc(String(e._lastError))+'</div>':'';
-      return '<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)">• '+esc(String(id))+tag+motivo+'</div>';
+      // 2026-11-19: cada pendiente atorado trae su propio botón para forzarlo (antes sólo había «Reintentar los detenidos», que no tocaba los conflictos).
+      const _idItem=esc(String(e.id||e._k||e.folio||''));
+      const _atorado=!!(e._conflict||e._detenido||intentos>0||e._lastError);
+      const _btn='display:inline-block;margin:4px 6px 2px 10px;padding:5px 9px;font-size:11px;border-radius:7px;border:1px solid #d0d7de;background:#fff;cursor:pointer';
+      const _acc=(_atorado?'<button type="button" style="'+_btn+'" onclick="_reintentarItem(\''+c.clave+'\',\''+_idItem+'\')">🔄 Reintentar</button>':'')
+        +((c.clave==='cola_remisiones'&&e._conflict&&/folio pertenece a otra/i.test(String(e._lastError||'')))?'<button type="button" style="'+_btn+'" onclick="_folioNuevoYReintentar(\''+_idItem+'\')">🔢 Folio nuevo y reintentar</button>':'');
+      return '<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)">• '+esc(String(id))+tag+motivo+(_acc?'<div>'+_acc+'</div>':'')+'</div>';
     }).join('');
     if(arr.length>8)html+='<div style="font-size:11px;color:var(--muted)">…y '+(arr.length-8)+' más</div>';
     html+='</div>';
@@ -9526,6 +9548,41 @@ function verEstado(){
   }
   document.getElementById('estadoBody').innerHTML=html;
   ov.classList.add('open');
+}
+// 2026-11-19: forzar UN pendiente atorado. Quita la espera, el tope de intentos, el «detenido» y la marca de conflicto y manda el procesador de SU cola ya.
+// Nunca borra ni cambia el contenido: lo único que cambia es que se vuelve a intentar enviar.
+const _PROC_COLA_={cola_remisiones:()=>procesarColaRemisiones(),cola_pdf:()=>procesarColaPDF(),cola_offline:()=>procesarCola(),cola_cot_r:()=>_procesarColaCotR(),
+  cola_elim:()=>procesarColaElim(),cola_nuevos:()=>procesarColaNuevos(),cola_cancel:()=>procesarColaCancel(),cola_resultado_cot:()=>_procesarColaResultadoCot()};
+function _reintentarItem(clave,id){
+  if(!isOnline){toast('Sin conexión — se reintentará solo al volver la señal','warn',4000);return;}
+  const cola=leerSeguro(clave,[]);
+  const e=cola.find(x=>String(x.id||x._k||x.folio||'')===String(id));
+  if(!e){toast('Ese pendiente ya no está en la cola','warn',3000);verEstado();return;}
+  ['_retryAt','_try','_srv','_detenido'].forEach(k=>{delete e[k];});
+  if(clave!=='cola_remisiones'||!/folio pertenece a otra/i.test(String(e._lastError||'')))delete e._conflict;   // un conflicto de FOLIO no se resuelve reintentando igual: para eso está «Folio nuevo»
+  guardarSeguro(clave,JSON.stringify(cola));
+  toast('🔄 Reintentando…','ok',2500);
+  try{(_PROC_COLA_[clave]||function(){})();}catch(x){console.warn('_reintentarItem',x);}
+  setTimeout(()=>{actualizarBadgePendientes();verEstado();},2500);
+}
+// Conflicto «el folio pertenece a otra remisión» (REM-0158 repetido): la remisión NO se pierde ni se descarta; se le da un folio libre (el siguiente del colchón, o un
+// temporal que el servidor convierte en definitivo) y se vuelve a enviar como una versión nueva (rev+1: operationId nuevo, sin CONFLICTO_ID).
+async function _folioNuevoYReintentar(id){
+  const rem=(remisiones||[]).find(r=>String(r.id)===String(id));
+  if(!rem){toast('No encuentro esa remisión en este teléfono','err',4000);return;}
+  let nuevo=_tomarFolioLibre_();
+  if(!nuevo&&isOnline){try{await apartarFolio(15000);}catch(_){} nuevo=_tomarFolioLibre_();}
+  if(!nuevo)nuevo=_folioTemporal_();
+  const viejo=rem.folio;
+  rem.folio=nuevo;if(rem.data)rem.data.folio=nuevo;
+  rem._rev=(+rem._rev||0)+1;
+  if(!persistirRemisiones()){rem.folio=viejo;if(rem.data)rem.data.folio=viejo;rem._rev=(+rem._rev||1)-1;toast('⚠️ No pude guardar el folio nuevo (memoria llena)','err',6000);return;}
+  _encolarRemision(rem);persistirRemisiones();
+  const cola=leerSeguro('cola_remisiones',[]);const e=cola.find(x=>String(x.id)===String(id));
+  if(e){['_conflict','_lastError','_retryAt','_try','_srv','_detenido'].forEach(k=>{delete e[k];});guardarSeguro('cola_remisiones',JSON.stringify(cola));}
+  toast('🔢 '+viejo+' → '+nuevo+'. Reenviando…','ok',4500);
+  procesarColaRemisiones();
+  setTimeout(()=>{actualizarBadgePendientes();verEstado();},2500);
 }
 function _reintentarTodo(){
   if(!isOnline){toast('Sin conexión — se reintentará solo al volver la señal','warn',4000);return;}
@@ -10491,6 +10548,19 @@ function _cotEncolar(e){
   if(typeof _cotGuardarHistorial==='function') _cotGuardarHistorial(_light);
   _actualizarBadgeCot();
 }
+// 2026-11-19 (decisión de Miguel: la edición SIEMPRE debe llegar a Google; corrida real CQT-005: el teléfono mostraba $399.96 y Google conservó $299.97).
+// Tras enviar una cotización editada se lee su detalle: si el total de Google no es el editado (un envío anterior pudo llegar después y pisarlo), se vuelve a
+// encolar la edición. Hasta 3 verificaciones; nunca borra nada; una lectura que falla no hace nada (la próxima apertura no la repite: el aviso queda en el historial).
+async function _verificarEdicionCot_(entry,url){
+  try{
+    const veces=(entry._verif||0)+1;if(veces>3)return;
+    const r=await sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({tipo:'cotizacion_detalle',token:API_TOKEN,folio:entry.folio})}).then(x=>x.json());
+    if(!(r&&r.ok&&r.cotizacion))return;
+    if(Math.round(Number(r.cotizacion.total)*100)===Math.round(Number(entry.total)*100))return;   // Google ya tiene la edición
+    _cotEncolar({...entry,_verif:veces});
+    setTimeout(_procesarColaCotR,1500);
+  }catch(_){}
+}
 function _cotDesencolar(id){ guardarSeguro('cola_cot_r',JSON.stringify(leerSeguro('cola_cot_r',[]).filter(x=>x.id!==id))); }
 
 async function _procesarColaCotR(){
@@ -10544,6 +10614,8 @@ async function _procesarColaCotR(){
         if(globalThis.ComercialCliente&&entry.data?.comercial){ComercialCliente.documento('COTIZACION',entry.id,folio,entry.data.comercial);ComercialCliente.enviar().catch(()=>{});}
         // Cotización registrada Y PDF guardado (hay URL, o no se mandó PDF) → desencolar.
         _cotDesencolar(entry.id);
+        if(entry._edicion)_verificarEdicionCot_(entry,url);
+        if(leerSeguro('cola_resultado_cot',[]).length)setTimeout(()=>{try{_procesarColaResultadoCot();}catch(_){}},400);   // 2026-11-19: ya existe en Google: sale el resultado que esperaba
         if(typeof _cotOnSync==='function') _cotOnSync(entry.id, res.folio, res.url);
         if(res.folio) toast('Cotización guardada: '+res.folio,'ok',3000);
         if(!_cotModoEdicion)_cotCargarFolio(); // refrescar folio para la SIGUIENTE cotización (no pisa una edición en curso)
@@ -11178,7 +11250,8 @@ async function _generarCotizacion(){
     const id=_cotModoEdicion||uuidCot();
     const gps=await _gpsRapido(3000).catch(()=>null);
     const entry={id,folio,cliente:nombre,fecha:fechaTxt,total,filename,pdf:b64,data,
-                 lat:gps?.lat||'',lng:gps?.lng||'',ts:Date.now()};
+                 lat:gps?.lat||'',lng:gps?.lng||'',ts:Date.now(),
+                 _edicion:!!_cotModoEdicion};   // 2026-11-19: una EDICIÓN se verifica contra Google tras enviarse (ver _verificarEdicionCot_)
     data.portalPedidoId=globalThis.SumetecPortalPedidos?.referencia()||null;
     _cotEncolar(entry);
     globalThis.SumetecPortalPedidos?.cotizacionPreparada(entry);
@@ -11705,6 +11778,9 @@ function _cotEstadoBadge(entry){
     try{
       for(const t of cola){
         if(t._detenido||!sumetecPuedeReintentar(t))continue;
+        // 2026-11-19: el resultado de una cotización cuya ALTA aún espera en cola_cot_r no sale antes que ella (el servidor contestaría «no encontrada»);
+        // al subir la cotización se vuelve a llamar a este procesador.
+        if(leerSeguro('cola_cot_r',[]).some(q=>String(q.folio)===String(t.folio)))continue;
         try{
           const r=await _escrituraOrdenada(()=>sumetecFetchLimite(url,{method:'POST',headers:{'Content-Type':'text/plain'},
             body:JSON.stringify({tipo:'cotizacion_resultado',token:API_TOKEN,folio:t.folio,resultado:t.resultado,operationId:t.operationId})}).then(x=>x.json()));
@@ -11713,7 +11789,9 @@ function _cotEstadoBadge(entry){
               (x.operationId||String(x.ts)+'|'+x.resultado)!==(t.operationId||String(t.ts)+'|'+t.resultado));
             guardarSeguro('cola_resultado_cot',JSON.stringify(rest));
           }else{
-            _bumpTry('cola_resultado_cot',e=>e.folio===t.folio&&e.operationId===t.operationId,sumetecMotivoRespuesta(r,'respuesta sin ok del servidor'),!sumetecFalloTransitorio(r));
+            // 2026-11-19: «cotización no encontrada» = el resultado llegó antes que la cotización (alta pendiente o con servidor ocupado). No es un rechazo del servidor:
+            // el resultado se CONSERVA en la cola y se reintenta; no cuenta contra el tope de intentos ni se detiene.
+            _bumpTry('cola_resultado_cot',e=>e.folio===t.folio&&e.operationId===t.operationId,sumetecMotivoRespuesta(r,'respuesta sin ok del servidor'),!sumetecFalloTransitorio(r)&&!/no encontrada/i.test(String((r&&r.error)||'')));
           }
         }catch(e){ _bumpTry('cola_resultado_cot',x=>x.folio===t.folio&&x.operationId===t.operationId,'sin respuesta del servidor',false);console.warn('_procesarColaResultadoCot',e); }
       }

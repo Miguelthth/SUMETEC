@@ -31,9 +31,9 @@ async function generarCodigoVinculacionDireccion() {
   dlg = document.createElement('dialog');
   dlg.id = 'dlgCodigoVinculo';
   dlg.className = 'sumetec-acceso';
-  dlg.style.cssText = 'max-width:420px;width:92%';
-  dlg.innerHTML = '<form method="dialog" style="display:flex;flex-direction:column;gap:12px;text-align:center">'
-    + '<h2 style="margin:0">Vincular otro teléfono</h2>'
+  dlg.style.cssText = 'width:100%;height:100%;max-width:none;max-height:none;margin:0;';   // pantalla completa como las demás pantallas «sumetec-acceso» (un <dialog> sin ancho se encoge y deja un hueco a la derecha)
+  dlg.innerHTML = '<form method="dialog" style="display:flex;flex-direction:column;gap:12px;text-align:center;box-sizing:border-box;width:100%;max-width:440px;margin:0 auto;padding:max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom))">'
+    + '<h2 style="margin:0;text-align:center">Vincular otro teléfono</h2>'
     + '<p style="margin:0;font-size:13px;opacity:.8">Elige la app del teléfono nuevo. Escanea el QR con ese teléfono (o escribe el código). Vale 10 minutos y sirve una sola vez.</p>'
     + '<select id="vinculoApp" aria-label="App a vincular" style="padding:10px;border-radius:10px">'
     + _VINCULO_APPS_.map(a => '<option value="' + a.clave + '">' + a.nombre + '</option>').join('') + '</select>'
@@ -54,6 +54,7 @@ async function generarCodigoVinculacionDireccion() {
       + '<small>' + (quedan > 0 ? 'Vence en ' + Math.floor(quedan / 60) + ':' + String(quedan % 60).padStart(2, '0') : 'Venció: genera uno nuevo') + '</small>';
   };
   const pedir = async () => {
+    codigoActual = null;   // el reloj repinta cada segundo: sin esto volvía a dibujar el código ANTERIOR mientras llegaba el nuevo
     caja().innerHTML = '<small>Generando código…</small>';
     let r;
     try { r = await _sumetecPostPermiso('direccion', { tipo: 'generar_codigo_vinculo' }); } catch (e) { r = { ok: false, error: String(e && e.message || e) }; }
