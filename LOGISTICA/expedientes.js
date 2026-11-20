@@ -109,6 +109,8 @@ function cerrarMenuLogistica(){$('menu-opciones').hidden=true;$('mas-opciones').
 $('mas-opciones').onclick=()=>{const abierto=$('menu-opciones').hidden;$('menu-opciones').hidden=!abierto;$('mas-opciones').setAttribute('aria-expanded',String(abierto));};
 $('menu-tema').onclick=()=>{cerrarMenuLogistica();alternarTemaSumetec();};
 $('menu-version').onclick=()=>{cerrarMenuLogistica();sumetecMostrarVersionInstalada('logistica');};
+// Borrado remoto (2026-11-20): cuenta lo pendiente para que Direccion no borre datos sin enviar.
+window.sumetecPendientesApp=async()=>(await baseLocal.pendientes()).length;
 $('menu-borrar-datos').onclick=async()=>{cerrarMenuLogistica();await sumetecBorrarDatosLocales('logistica',{nombre:'Logística',pendientes:async()=>(await baseLocal.pendientes()).length,avisar});};
 $('menu-sincronizar').onclick=()=>{cerrarMenuLogistica();sincronizarComercial();};
 $('menu-ajustes').onclick=()=>{cerrarMenuLogistica();seleccionado=null;mostrarPantalla('ajustes');};

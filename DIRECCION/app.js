@@ -269,6 +269,7 @@ window.addEventListener('offline', estado);
     $('#vincular').addEventListener('close', () => { $('#vincular-volver').hidden = true; });
   }
   $('#menuGenerarCodigo').onclick = () => { masMenu.hidden = true; masMenu.style.display = 'none'; generarCodigoVinculacionDireccion(); };
+  $('#menuBorradoRemoto').onclick = () => { masMenu.hidden = true; masMenu.style.display = 'none'; borradoRemotoDireccion(); };
 }
 
 // El contenido se dibuja después de confirmar la vinculación o el PIN.
