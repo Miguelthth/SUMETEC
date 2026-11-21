@@ -261,3 +261,5 @@ dialog[open]:not(.sumetec-acceso):not(.sumetec-pin-teclado){position:fixed;inset
 dialog.sumetec-codigo-popup .sumetec-codigo-campo{display:block;box-sizing:border-box;width:100%;min-height:54px;margin:16px 0 0;padding:8px 12px;border:1px solid rgb(255 255 255 / .28);border-radius:14px;background:rgb(255 255 255 / .08);color:#fff;font:700 26px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.35em;text-align:center}
 dialog.sumetec-codigo-popup .sumetec-codigo-campo:focus{outline:2px solid #f5a623;outline-offset:1px}
 dialog.sumetec-codigo-popup .sumetec-permiso-icono{background:rgb(245 166 35 / .18)}
+/* Un elemento con [hidden] debe quedar oculto aunque su clase le dé display (Dirección: «← Volver» ensanchaba la cuadrícula y encogía las cajas). 2026-11-20 */
+.sumetec-acceso [hidden] { display: none !important; }
