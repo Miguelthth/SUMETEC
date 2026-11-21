@@ -343,6 +343,22 @@
         const datos = await Promise.all(TABLAS.map(t=>peticion(tx.objectStore(t).getAll())));
         return { schema: 2, app: 'logistica', exportadoTs: c.ahora(), tablas: Object.fromEntries(TABLAS.map((t, i) => [t, datos[i]])) };
       },
+      async borrarDatosLocales(comprobarPendientes) {
+        let borrado = false;
+        await escribir(TABLAS, t => {
+          const vaciar = () => {
+            for (const tabla of TABLAS) t[tabla].clear();
+            t.meta.put(dispositivo);
+            borrado = true;
+          };
+          if (!comprobarPendientes) { vaciar(); return; }
+          const operaciones = t.operaciones.getAll();
+          operaciones.onsuccess = () => {
+            if (!operaciones.result.some(o => !['CONFIRMADA', 'DESCARTADA'].includes(o.estadoLocal))) vaciar();
+          };
+        });
+        return borrado;
+      },
       cerrar: () => db.close()
     };
   }

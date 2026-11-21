@@ -54,21 +54,25 @@ async function borradoRemotoDireccion() {
   const pintarOrden = () => {
     const o = ultima; if (!o) { pintarSinOrden(); return; }
     mostrando = 'orden';
+    const activa = o.estado === 'PROGRAMADA';
+    const estado = { CERRADA: 'Borrado confirmado por todas las apps.', CANCELADA: 'Orden cancelada.', VENCIDA: 'Orden vencida.', REEMPLAZADA: 'Orden reemplazada.' };
     const previo = (dlg.querySelector('#borradoAviso') || {}).textContent || '';
     const filas = (o.equipos || []).map(e => '<tr><td>' + _borradoEsc_(e.nombre) + ' <small>(' + _borradoEsc_(e.app) + ')</small></td><td>' + _borradoEsc_(_BORRADO_ESTADOS_[e.estado] || e.estado)
-      + (e.estado === 'EN_ESPERA' ? ' <small>(' + e.pendientes + ')</small><br><button type="button" class="btn" data-decidir="REVISAR" data-id="' + _borradoEsc_(e.dispositivo) + '">Revisar</button> <button type="button" class="btn" data-decidir="FORZAR" data-id="' + _borradoEsc_(e.dispositivo) + '" style="background:#b3261e;color:#fff">Forzar</button>' : '')
+      + (activa && e.estado === 'EN_ESPERA' ? ' <small>(' + e.pendientes + ')</small><br><button type="button" class="btn" data-decidir="REVISAR" data-id="' + _borradoEsc_(e.dispositivo) + '" data-app="' + _borradoEsc_(e.app) + '">Revisar</button> <button type="button" class="btn" data-decidir="FORZAR" data-id="' + _borradoEsc_(e.dispositivo) + '" data-app="' + _borradoEsc_(e.app) + '" style="background:#b3261e;color:#fff">Forzar</button>' : '')
       + (e.decision === 'FORZAR' && e.estado !== 'BORRADO' ? ' <small>Forzado: se descarta lo pendiente</small>' : '') + '</td></tr>').join('');
-    cuerpo().innerHTML = '<p style="margin:0;font-size:13px">Orden <b>' + _borradoEsc_(o.id) + '</b> de ' + _borradoEsc_(o.ordeno) + '. <span id="borradoFaltan">' + textoFalta(o) + '</span></p>'
+    cuerpo().innerHTML = '<p style="margin:0;font-size:13px">Orden <b>' + _borradoEsc_(o.id) + '</b> de ' + _borradoEsc_(o.ordeno) + '. <span id="borradoFaltan">' + (activa ? textoFalta(o) : _borradoEsc_(estado[o.estado] || o.estado)) + '</span></p>'
       + '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-top:8px"><tbody>' + filas + '</tbody></table>'
-      + '<p style="margin:8px 0 0;font-size:12px;opacity:.8">«Revisar» deja al teléfono esperando a que envíe lo pendiente. «Forzar» lo descarta y pide otro código del ERP.</p>'
-      + '<button type="button" id="borradoCancelar" class="btn" style="margin-top:8px">Cancelar la orden</button>'
+      + (activa ? '<p style="margin:8px 0 0;font-size:12px;opacity:.8">«Revisar» espera a que la app envíe lo pendiente. «Forzar» lo descarta y pide otro código del ERP.</p>'
+        + '<button type="button" id="borradoCancelar" class="btn" style="margin-top:8px">Cancelar la orden</button>'
+        : '<button type="button" id="borradoNueva" class="btn" style="margin-top:8px">Preparar otra orden</button>')
       + '<small id="borradoAviso" style="display:block;margin-top:6px"></small>';
     if (previo) aviso(previo);
+    if (!activa) { dlg.querySelector('#borradoNueva').onclick = pintarSinOrden; return; }
     dlg.querySelector('#borradoCancelar').onclick = async () => {
       if (!(await sumetecConfirmar('¿Cancelar la orden de borrado? Los teléfonos que aún no borraron ya no lo harán.'))) return;
-      const r = await _borradoPost_({ tipo: 'borrado_cancelar' });
+      const r = await _borradoPost_({ tipo: 'borrado_cancelar', id: o.id });
       if (!r.ok) { aviso(r.error, true); return; }
-      ultima = null; pintarSinOrden();
+      await refrescar();
     };
     dlg.querySelectorAll('[data-decidir]').forEach(b => b.onclick = async () => {
       const decision = b.dataset.decidir; let codigo = '';
@@ -77,19 +81,25 @@ async function borradoRemotoDireccion() {
         codigo = await sumetecPedirTexto('Código de 6 dígitos nuevo generado en el ERP (borrado remoto):');
         if (!codigo) return;
       }
-      const r = await _borradoPost_({ tipo: 'borrado_decidir', dispositivo: b.dataset.id, decision, codigoAuth: String(codigo).trim() });
+      const r = await _borradoPost_({ tipo: 'borrado_decidir', id: o.id, dispositivo: b.dataset.id, appDestino: b.dataset.app, decision, codigoAuth: String(codigo).trim() });
       aviso(r.ok ? (decision === 'FORZAR' ? 'Listo: ese teléfono borrará todo en cuanto abra la app.' : 'Se queda esperando a que envíe lo pendiente.') : (r.error || 'No se pudo.'), !r.ok);
     });
   };
   const refrescar = async () => {
     if (ocupado) return;
+    const anterior = ultima;
     const r = await _borradoPost_({ tipo: 'borrado_ver' });
-    if (!r.ok) { if (!ultima) cuerpo().innerHTML = '<small style="color:#c0392b">' + _borradoEsc_(r.error || 'No se pudo consultar.') + '</small>'; return; }
+    if (ocupado || anterior !== ultima || !dlg.open) return;
+    if (!r.ok) {
+      if (mostrando) aviso(r.error || 'No se pudo consultar.', true);
+      else cuerpo().innerHTML = '<small style="color:#c0392b">' + _borradoEsc_(r.error || 'No se pudo consultar.') + '</small>';
+      return;
+    }
     ultima = r.orden; if (ultima) ultima._desfase = Date.now() - ultima.ahora;
-    if (!ultima && mostrando === 'form') return;       // no borrar lo que se está escribiendo
+    if (mostrando === 'form' && ultima?.estado !== 'PROGRAMADA') return;
     pintarOrden();
   };
-  reloj = setInterval(() => { const f = dlg.querySelector('#borradoFaltan'); if (ultima && f) f.textContent = textoFalta(ultima); }, 1000);
+  reloj = setInterval(() => { const f = dlg.querySelector('#borradoFaltan'); if (ultima?.estado === 'PROGRAMADA' && f) f.textContent = textoFalta(ultima); }, 1000);
   const sondeo = setInterval(refrescar, 8000);
   dlg.addEventListener('close', () => { clearInterval(reloj); clearInterval(sondeo); dlg.remove(); }, { once: true });
   await refrescar();

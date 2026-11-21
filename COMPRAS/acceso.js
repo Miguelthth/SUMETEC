@@ -358,12 +358,12 @@ function _sumetecDialogoSimple(icono, titulo, texto, botones) {
 // Cada app dice a qué servidor y con qué token pedirlo: sumetecRegistrarServidor('cotizador', () => ({url, token}))
 // (la función puede ser async: Dirección y Compras sacan el token con su PIN o huella).
 const _sumetecServidores = {};
-function sumetecRegistrarServidor(app, obtener) { _sumetecServidores[_sumetecAppAcceso(app)] = obtener; try { sumetecIniciarBorradoRemoto(_sumetecAppAcceso(app)); } catch (_) {} }
-async function _sumetecPostPermiso(app, cuerpo) {
+function sumetecRegistrarServidor(app, obtener) { _sumetecServidores[_sumetecAppAcceso(app)] = obtener; }
+async function _sumetecPostPermiso(app, cuerpo, silencioso = false) {
   // Facturación habla con el servidor fiscal, que no guarda permisos: ahí no se registra y se avisa.
   if (!_sumetecServidores[app]) return { ok: false, error: 'Esta app no puede pedir permiso al dueño: hazlo desde el ERP o pide que esta acción quede «Sin permiso» (Ecosistema → Permisos).' };
   let s = null;
-  try { s = await _sumetecServidores[app](); } catch (_) { s = null; }
+  try { s = await _sumetecServidores[app](silencioso); } catch (_) { s = null; }
   if (!s || !s.url || !s.token) return { ok: false, error: 'Este teléfono aún no está vinculado al servidor (o canceló el PIN).' };
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { sinRed: true };
   const x = await sumetecPostJsonSeguro(s.url, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
@@ -923,11 +923,10 @@ async function sumetecVersionesTimbre(url, token) {
 // PERO SIN DESVINCULARLO: se conservan el nombre, la dirección del servidor, el token cifrado, el id del dispositivo, el PIN
 // y la huella. No borra nada si hay cosas sin enviar (`op.pendientes()` devuelve cuántas) para no perder ventas ni gastos.
 const SUMETEC_CONSERVAR_LOCAL = [
-  /^sumetec_(cotizador|gastos|compras|direccion|logistica|fact)_(dispositivo|token_cifrado|url|nombre)$/,
+  /^sumetec_(cotizador|gastos|compras|direccion|logistica|fact)_(dispositivo|token_cifrado|url|nombre|sesion)$/,
   /^sumetec_sinpin_/, /^sumetec_huella_/, /^sumetec_sync_equipo$/, /^sumetec_acceso_cfg$/,
-  /^device_id$/, /^drive_url$/, /^gs_url$/, /^sumetec_borrado_confirmar$/
+  /^device_id$/, /^drive_url$/, /^gs_url$/, /^sumetec_borrado_confirmar(?:_|$)/
 ];
-const SUMETEC_IDB_CONSERVAR = ['sumetec-huella'];
 function sumetecClaveConservada(clave) { return SUMETEC_CONSERVAR_LOCAL.some(r => r.test(String(clave))); }
 // Autoriza borrar los datos de ESTE teléfono (2026-11-16). 'libre'/'bloqueado' como cualquier permiso. En 'codigo' (lo normal):
 // el teléfono pide a Dirección un código de 6 DÍGITOS de un solo uso; el dueño lo ve en Dirección → Permisos y se lo
@@ -1003,20 +1002,41 @@ function sumetecAvisoContenidoBorrado(detalle) {
     dlg.addEventListener('close', () => resolve(true), { once: true });
   });
 }
-// Vacía todo lo guardado en ESTE teléfono (localStorage salvo lo conservado, sessionStorage, cachés, IndexedDB). No pide permiso:
-// quien la llama ya lo autorizó (menú «Borrar datos» o la orden de borrado remoto de Dirección).
-async function sumetecVaciarLocal() {
+// GitHub Pages comparte almacenamiento entre las apps. Cada orden limpia solo sus propios datos.
+const SUMETEC_DATOS_LOCALES = {
+  cotizador: /^(?:sumetec_(?:cotizador_|remisiones_|folio_epoca$|productos_generacion$)|r_|cot_|_cot_historial$|buzon_ids_enviados$|cola_(?:cancel|cot_r|devoluciones|elim|nuevos|offline|pdf|remisiones|resultado_cot)$|cache_cobros|cat_(?:ok_ts|ver)$|data_ver$|erp_(?:auto_n|auto_ts|catalogo_ts)$|excepciones_activas$|fallas_erp$|gs_(?:cc|cfg|cfg_ts|cp|hp|sync|sync_ts)$|pdf_(?:boletos|previo_traza)$|portal_pedidos_borradores$|prod_capturados$|rem_ultima_actualizacion$|tmp_(?:letras|n)$|ultimo_respaldo_ts$|_respaldo_antes_de_restaurar$)/,
+  gastos: /^(?:sumetec_gastos_|cola_(?:gastos|conteo)$|conteo_actual$|gasto_ultimo_proveedor$|gastos_recientes$|inv_|listas_gasto_cache$|stock_teorico_cache$|config_ecosistema_cache$)/,
+  direccion: /^(?:sumetec_direccion_|direccion_ultima_actualizacion$)/,
+  compras: /^(?:sumetec_compras_|compras_ultima_actualizacion$|sfoto_)/,
+  logistica: /^(?:sumetec_logistica_|logistica_(?:ultima_actualizacion|acceso_validado)$)/,
+  fact: /^sumetec_fact(?:_|uras_demo$)/,
+};
+async function sumetecVaciarLocal(app, revisarPendientes) {
   const resumen = { claves: 0, sesion: 0, caches: 0, bases: 0 };
   try {
-    for (const k of Object.keys(localStorage)) if (!sumetecClaveConservada(k)) { localStorage.removeItem(k); resumen.claves++; }
-    try { resumen.sesion = sessionStorage.length; sessionStorage.clear(); } catch (_) {}
-    if (typeof caches !== 'undefined' && caches.keys) for (const n of await caches.keys()) { if (await caches.delete(n)) resumen.caches++; }
-    if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
-      for (const b of await indexedDB.databases()) if (b && b.name && !SUMETEC_IDB_CONSERVAR.includes(b.name)) {
-        await new Promise(ok => { const r = indexedDB.deleteDatabase(b.name); r.onsuccess = r.onerror = r.onblocked = () => ok(); });
-        resumen.bases++;
-      }
+    const claves = SUMETEC_DATOS_LOCALES[app];
+    if (!claves) throw Error('Aplicación desconocida para el borrado.');
+    const servidor = await _sumetecServidores[app]?.(true);
+    if (revisarPendientes && await revisarPendientes()) return { ok: false, pendientes: true };
+    if (servidor?.token && typeof SumetecSync !== 'undefined' && SumetecSync.borrarLocal) {
+      if (await SumetecSync.borrarLocal(servidor.url, servidor.token, app)) resumen.bases++;
     }
+    if (revisarPendientes && await revisarPendientes()) return { ok: false, pendientes: true };
+    if (app === 'logistica') {
+      if (typeof window.sumetecVaciarBaseApp !== 'function') throw Error('La base de Logística aún no está disponible.');
+      if (await window.sumetecVaciarBaseApp(!!revisarPendientes) === false) return { ok: false, pendientes: true };
+      resumen.bases++;
+    }
+    const quitar = almacenamiento => {
+      let n = 0;
+      for (const k of Object.keys(almacenamiento)) if (claves.test(k) && !sumetecClaveConservada(k)) {
+        almacenamiento.removeItem(k);
+        n++;
+      }
+      return n;
+    };
+    resumen.claves = quitar(localStorage);
+    if (typeof sessionStorage !== 'undefined') resumen.sesion = quitar(sessionStorage);
   } catch (e) { return { ok: false, error: String(e && e.message || e), resumen }; }
   return { ok: true, resumen };
 }
@@ -1031,7 +1051,8 @@ async function sumetecBorrarDatosLocales(app, op = {}) {
   if (!permitido) return { ok: false, motivo: 'SIN_PERMISO' };
   if (typeof op.confirmar === 'function' ? !(await op.confirmar()) : !(await sumetecConfirmarBorrado({ verbo: 'Borrar', objeto: 'los datos de este teléfono', detalle: 'Se borran las copias guardadas aquí (catálogo, clientes, historial). La app sigue vinculada y todo lo enviado sigue en el servidor.', irreversible: false })))
     return { ok: false, motivo: 'CANCELADO' };
-  const v = await sumetecVaciarLocal();
+  const v = await sumetecVaciarLocal(app, async () => typeof op.pendientes === 'function' && Number(await op.pendientes()) > 0);
+  if (v.pendientes) { avisar('Entraron cosas sin enviar. Envíalas antes de borrar los datos.'); return { ok: false, motivo: 'PENDIENTES' }; }
   if (!v.ok) { avisar('No se pudo borrar todo: ' + v.error); return { ok: false, motivo: 'ERROR', resumen: v.resumen }; }
   const resumen = v.resumen;
   await sumetecAvisoContenidoBorrado();
@@ -1051,7 +1072,7 @@ const _sumetecBorradoRemoto = { app: '', timer: null, ocupado: false, iniciado: 
 async function _sumetecPendientesBorrado() {
   const f = (typeof window !== 'undefined') && (window.sumetecPendientesApp || window._pendientesParaLimpiar_ || window._pendientesParaLimpiar);
   if (typeof f !== 'function') return 1;       // sin contador: por seguridad se trata como «hay pendientes»
-  try { return Math.max(0, Number(await f()) || 0); } catch (_) { return 1; }
+  try { const n = Number(await f()); return Number.isSafeInteger(n) && n >= 0 ? n : 1; } catch (_) { return 1; }
 }
 function _sumetecFranjaBorrado(texto) {
   if (typeof document === 'undefined') return;
@@ -1065,20 +1086,22 @@ function _sumetecFranjaBorrado(texto) {
   el.textContent = texto;
 }
 async function _sumetecConfirmarBorradoRemoto(app) {
-  let c = null; try { c = JSON.parse(localStorage.getItem('sumetec_borrado_confirmar') || 'null'); } catch (_) {}
-  if (!c || !c.id) return false;
-  const r = await _sumetecPostPermiso(app, { tipo: 'borrado_confirmar', id: c.id, resumen: c.resumen || '', forzado: !!c.forzado });
-  if (r && (r.ok || /ya no est/i.test(String(r.error || '')))) { try { localStorage.removeItem('sumetec_borrado_confirmar'); } catch (_) {} return true; }
-  return false;
+  const clave = 'sumetec_borrado_confirmar_' + app;
+  let c = null; try { c = JSON.parse(localStorage.getItem(clave) || 'null'); } catch (_) {}
+  if (!c || !c.id) return 'sin_acuse';
+  const r = await _sumetecPostPermiso(app, { tipo: 'borrado_confirmar', id: c.id, resumen: c.resumen, forzado: c.forzado }, true);
+  if (!r?.confirmado && r?.codigo !== 'ORDEN_INACTIVA') return 'acuse_pendiente';
+  localStorage.removeItem(clave);
+  return 'acuse_enviado';
 }
 async function sumetecSondearBorradoRemoto(app) {
   const E = _sumetecBorradoRemoto;
   if (E.ocupado) return { estado: 'ocupado' };
   E.ocupado = true;
   try {
-    if (await _sumetecConfirmarBorradoRemoto(app)) { /* confirmación atrasada enviada */ }
+    if (await _sumetecConfirmarBorradoRemoto(app) === 'acuse_pendiente') return { estado: 'acuse_pendiente' };
     const pend = await _sumetecPendientesBorrado();
-    const r = await _sumetecPostPermiso(app, { tipo: 'borrado_estado', pendientes: pend });
+    const r = await _sumetecPostPermiso(app, { tipo: 'borrado_estado', pendientes: pend }, true);
     if (!r || r.sinRed || !r.ok || !r.orden) { _sumetecFranjaBorrado(''); return { estado: 'sin_orden' }; }
     const o = r.orden;
     if (!o.ejecutar) {
@@ -1092,11 +1115,12 @@ async function sumetecSondearBorradoRemoto(app) {
     const pend2 = await _sumetecPendientesBorrado();
     if (pend2 > 0 && !o.forzar) { _sumetecFranjaBorrado('Dirección ordenó borrar los datos de este teléfono. Tienes ' + pend2 + ' cosa(s) sin enviar: envíalas para que se borre.'); return { estado: 'en_espera', pendientes: pend2 }; }
     _sumetecFranjaBorrado('Borrando los datos de este teléfono por orden de Dirección…');
-    // Se anota ANTES de borrar para poder confirmar aunque no haya señal; sobrevive al borrado (clave conservada).
-    try { localStorage.setItem('sumetec_borrado_confirmar', JSON.stringify({ id: o.id, forzado: !!o.forzar && pend2 > 0, resumen: 'borrado por orden de Dirección' })); } catch (_) {}
-    const v = await sumetecVaciarLocal();
-    if (!v.ok) { _sumetecFranjaBorrado('No se pudo borrar: ' + v.error); try { localStorage.removeItem('sumetec_borrado_confirmar'); } catch (_) {} return { estado: 'error' }; }
-    try { localStorage.setItem('sumetec_borrado_confirmar', JSON.stringify({ id: o.id, forzado: !!o.forzar && pend2 > 0, resumen: 'claves ' + v.resumen.claves + ', cachés ' + v.resumen.caches + ', bases ' + v.resumen.bases })); } catch (_) {}
+    const v = await sumetecVaciarLocal(app, o.forzar ? null : async () => await _sumetecPendientesBorrado() > 0);
+    if (v.pendientes) { _sumetecFranjaBorrado('Entraron datos por enviar. El borrado sigue en espera.'); return { estado: 'en_espera' }; }
+    if (!v.ok) { _sumetecFranjaBorrado('No se pudo borrar: ' + v.error); return { estado: 'error' }; }
+    localStorage.setItem('sumetec_borrado_confirmar_' + app, JSON.stringify({
+      id: o.id, forzado: !!o.forzar && pend2 > 0, resumen: 'claves ' + v.resumen.claves + ', bases ' + v.resumen.bases
+    }));
     await _sumetecConfirmarBorradoRemoto(app);
     _sumetecFranjaBorrado('');
     await sumetecAvisoContenidoBorrado('Dirección ordenó borrar los datos de este teléfono. La app sigue vinculada y todo lo enviado sigue en el servidor.');
@@ -1109,7 +1133,11 @@ function sumetecIniciarBorradoRemoto(app) {
   const E = _sumetecBorradoRemoto;
   if (E.iniciado || typeof document === 'undefined' || typeof setInterval === 'undefined') return;
   E.iniciado = true; E.app = app;
-  const sondear = () => { if (document.visibilityState !== 'hidden') sumetecSondearBorradoRemoto(app); };
+  const sondear = () => {
+    if (document.visibilityState === 'hidden' || navigator.onLine === false || E.ocupado) return;
+    if (navigator.locks) navigator.locks.request('sumetec-borrado-' + app, { ifAvailable: true }, lock => lock && sumetecSondearBorradoRemoto(app)).catch(() => {});
+    else sumetecSondearBorradoRemoto(app);
+  };
   setTimeout(sondear, 6000);
   E.timer = setInterval(sondear, 60000);
   document.addEventListener('visibilitychange', sondear);

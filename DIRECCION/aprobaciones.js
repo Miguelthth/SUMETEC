@@ -5,11 +5,13 @@
 // La lógica común (pedir, esperar, resolver, huella) vive en acceso.js; aquí solo va la pantalla.
 
 // A qué servidor y con qué token: el token de Dirección sale con su PIN o su huella.
-if (typeof sumetecRegistrarServidor === 'function') sumetecRegistrarServidor('direccion', async () => {
+if (typeof sumetecRegistrarServidor === 'function') sumetecRegistrarServidor('direccion', async silencioso => {
   const url = localStorage.getItem('sumetec_direccion_url');
   if (!url) return null;
+  if (silencioso && !_pinVigente() && !sumetecPinGuardado('direccion')) return null;
   return { url, token: await abrirSesionDireccion(await pedirPinDireccion()) };
 });
+if (typeof sumetecIniciarBorradoRemoto === 'function') sumetecIniciarBorradoRemoto('direccion');
 
 const _ACCIONES_PERMISO_ = {
   borrar_datos_locales: 'Borrar los datos de un teléfono',

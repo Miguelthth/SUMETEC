@@ -58,6 +58,24 @@
     const tx=db.transaction('estado','readwrite');tx.objectStore('estado').put(valor,key);
     tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error || new Error('SYNC_ALMACENAMIENTO'));
   });}finally{db.close();}}
+  async function borrarLocal(url,token,app){
+    if(!root.indexedDB)return false;
+    const key=await hash(url+'\n'+token+'\n'+app), ses=sesiones.get(key);
+    async function borrar(){
+      const db=await abrirDB();
+      try{await new Promise((resolve,reject)=>{
+        const tx=db.transaction('estado','readwrite');
+        tx.oncomplete=resolve;
+        tx.onabort=()=>reject(tx.error || Error('No se pudo borrar la copia sincronizada.'));
+        tx.objectStore('estado').delete(key);
+      });}finally{db.close();}
+      sesiones.delete(key);
+      return true;
+    }
+    if(root.navigator?.locks)return root.navigator.locks.request('sumetec-sync-'+key,borrar);
+    if(ses?.enVuelo)try{await ses.enVuelo;}catch(_){}
+    return borrar();
+  }
   const nativo=typeof root.fetch==='function'?root.fetch.bind(root):null;
   const sesiones=new Map();let escribiendo=0,actividad=Date.now(),rapidoAutorizado=false;
   let equipo='';
@@ -181,7 +199,7 @@
     const key=await hash(url+'\n'+token+'\n'+app),s=sesiones.get(key);
     return reconstruir(s.activo.temas[tema].map);
   }
-  const api={segundosConsulta,reconstruir,validarPagina,consultar,leer,reloj,metricas:[],appActual,invalidar(){sesiones.forEach(s=>{s.invalido=true;});},exportarMetricas(){return api.metricas.map(x=>JSON.stringify(x)).join('\n');}};
+  const api={segundosConsulta,reconstruir,validarPagina,consultar,leer,reloj,borrarLocal,metricas:[],appActual,invalidar(){sesiones.forEach(s=>{s.invalido=true;});},exportarMetricas(){return api.metricas.map(x=>JSON.stringify(x)).join('\n');}};
   root.SumetecSync=api;
   if(root.document){['pointerdown','keydown','touchstart'].forEach(e=>root.document.addEventListener(e,()=>{actividad=Date.now();},{passive:true}));}
   // El adaptador reutiliza las lecturas existentes: las pantallas reciben su contrato habitual.

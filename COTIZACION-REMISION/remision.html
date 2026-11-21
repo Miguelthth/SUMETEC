@@ -2602,6 +2602,7 @@ const URL_DRIVE     = URL_SERVIDOR;  // misma URL para Drive y folios
 // Configurar en el botón 🔑 Token de la barra
 let API_TOKEN=''; // B5: sólo en memoria; localStorage conserva la versión cifrada.
 if(typeof sumetecRegistrarServidor==='function') sumetecRegistrarServidor('cotizador',()=>({url:getScriptUrl(),token:API_TOKEN}));
+if(typeof sumetecIniciarBorradoRemoto==='function') sumetecIniciarBorradoRemoto('cotizador');
 let _cotAccesoAutorizado = false;
 const _COT_HUELLA_VALIDADA = 'sumetec_cotizador_token_validado';
 
@@ -7161,6 +7162,12 @@ function _pendientesParaLimpiar(){
   // Remisión guardada en el celular que aún no llegó al servidor (no siempre está en una cola).
   n+=(leerSeguro('r_rems',[])||[]).filter(r=>r&&r.sincronizado===false).length;
   return n;
+}
+function sumetecPendientesApp(){
+  const borradores = ['r_draft', 'cot_draft_r'].map(k => leerSeguro(k, null));
+  const activos = borradores.filter(d => d && (d.c_nombre || d.obs || d._firma || d.items?.some(i => i.desc || i.descripcion || i.nombre || i.precio > 0)));
+  return _pendientesParaLimpiar() + activos.length +
+    leerSeguro('cola_devoluciones', []).length + leerSeguro('cola_resultado_cot', []).length;
 }
 async function _confirmarServidorEnLinea(){
   const url=getScriptUrl(); if(!url||!navigator.onLine) return false;

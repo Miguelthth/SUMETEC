@@ -319,6 +319,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 let API_TOKEN = '';
 // Permiso del dueño (2026-10-20, acceso.js): a qué servidor y con qué token pedirlo (se leen al momento).
 if (typeof sumetecRegistrarServidor === 'function') sumetecRegistrarServidor('gastos', () => ({ url: getScriptUrl(), token: API_TOKEN }));
+if (typeof sumetecIniciarBorradoRemoto === 'function') sumetecIniciarBorradoRemoto('gastos');
 let _gastosAccesoAutorizado = false;
 const _GASTOS_HUELLA_VALIDADA = 'sumetec_gastos_token_validado';
 

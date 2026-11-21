@@ -107,11 +107,13 @@ function _autorizarCompras_(accion, porDefecto, documento, detalle) {
 // nunca corría («Esta app no puede pedir permiso al dueño» al borrar datos). Se registra al terminar de cargar todos los scripts.
 function _registrarServidorPermisosCompras_() {
   if (typeof sumetecRegistrarServidor !== 'function') return;
-  sumetecRegistrarServidor('compras', async () => {
+  sumetecRegistrarServidor('compras', async silencioso => {
     const url = localStorage.getItem('sumetec_compras_url');
     if (!url) return null;
+    if (silencioso && !_pinVigente() && !sumetecPinGuardado('compras')) return null;
     return { url, token: await abrirSesionDireccion(await pedirPinDireccion()) };
   });
+  if (typeof sumetecIniciarBorradoRemoto === 'function') sumetecIniciarBorradoRemoto('compras');
 }
 _registrarServidorPermisosCompras_();
 if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('DOMContentLoaded', _registrarServidorPermisosCompras_);
