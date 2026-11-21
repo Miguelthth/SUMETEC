@@ -233,7 +233,7 @@ document.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => vista(b
 $('#estado').onclick = () => enviarPendientesDireccion();
 $('#enlazar').onclick = e => {
   e.preventDefault();
-  vincular().catch(x => { sumetecEntrando($('#enlazar'), false); $('#vincular-estado').textContent = 'Falló: ' + clasificarErrorAcceso(x); });
+  vincular().catch(x => { sumetecEntrando($('#enlazar'), false); $('#vincular-estado').textContent = 'Falló: ' + clasificarErrorAcceso(x) + ' [detalle técnico: ' + String(x && x.message || x).slice(0, 160) + ']'; });
 };
 window.addEventListener('online', estado);
 window.addEventListener('offline', estado);
