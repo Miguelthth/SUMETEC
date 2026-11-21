@@ -86,6 +86,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
     <div class="sumetec-acceso-intro"><div class="sumetec-acceso-candado" aria-hidden="true">🔒</div><h2>Vincular teléfono</h2><p class="sumetec-acceso-descripcion">Conecta este equipo de forma segura.</p></div>
     <div class="sumetec-acceso-campos">
       <div class="sumetec-acceso-campo sumetec-acceso-campo--principal"><label for="nombre-vincular">Tu nombre</label><input id="nombre-vincular" autocomplete="name" placeholder="Tu nombre" required></div><div class="sumetec-acceso-campo sumetec-acceso-campo--secundario"><label for="codigo">Código de vinculación</label><input id="codigo" maxlength="8" minlength="8" placeholder="8 caracteres" autocomplete="off" autocapitalize="characters" required></div>
+      <div aria-hidden="true" style="height:45px"></div><!-- mismo alto que la pantalla del Cotizador (2026-11-20) -->
     </div>
 
     <p id="vincular-error" class="sumetec-acceso-error" role="alert"></p><button id="enlazar" class="sumetec-acceso-boton" type="submit">Vincular</button><button type="button" class="sumetec-acceso-enlace" aria-controls="ayuda-logistica" aria-expanded="false" onclick="sumetecAbrirAyuda('ayuda-logistica')">¿Necesitas ayuda?</button>
