@@ -244,6 +244,21 @@ function _filaDenominacion(valor) {
   </div>`;
 }
 
+// 2026-11-25 (Miguel): la moneda más chica es 0.50, pero el efectivo del día
+// trae centavos sueltos (cobros de $406.13): sin esto el contado exacto no se
+// podía capturar y el corte marcaba un faltante falso. Un renglón más con
+// valor 0.01: la cantidad son los centavos (45 = $0.45). Siempre aparece,
+// aunque el ERP publique otra lista de denominaciones.
+function _filaCentavos_() {
+  return `<div class="denominacion denominacion-centavos" data-valor="0.01">
+    <span class="billete-etiqueta">Centavos</span>
+    <button type="button" class="billete-boton billete-menos" aria-label="Quitar un centavo">−</button>
+    <input type="number" min="0" step="1" value="0" inputmode="numeric" class="cant-denominacion" aria-label="Centavos sueltos (45 = $0.45)">
+    <button type="button" class="billete-boton billete-mas" aria-label="Agregar un centavo">+</button>
+    <span class="billete-subtotal">—</span>
+  </div>`;
+}
+
 function formularioCorteDireccion() {
   return `<h1>Corte</h1>
 <div id="arqueo-vivo" class="arqueo-vivo" role="status" aria-live="polite">
@@ -265,7 +280,8 @@ function formularioCorteDireccion() {
   </div>
   <fieldset id="denominaciones-corte" class="billetero">
     <legend class="form-label">Efectivo contado, billete por billete</legend>
-    ${DENOMINACIONES_MXN.map(_filaDenominacion).join('')}
+    ${DENOMINACIONES_MXN.filter(v => Number(v) !== 0.01).map(_filaDenominacion).join('')}
+    ${_filaCentavos_()}
   </fieldset>
   <label class="form-label corte-contado" for="corte-contado">Efectivo contado (suma de arriba)
     <input id="corte-contado" class="form-control num" name="contado" type="number" min="0" step="0.01" required readonly>
@@ -279,11 +295,24 @@ function formularioCorteDireccion() {
 </div>`;
 }
 
-// Umbral desde el que una diferencia pide confirmación explícita antes de
-// cerrar (plan de mejoras 2026-09-14): un corte descuadrado por unos
-// centavos es normal; uno descuadrado por cientos de pesos merece una
-// pausa, no un guardado de un solo toque.
-let UMBRAL_CONFIRMAR_DIFERENCIA = 100; // el ERP lo puede cambiar (Ecosistema → Dirección)
+// Diferencia aceptable del corte (2026-11-25, Miguel). Antes era solo el
+// umbral desde el que se pedía confirmar; ahora al cerrar SIEMPRE se avisa
+// si falta o sobra, y este número dice si la diferencia es aceptable o no.
+// 0 = el corte debe cuadrar exacto. El ERP lo cambia en Ecosistema →
+// Dirección («Diferencia aceptable en el corte»); el nombre de la variable
+// se conserva por compatibilidad con lo que el ERP ya publica.
+let UMBRAL_CONFIRMAR_DIFERENCIA = 100;
+function _dentroDeLoAceptable_(diferencia) {
+  return Math.abs(diferencia) <= Number(UMBRAL_CONFIRMAR_DIFERENCIA || 0) + 0.005;
+}
+function _textoAvisoDiferencia_(diferencia) {
+  const monto = '$' + Math.abs(diferencia).toFixed(2), tope = '$' + Number(UMBRAL_CONFIRMAR_DIFERENCIA || 0).toFixed(2);
+  return `${_etiquetaDiferencia(diferencia)} ${monto} en el corte.\n\n` +
+    (_dentroDeLoAceptable_(diferencia)
+      ? `Está dentro de la diferencia aceptable (${tope}).`
+      : `Es MÁS que la diferencia aceptable (${tope}). Vuelve a contar antes de cerrar.`) +
+    `\n\n¿Cerrar el corte de todas formas?`;
+}
 
 // Separada de la lectura del DOM para poder probarla sin navegador: dado
 // [{valor, cantidad}, ...] regresa el total en efectivo -- exactamente lo
@@ -474,9 +503,11 @@ function activarCorteDireccion() {
         fondo: f.fondo.value, entradasEfectivo: p.entradasEfectivo,
         salidasEfectivo: p.salidasEfectivo, contado: f.contado.value
       });
-      if (Math.abs(cSinGuardar.diferencia) >= UMBRAL_CONFIRMAR_DIFERENCIA) {
-        const sigue = await sumetecConfirmar(`${_etiquetaDiferencia(cSinGuardar.diferencia)} ` +
-          `$${Math.abs(cSinGuardar.diferencia).toFixed(2)}. ¿Cerrar el corte de todas formas?`);
+      if (Math.abs(cSinGuardar.diferencia) >= 0.005) {
+        const fuera = !_dentroDeLoAceptable_(cSinGuardar.diferencia);
+        const sigue = await sumetecConfirmar(_textoAvisoDiferencia_(cSinGuardar.diferencia),
+          fuera ? 'El corte no cuadra' : 'Diferencia en el corte',
+          { si: 'Cerrar corte', no: 'Volver a contar', peligro: fuera });
         if (!sigue) return;
       }
       const corte = {
@@ -498,7 +529,9 @@ function activarCorteDireccion() {
       const dif = Number(r.diferencia);
       out.innerHTML = `<p><strong class="text-verde">Corte guardado.</strong></p>` +
         `<p>Esperado: <strong class="num">$${Number(r.esperado).toFixed(2)}</strong></p>` +
-        `<p>Diferencia: <strong class="num ${_claseDiferencia(dif)}">${_etiquetaDiferencia(dif)} $${Math.abs(dif).toFixed(2)}</strong></p>`;
+        `<p>Diferencia: <strong class="num ${_claseDiferencia(dif)}">${_etiquetaDiferencia(dif)} $${Math.abs(dif).toFixed(2)}</strong></p>` +
+        (Math.abs(dif) >= 0.005 ? `<p class="${_dentroDeLoAceptable_(dif) ? 'text-muted' : 'text-rojo'}">` +
+          `${_dentroDeLoAceptable_(dif) ? 'Dentro' : 'Fuera'} de la diferencia aceptable ($${Number(UMBRAL_CONFIRMAR_DIFERENCIA || 0).toFixed(2)}).</p>` : '');
       estado();
     } catch (err) {
       out.textContent = textoErrorRed(err);

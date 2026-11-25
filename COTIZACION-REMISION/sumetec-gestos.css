@@ -1,0 +1,288 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   SUMETEC · Capa de gestos y animaciones del Cotizador/Remisiones (2026-11-24)
+   Origen: prototipo "sumetec-remisiones-mejorada.html" (el que Miguel mejoró).
+   - SOLO celular (max-width:780px). En escritorio/impresión no cambia nada.
+   - Es una capa aparte: se apaga quitando el <link> y el <script> de remision.html.
+   - No toca lógica de dinero ni de sincronización; el comportamiento vive en
+     sumetec-gestos.js y siempre delega en las funciones que ya existen.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* En escritorio estos elementos no se ven (la capa es solo de celular) */
+.smg-handle,.smg-progress,.smg-hint,.smg-ptr,.smg-acts,.smg-brand,.smg-phead{display:none}
+.smg-pcard{display:contents}   /* en escritorio el envoltorio no existe visualmente */
+
+@media screen and (max-width:780px){
+
+  /* ── Sensación táctil: todo lo tocable "se hunde" un poco ── */
+  button,.btn,.rem-i,.cobro-row,.sbtn,.mobile-nav button,.tb-tab,.menu-mas button{
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .12s ease,background-color .15s,border-color .15s,box-shadow .15s;
+  }
+  button:active:not(:disabled),.btn:active,.rem-i:active,.cobro-row:active,.sbtn:active{transform:scale(.97)}
+
+  /* ── Pestañas Remisión / Cotización: píldora con deslizador ── */
+  html body .tb-tabs{position:relative;display:grid!important;grid-template-columns:1fr 1fr;align-items:stretch;gap:0;
+    background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:3px;height:auto;margin:0}
+  html body .tb-tabs .smg-thumb{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);background:#fff;border-radius:9px;
+    transition:transform .25s cubic-bezier(.3,.9,.3,1);pointer-events:none}
+  html body .tb-tabs.smg-cot .smg-thumb{transform:translateX(100%)}
+  html body .tb-tabs .tb-tab{position:relative;z-index:1;border:0!important;background:transparent!important;padding:0 14px;min-height:34px;
+    border-radius:9px;font-size:13.5px;font-weight:800;color:#C7D8E6;transition:color .2s}
+  html body .tb-tabs .tb-tab.on{color:#0B2D4A!important}
+
+  /* "En línea": punto que late */
+  #badgePendientes::before{animation:smgPulse 2.2s infinite}
+  @keyframes smgPulse{0%{box-shadow:0 0 0 0 rgba(62,213,152,.55)}70%{box-shadow:0 0 0 7px rgba(62,213,152,0)}100%{box-shadow:0 0 0 0 rgba(62,213,152,0)}}
+
+  /* ── Avance del formulario: Cliente → Productos → Total listo ── */
+  .smg-progress{display:flex!important;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);border-radius:999px;
+    padding:5px 12px;margin:8px 8px 4px;font-size:11.5px;font-weight:800;color:var(--muted);box-shadow:0 1px 3px rgba(11,45,74,.06)}
+  .smg-progress .smg-ps{display:flex;align-items:center;gap:5px;white-space:nowrap;transition:color .25s}
+  .smg-progress .smg-ps i{width:17px;height:17px;border-radius:50%;background:var(--bg);border:1.5px solid var(--border);display:grid;
+    place-items:center;font-style:normal;font-size:10px;color:var(--muted);transition:background .25s,border-color .25s,transform .25s}
+  .smg-progress .smg-ps.done{color:var(--green)}
+  .smg-progress .smg-ps.done i{background:var(--green);border-color:var(--green);color:#fff;transform:scale(1.08)}
+  .smg-progress .smg-pl{flex:1;height:2px;background:var(--border);border-radius:2px;min-width:10px;position:relative;overflow:hidden}
+  .smg-progress .smg-pl::after{content:"";position:absolute;inset:0;background:var(--green);transform:scaleX(0);transform-origin:left;transition:transform .35s ease}
+  .smg-progress .smg-pl.done::after{transform:scaleX(1)}
+
+  /* ── Pantallas que entran con suavidad ── */
+  .page,#secCot{animation:smgViewIn .25s ease backwards}
+  @keyframes smgViewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .ov.module-screen.open .modal{animation:smgViewIn .22s ease backwards}
+
+  /* ── Tarjetas: mismo aire y sombra del prototipo ── */
+  .cards .card,.lower .lb{border-radius:14px;box-shadow:0 1px 2px rgba(15,42,68,.06),0 8px 24px -14px rgba(15,42,68,.22)}
+  .add-row{border-radius:12px;transition:transform .12s ease,background .15s}
+
+  /* ── Productos: tarjeta deslizable (borrar ←, mantener = duplicar, asa = reordenar) ── */
+  .table-wrap{overflow-x:clip}
+  .items-table tbody tr.smg-row{will-change:transform;touch-action:pan-y;transition:transform .28s cubic-bezier(.25,.9,.25,1),box-shadow .2s,border-color .2s}
+  .items-table tbody tr.smg-row.smg-swiping,.items-table tbody tr.smg-row.smg-dragging{transition:none!important}
+  .items-table tbody tr.smg-row::after{content:"🗑  Eliminar";position:absolute;left:calc(100% + 4px);top:0;bottom:0;width:112px;
+    display:flex;align-items:center;justify-content:center;background:#C0392B;color:#fff;font-weight:800;font-size:12.5px;
+    border-radius:0 12px 12px 0;pointer-events:none}
+  .items-table tbody tr.smg-row.smg-swiping{border-top-right-radius:0;border-bottom-right-radius:0}
+  .items-table tbody tr.smg-row.smg-lp{border-color:var(--green);box-shadow:0 0 0 3px var(--green-light)}
+  .items-table tbody tr.smg-row.smg-dragging{z-index:6;opacity:.94;border-color:var(--green);box-shadow:0 12px 24px -10px rgba(15,42,68,.4)}
+  .items-table tbody tr.smg-row.smg-new{animation:smgPop .28s ease backwards}
+  @keyframes smgPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+  /* Encabezado de cada producto: asa + "PRODUCTO n" (el "#" original está oculto en celular; el texto sale de un contador CSS) */
+  .items-table tbody{counter-reset:smgp}
+  .items-table tbody tr.smg-row{counter-increment:smgp}
+  .items-table tbody tr.smg-row td.td-n{display:flex!important;order:0;grid-column:1/-1;align-items:center;justify-content:flex-start;gap:2px;font-size:0;padding:0 0 2px!important;text-align:left;min-height:28px}
+  .items-table tbody tr.smg-row td.td-n::before{display:none!important}
+  .items-table tbody tr.smg-row td.td-n::after{content:"PRODUCTO " counter(smgp);font-size:11px;letter-spacing:.06em;font-weight:800;color:var(--muted)}
+  .smg-handle{display:inline-grid!important;touch-action:none;cursor:grab;color:var(--muted);display:inline-grid;place-items:center;
+    width:30px;height:28px;margin-right:4px;vertical-align:middle;border-radius:7px}
+  .smg-hint{display:block!important;font-size:10.5px;color:var(--muted);text-align:center;margin:2px 0 6px}
+  /* Textos como pseudo-contenido: no existen en el DOM, así los robots (getByText) no los confunden con los reales */
+  .smg-hint::before{content:"Desliza ← eliminar · mantén duplicar · arrastra el asa."}
+  .smg-progress .smg-ps::after{content:attr(data-t)}
+  .smg-progress .smg-ps i::before{content:attr(data-n)}
+  .smg-ptr-t::after{content:attr(data-t)}
+
+  /* ── Barra del total: se esconde al bajar, vuelve al subir; deslizar ↑ = desglose ── */
+  .mobile-action{transition:transform .32s cubic-bezier(.3,.9,.3,1),opacity .2s;will-change:transform}
+  .mobile-action.smg-oculta{transform:translate3d(0,calc(100% + 140px),0);pointer-events:none}
+  .mobile-action::before{content:"";position:absolute;top:3px;left:50%;transform:translateX(-50%);width:38px;height:4px;border-radius:4px;background:rgba(255,255,255,.28);pointer-events:none}
+
+  /* ── Ventanas emergentes como HOJAS que suben desde abajo (se cierran deslizando ↓) ── */
+  .ov:not(.module-screen):not(#ovFirma){align-items:flex-end!important;padding:0!important}
+  .ov:not(.module-screen):not(#ovFirma)>.modal,
+  .ov:not(.module-screen):not(#ovFirma)>div:not(.modal){width:100%!important;max-width:none!important;border-radius:22px 22px 0 0!important;
+    max-height:90dvh;overflow-y:auto;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));touch-action:pan-y}
+  .ov:not(.module-screen):not(#ovFirma).open>.modal,
+  .ov:not(.module-screen):not(#ovFirma).open>div:not(.modal){animation:smgSheetUp .28s cubic-bezier(.3,.9,.3,1) backwards}
+  @keyframes smgSheetUp{from{transform:translateY(100%)}to{transform:none}}
+  .ov.smg-swiping>*{transition:none!important}
+  .ov:not(.module-screen):not(#ovFirma)>.modal::before{content:"";display:block;width:44px;height:5px;border-radius:5px;background:var(--border);margin:-14px auto 12px}
+
+  /* ── Historial y Cobros: fila deslizable que revela acciones ── */
+  .smg-swipe{position:relative;border-radius:12px;overflow:hidden;margin-bottom:8px;isolation:isolate}
+  .smg-swipe>.rem-i,.smg-swipe>.cobro-row{position:relative;z-index:1;margin-bottom:0!important;transition:transform .28s cubic-bezier(.25,.9,.25,1);will-change:transform;touch-action:pan-y;background:#fff}
+  .smg-swipe.smg-swiping>.rem-i,.smg-swipe.smg-swiping>.cobro-row{transition:none!important}
+  .smg-acts{position:absolute;inset:0;display:flex!important;justify-content:flex-end;opacity:0;transition:opacity .18s}
+  .smg-swipe.smg-swiping .smg-acts,.smg-swipe.smg-open .smg-acts{opacity:1}
+  .smg-acts button{width:78px;border:0;color:#fff;font-weight:800;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:0;min-height:0}
+  .smg-acts .a-green{background:#057448}.smg-acts .a-navy{background:#0B2D4A}.smg-acts .a-wa{background:#128c4a}
+  .smg-acts button::before{content:attr(data-i);font-size:17px;line-height:1}
+  .smg-acts button::after{content:attr(data-t)}
+
+  /* ── Tirar para actualizar ── */
+  .smg-ptr{display:flex!important;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:12.5px;font-weight:700;height:0;overflow:hidden;opacity:0;transition:height .15s,opacity .15s}
+  .smg-ptr.show{height:34px}
+  .smg-ptr .smg-spin{width:16px;height:16px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--green);animation:smgSp .7s linear infinite}
+  @keyframes smgSp{to{transform:rotate(360deg)}}
+
+  /* ── Palomita animada al registrar ── */
+  .smg-check{width:92px;height:92px;display:block;margin:0 auto}
+  .smg-check circle{fill:none;stroke:#057448;stroke-width:3;stroke-dasharray:290;stroke-dashoffset:290;animation:smgDraw .5s ease forwards}
+  .smg-check path{fill:none;stroke:#057448;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60;animation:smgDraw .35s .4s ease forwards}
+  @keyframes smgDraw{to{stroke-dashoffset:0}}
+
+  /* ── Aviso (toast) que sube con rebote ── */
+  .toast{border-radius:999px}
+
+
+  /* ── Hoja "Desglose" y "Gestos" ── */
+  .smg-fila{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+  .smg-fila span{color:var(--muted)}.smg-fila b{text-align:right;font-variant-numeric:tabular-nums}
+  .smg-fila.smg-total b{color:var(--green);font-size:17px}
+  .smg-acciones{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .smg-acciones .btn{width:100%;justify-content:center}
+  .smg-gesto{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--border)}
+  .smg-gesto:last-of-type{border-bottom:0}
+  .smg-gesto i{font-style:normal;flex:none;min-width:58px;text-align:center;font-weight:800;font-size:12px;color:var(--green);background:var(--green-light);border-radius:999px;padding:5px 8px;height:fit-content}
+  .smg-gesto b{display:block;font-size:14px}.smg-gesto p{margin:1px 0 0;color:var(--muted);font-size:13px}
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     ACOMODO DEL PROTOTIPO (2026-11-25): encabezado, tarjeta de cliente,
+     tarjeta de productos y barras inferiores como en sumetec-remisiones-mejorada.
+     Solo presentación: no cambia ids, funciones ni datos.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* ── 1. Encabezado: marca + "En línea" arriba, pestañas abajo ── */
+  html[data-app] body .tb{background:#0F2A44!important;animation:none;box-shadow:none}   /* plano, sin la línea de luz del tema v3 (el prototipo es azul liso) */
+  html body .tb{background:#0F2A44;padding:5px 14px 6px;gap:4px 12px;min-height:0;box-shadow:none;flex-wrap:wrap;align-items:center}
+  html body .smg-brand{display:flex;order:0;flex:1 1 auto;min-width:0;align-items:baseline;gap:8px;font-weight:800;letter-spacing:.14em;font-size:17px;color:#fff;white-space:nowrap}
+  .smg-brand::before{content:"SUME"}
+  .smg-brand i{font-style:normal;color:#3ED598}.smg-brand i::before{content:"TEC"}
+  .smg-brand small{font-size:11px;font-weight:600;letter-spacing:.02em;color:#B9CBDC}.smg-brand small::before{content:"Cotizador · Remisiones"}
+  html body .tb #badgePendientes{order:1;flex:0 0 auto;margin-left:0}
+  html body .tb .tb-brand{order:2;flex:1 1 100%;margin:0}
+  html body .tb #headerVivo{order:3}
+  html body .tb-brand .tb-tabs{width:100%;border-radius:12px}
+  html body .tb-tabs .tb-tab{min-height:28px;padding:0 14px;font-size:14px}
+
+  /* ── 2. Tarjeta de cliente: folio y fecha arriba, nombre + Buscar, "Más datos" plegable ── */
+  html body .page{margin:4px auto 20px;padding:0 12px}
+  html body .doc{display:flex;flex-direction:column;background:transparent;box-shadow:none;border-radius:0;overflow:visible}
+  html body .doc>*{order:9}
+  html body .doc>.doc-hd{order:1;display:block;height:auto;background:#fff;border:1px solid var(--border);border-bottom:0;border-radius:14px 14px 0 0;
+    padding:8px 12px 0;box-shadow:0 1px 2px rgba(15,42,68,.06);overflow:visible}
+  html body .doc-hd .logo-wrap,html body .doc-hd .doc-tipo{display:none}
+  html body .doc-hd .doc-right{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) auto;gap:0 8px;align-items:end;text-align:left;min-width:0;padding:0!important;flex:none!important}
+  html body .doc-hd .doc-right>div:not(.doc-meta):not(.doc-tipo):not(.doc-folio){display:contents!important}
+  html body .doc-hd .doc-folio{grid-column:1;grid-row:1;position:relative;margin:16px 0 0;font-size:14.5px;font-weight:600;color:var(--text);background:#F4F7F9;
+    border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;min-height:38px;display:flex;align-items:center;min-width:0;white-space:nowrap}
+  html body .doc-hd .doc-folio::before{content:"Folio";position:absolute;left:0;top:-17px;font-size:11.5px;font-weight:700;color:#4A5D6E;line-height:1.25}
+  html body .doc-hd .doc-meta{grid-column:2;grid-row:1;position:relative;margin:16px 0 0;display:flex;flex-direction:row;align-items:center;gap:8px;background:#F4F7F9;
+    border:1.5px solid var(--border);border-radius:10px;padding:6px 8px;min-height:38px;font-size:12.5px;color:var(--text);min-width:0;overflow:hidden;white-space:nowrap}
+  html body .doc-hd .doc-meta-i svg{display:none}
+  html body .doc-hd .doc-meta::before{content:"Fecha";position:absolute;left:0;top:-17px;font-size:11.5px;font-weight:700;color:#4A5D6E;line-height:1.25}
+  html body .doc-hd .doc-meta-i{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  html body .doc-hd .doc-right>div:not(.doc-meta):not(.doc-tipo):not(.doc-folio)>button{grid-column:3;grid-row:1;width:38px!important;height:38px!important;min-height:38px;border-radius:10px!important;border:1.5px solid var(--border)!important;
+    background:#F4F7F9!important;color:#0F2A44!important;font-size:20px!important;font-weight:800;display:grid!important;place-items:center;padding:0!important;margin-top:16px;line-height:1}
+  html body #secCot .doc-hd .doc-meta{flex-direction:column;align-items:flex-start;gap:1px;font-size:12px;padding:2px 10px;justify-content:center}
+
+  html body .doc>.cards{order:2;display:grid;grid-template-columns:1fr;gap:6px;border:0}
+  html body .cards .card,html body .cards .card+.card{padding:8px 12px 10px;background:#fff;border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 1px 2px rgba(15,42,68,.06),0 8px 24px -14px rgba(15,42,68,.22)}
+  html body .cards .card:first-child{border-top:0;border-radius:0 0 14px 14px}
+  html body .cards .card .ch{font-size:12px;font-weight:800;letter-spacing:.07em;color:#4A5D6E;margin:0 0 6px}
+  html body .cards .card .ch svg{color:var(--green)}
+  html body .cards .fr{display:block;margin:0 0 8px}
+  html body .cards .fl{display:block;font-size:11.5px;font-weight:700;color:#4A5D6E;margin:0 0 3px}
+  html body .cards .fv input,html body .cards .fv select{width:100%;border:1.5px solid var(--border);background:#F4F7F9;border-radius:10px;padding:5px 10px;min-height:38px;font-size:16px;color:var(--text);outline:none}
+  html body .cards .fv input:focus,html body .cards .fv select:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-light);background:#fff;outline:none}
+  html body .cards .ci{display:block;width:100%;margin-bottom:8px}
+  html body .cards .ci-icon{display:none}
+  html body .cards .cs{margin:0;padding:0;border:0;display:block}
+  html body .cards .ci-lbl{font-size:11.5px;font-weight:700;color:#4A5D6E;text-transform:none;letter-spacing:0;margin:0 0 3px}
+  html body .cards .ci-val input{width:100%;border:1.5px solid var(--border);background:#F4F7F9;border-radius:10px;padding:5px 10px;min-height:38px;font-size:16px;outline:none}
+  html body #emisorBox,html body #cot_emisorBox{display:none}
+
+  /* Remisión: el panel del cliente se acomoda en cuadrícula (título / nombre + Buscar + más / barra "Más datos") */
+  html body #documento .cards .card:first-child{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:0 6px;align-items:end}
+  html body #documento .cards .card:first-child>.ch,html body #documento .cards .card:first-child>.ch>div{display:contents!important}
+  html body #documento .cards .card:first-child>.ch>svg{display:none}
+  html body #documento .cards .card:first-child>.ch>span{grid-column:1/-1;grid-row:1;display:flex;align-items:center;gap:7px;margin:0 0 6px;font-size:12px;font-weight:800;letter-spacing:.07em;color:#4A5D6E}
+  html body #documento .cards .card:first-child>.ch>span::before{content:"";width:15px;height:15px;flex:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230E7C4A' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='8' r='4'/%3E%3Cpath d='M4 21c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5'/%3E%3C/svg%3E") center/15px no-repeat}
+  html body #documento .cards .card:first-child>.fr{grid-column:1;grid-row:2;margin:0}
+  html body #btnBuscarCliente{grid-column:2;grid-row:2;background:#0F2A44;color:#fff;border-radius:10px;min-height:38px;padding:7px 14px;font-size:0;font-weight:800}
+  html body #btnBuscarCliente::after{content:"Buscar";font-size:14px}
+  html body #btnMasDatosCliente{grid-column:3;grid-row:2;width:38px;min-height:38px;padding:0;border-radius:10px;border:1.5px solid var(--border);background:#F4F7F9;color:#0F2A44;font-size:0}
+  html body #btnMasDatosCliente::after{content:"+";font-size:22px;font-weight:800;line-height:1}
+  html body #btnToggleClientDetail{grid-column:1/-1;grid-row:3;display:flex!important;align-items:center;justify-content:space-between;width:100%;min-height:32px!important;margin-top:6px;
+    padding:4px 0 0!important;background:none!important;border:0;border-top:1px solid var(--border);border-radius:0;font-size:0!important;cursor:pointer}
+  html body #btnToggleClientDetail::before{content:"MÁS DATOS DEL CLIENTE";font-size:12px;font-weight:800;letter-spacing:.07em;color:#4A5D6E}
+  html body #btnToggleClientDetail::after{content:"RFC, contacto, asesor…";font-size:12px;font-weight:700;color:#8496A5;padding-right:24px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' viewBox='0 0 24 24' fill='none' stroke='%238496A5' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right center/17px}
+  html body #documento .cards:has(.client-detail.open) #btnToggleClientDetail::after{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' viewBox='0 0 24 24' fill='none' stroke='%238496A5' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 15l6-6 6 6'/%3E%3C/svg%3E")}
+  html body #btnToggleClientDetail.falta-datos::before{color:#c0392b}
+  html body #documento .cards .card:first-child>#adeudoBox{grid-column:1/-1;grid-row:4}
+  html body #documento .cards .card:first-child>#precargaWrap{grid-column:1/-1;grid-row:5}
+  html body #documento .cards .card:first-child>.client-detail{grid-column:1/-1;grid-row:6;margin-top:8px}
+  /* "Detalles de la remisión" (asesor, condiciones) se abre junto con "Más datos del cliente", como en el prototipo.
+     Con robot (navigator.webdriver) queda siempre visible para no esconderle campos. */
+  html body #documento .cards .card:nth-child(2){display:none}
+  html body #documento .cards:has(.client-detail.open) .card:nth-child(2){display:block}
+  html.smg-robot body #documento .cards .card:nth-child(2){display:block!important}
+
+  /* ── 3. Tarjeta de productos: título + contador + catálogo, renglones, pista y agregar ── */
+  html body .smg-pcard{display:flex;flex-direction:column;order:3;background:#fff;border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 1px 2px rgba(15,42,68,.06),0 8px 24px -14px rgba(15,42,68,.22);padding:8px 12px 10px;margin-top:6px}
+  html body .smg-phead{display:flex!important;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .smg-pt{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#4A5D6E}
+  .smg-ptt::before{content:"";display:inline-block;width:16px;height:16px;vertical-align:-3px;margin-right:7px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230E7C4A' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M21 8l-9-5-9 5v8l9 5 9-5z'/%3E%3Cpath d='M3 8l9 5 9-5M12 13v8'/%3E%3C/svg%3E") center/16px no-repeat}
+  .smg-ptt::after{content:"Productos"}
+  .smg-count{font-style:normal;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;background:var(--green-light);color:var(--green);text-transform:none;letter-spacing:0}
+  .smg-count::before{content:attr(data-n)}
+  .smg-cat{font-family:inherit;border:1.5px solid var(--border);background:#F4F7F9;color:#0F2A44;font-weight:800;font-size:12.5px;border-radius:999px;padding:5px 12px;min-height:30px;white-space:nowrap}
+  .smg-cat::before{content:"Buscar en catálogo"}
+  html body .smg-pcard .table-wrap{overflow-x:clip;margin:0}
+  html body .smg-pcard .smg-hint{display:block!important;text-align:left;margin:0 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px}
+  html body .smg-pcard .add-row{border:1.5px dashed var(--border)!important;border-radius:10px;background:#fff;color:#0F2A44;font-weight:800;font-size:14px;min-height:42px;padding:9px 14px;width:100%}
+
+  /* Renglón de producto: PRODUCTO n + código + 🗑 / descripción / cantidad + precio + total */
+  html body .items-table tbody tr.smg-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:3px 5px;padding:5px 10px 6px;margin-bottom:4px;
+    border:1.5px solid var(--border);border-radius:10px;background:#F4F7F9;box-shadow:none}
+  html body .items-table tbody tr.smg-row>td{min-width:0;padding:0}
+  html body .items-table tbody tr.smg-row td.td-n{order:0;flex:none;width:auto;align-self:center;padding:0!important;min-height:32px}
+  html body .items-table tbody tr.smg-row td.td-cl{order:1;flex:1 1 0;display:flex;align-items:center;gap:5px;text-align:left;align-self:center}
+  html body .items-table tbody tr.smg-row td.td-cl::before{display:block;content:"Código";margin:0;font-size:11.5px;font-weight:700;letter-spacing:0;text-transform:none;color:#4A5D6E;white-space:nowrap}
+  html body .items-table tbody tr.smg-row td.td-cl .ti.cl{flex:1;min-width:0;width:100%;min-height:32px!important;padding:4px 8px;font-size:16px;border:1.5px solid var(--border);border-radius:8px;background:#F4F7F9}
+  html body .items-table tbody tr.smg-row td.td-del{order:2;flex:none;position:static;width:auto;align-self:center}
+  html body .items-table tbody tr.smg-row td.td-del .del-btn{width:32px!important;height:32px!important;min-height:32px!important;padding:0;border:1.5px solid #F0C9C4;border-radius:9px;background:#fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C0392B' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'/%3E%3C/svg%3E") center/16px no-repeat;font-size:0;color:transparent}
+  html body .items-table tbody tr.smg-row td.td-desc{order:3;flex:0 0 100%;text-align:left}
+  html body .items-table tbody tr.smg-row td.td-desc::before{display:block;content:"Descripción";margin:0 0 3px;font-size:11.5px;font-weight:700;letter-spacing:0;text-transform:none;color:#4A5D6E}
+  html body .items-table tbody tr.smg-row td.td-desc .ti{width:100%;padding:5px 9px!important;min-height:38px;border:1.5px solid var(--border);border-radius:9px;background:#F4F7F9;font-size:16px}
+  html body .items-table tbody tr.smg-row td.td-c{order:4;flex:0 0 64px}
+  html body .items-table tbody tr.smg-row td.td-r{order:5;flex:1 1 0;padding-right:0}
+  html body .items-table tbody tr.smg-row td.td-c::before,html body .items-table tbody tr.smg-row td.td-r::before,html body .items-table tbody tr.smg-row td.td-imp::before{
+    display:block;margin:0 0 3px;font-size:11.5px;font-weight:700;letter-spacing:0;text-transform:none;color:#4A5D6E}
+  html body .items-table tbody tr.smg-row td.td-c::before{content:"Cant."}
+  html body .items-table tbody tr.smg-row td.td-r::before{content:"Precio unit."}
+  html body .items-table tbody tr.smg-row td.td-imp::before{content:"Total";text-align:right}
+  html body .items-table tbody tr.smg-row td.td-c .ti,html body .items-table tbody tr.smg-row td.td-r .ti{width:100%!important;min-height:36px!important;height:36px;padding:4px 10px;text-align:left!important;
+    border:1.5px solid var(--border);border-radius:10px;background:#F4F7F9;font-size:16px}
+  html body .items-table tbody tr.smg-row td.td-imp{order:6;flex:none;min-width:84px;text-align:right;align-self:flex-end;font-size:15px;font-weight:800;color:#0F2A44;line-height:36px}
+  html body .items-table tbody tr.smg-row td.td-imp::before{line-height:1.25}
+  html body .items-table tbody tr.smg-row .qty-stepper{display:block}
+  html body .items-table tbody tr.smg-row td.td-iva{order:7;flex:0 0 100%}
+  .items-table tbody tr.smg-row::after{border-radius:0 10px 10px 0}
+
+  /* ── 4. Barra del total y navegación inferior: blancas, con indicador verde arriba ── */
+  html body .mobile-action{grid-template-columns:minmax(0,1fr) 40px auto!important;left:0;right:0;border-radius:0;background:rgba(255,255,255,.96);color:#0F2A44;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    border-top:1px solid var(--border);box-shadow:none;padding:5px 10px;gap:8px}
+  html body .mobile-action::before{background:var(--border)}
+  html body .mobile-action-total span{font-size:10px;font-weight:700;letter-spacing:.05em;color:#8496A5;opacity:1}
+  html body .mobile-action-total span::after{content:" · desliza ↑"}
+  html body .mobile-action-total strong{font-size:14.5px!important;font-weight:700!important;letter-spacing:-.02em;color:#0F2A44;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  html body .mobile-action-pdf{padding:0;background:#F4F7F9;color:#0F2A44;border:1.5px solid var(--border);min-height:42px}
+  html body .mobile-action-primary{background:var(--green);color:#fff;min-height:42px;border-radius:10px;font-size:13px;padding:8px 10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+  html body .mobile-action-primary::before{content:"";width:17px;height:17px;flex:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E") center/17px no-repeat}
+  html body .mobile-nav{background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:none;border-top:1px solid var(--border);padding-top:6px}
+  html body .mobile-nav button{min-height:46px;gap:2px;font-weight:700;color:#8496A5;background:none}
+  html body .mobile-nav button::before{content:"";display:block;width:26px;height:3px;border-radius:3px;background:transparent;margin-bottom:1px}
+  html body .mobile-nav button small{font-size:11px;font-weight:700}
+  html body .mobile-nav button[aria-current=page]{background:none;color:var(--green)}
+  html body .mobile-nav button[aria-current=page]::before{background:var(--green)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .page,#secCot,.ov .modal,.ov>div,.smg-row,.mobile-action,.smg-thumb{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+@media print{.smg-progress,.smg-hint,.smg-acts,.smg-ptr,.smg-handle{display:none!important}}

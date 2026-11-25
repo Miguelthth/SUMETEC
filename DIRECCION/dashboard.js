@@ -204,7 +204,8 @@ function _aplicarConfigDireccionPublicada_(direccion) {
   if (typeof direccion.pin_timeout_minutos === 'number' && direccion.pin_timeout_minutos > 0) {
     PIN_TIMEOUT_MS = direccion.pin_timeout_minutos * 60000;
   }
-  if (typeof direccion.umbral_diferencia_corte === 'number' && direccion.umbral_diferencia_corte > 0
+  // 0 es válido desde 2026-11-25: «el corte debe cuadrar exacto».
+  if (typeof direccion.umbral_diferencia_corte === 'number' && direccion.umbral_diferencia_corte >= 0
       && typeof UMBRAL_CONFIRMAR_DIFERENCIA !== 'undefined') {
     UMBRAL_CONFIRMAR_DIFERENCIA = direccion.umbral_diferencia_corte;
   }

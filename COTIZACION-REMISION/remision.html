@@ -448,6 +448,14 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color
   .table-wrap{overflow-x:visible}
   .items-table{min-width:0;border:none}
   .items-table thead{display:none}
+  /* 2026-11-24: con el encabezado oculto, «🎁 Regalo» (vive en el <th> de Descripción) quedaba inalcanzable en el
+     celular: no se podía marcar un regalo. Se deja visible SOLO ese botón, alineado a la derecha sobre las tarjetas. */
+  .items-table thead:has(#btnModoRegalo){display:block}
+  .items-table thead:has(#btnModoRegalo) tr{display:flex;justify-content:flex-end;background:none}
+  .items-table thead:has(#btnModoRegalo) th{display:none}
+  .items-table thead:has(#btnModoRegalo) th:has(#btnModoRegalo){display:block;font-size:0;padding:0 0 6px;background:none}
+  #btnModoRegalo{float:none!important;font-size:13px!important;padding:6px 12px!important;background:var(--navy-soft,#0D3B66)!important;color:#fff!important}
+  #btnModoRegalo[style*="rgb(5, 116, 72)"],#btnModoRegalo[style*="#057448"]{background:#057448!important}   /* activo: verde, como en escritorio */
   .items-table tbody{display:block}
   /* 2026-07-23: # solo necesita caber "100"/"200" (3 cifras) -- angosto a
      propósito para regalarle ese espacio a Cantidad y sobre todo a Código
@@ -739,8 +747,11 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
 </style>
 <!-- Estándar visual v3 (2026-10): color de la app, sin scroll lateral, animación. Va al final. -->
 <link rel="stylesheet" href="sumetec-v3.css">
+<!-- Gestos y animaciones del prototipo de Miguel (2026-11-24): solo celular; se apaga quitando estas 2 líneas -->
+<link rel="stylesheet" href="sumetec-gestos.css">
 <!-- Atrás del teléfono cierra lo último que se abrió (2026-10) -->
 <script src="sumetec-atras.js" defer></script>
+<script src="sumetec-gestos.js" defer></script>
 </head>
 <body>
 <div class="tb no-print">
