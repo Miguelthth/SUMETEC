@@ -2665,7 +2665,7 @@ function _urlAppsScriptValida(u){
       // 30s — mayor que el waitLock(15s) del servidor + su proceso. Al vencer, la llamada
       // falla y el ítem QUEDA en su cola para reintentar. Seguro: registrarPago/Remision son
       // idempotentes por UUID, así que un reintento no duplica.
-      if(!init.signal){
+      if(!init.signal && !String(init.body||'').includes('"vincular_dispositivo"')){
         const _ctrl=new AbortController();
         const _tid=setTimeout(()=>_ctrl.abort(),30000);
         init={...init,signal:_ctrl.signal};
@@ -6927,9 +6927,10 @@ async function _validarTokenCotizador_(token){
   try {
     const r = await fetch(getScriptUrl(), {method:'POST',headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({tipo:'ping',token}),signal:ctrl.signal});
-    if (!r.ok) throw Error('TOKEN_INVALIDO');
+    if (!r.ok) throw Error('El servidor no pudo verificar el acceso. Intenta de nuevo.');
     const j = await r.json();
-    if (!j || j.ok !== true) throw Error('TOKEN_INVALIDO');
+    if (j && j.ok === false && /no autorizado/i.test(String(j.error || ''))) throw Error('TOKEN_INVALIDO');
+    if (!j || j.ok !== true) throw Error('El servidor no pudo verificar el acceso. Intenta de nuevo.');
   } finally { clearTimeout(tiempo); }
 }
 async function _tgGuardar(){

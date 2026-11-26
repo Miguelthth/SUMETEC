@@ -927,7 +927,8 @@ async function _iniciarFacturacionProtegida() {
   sumetecMostrarCargaAcceso(true);
   try {
     const r = await _post({ tipo: 'ping' });
-    if (!r || r.ok !== true) throw Error('TOKEN_INVALIDO');
+    if (r && r.ok === false && /no autorizado/i.test(String(r.error || ''))) throw Error('TOKEN_INVALIDO');
+    if (!r || r.ok !== true) throw Error('El servidor no pudo verificar el acceso. Intenta de nuevo.');
     await sumetecMarcarAccesoValidado(token, _FACT_HUELLA_VALIDADA);
   } catch (e) {
     if (e.message === 'TOKEN_INVALIDO') {
