@@ -6946,16 +6946,18 @@ async function _tgGuardar(){
   const btn=document.getElementById('tg_btn');
   sumetecEntrando(btn, true);
   try{
+    // 2026-11-25: el token recién entregado ya es la prueba; no se repite el ping (un viaje más a Google, y su tope de
+    // 12 s cortaba con «operation was aborted» una vinculación que sí había quedado).
+    let reciénVinculado=false;
     if(!v){
       const dispositivo=localStorage.getItem('sumetec_cotizador_dispositivo')||crypto.randomUUID();
-      const r=await fetch(getScriptUrl(),{method:'POST',headers:{'Content-Type':'text/plain'},
-        body:JSON.stringify({tipo:'vincular_dispositivo',app:'COTIZADOR',codigo,dispositivo,nombre})}).then(x=>x.json());
-      if(!r.ok)throw Error(r.error||'No se pudo vincular');
-      v=r.token;
+      localStorage.setItem('sumetec_cotizador_dispositivo',dispositivo);   // antes de pedir: un reintento es el mismo teléfono
+      const r=await sumetecVincularDispositivo(getScriptUrl(),{app:'COTIZADOR',codigo,dispositivo,nombre},
+        t=>{if(err){err.textContent=t;err.style.display=t?'block':'none';}});
+      v=r.token; reciénVinculado=true;
       const tokenInput=document.getElementById('tg_input');if(tokenInput)tokenInput.value=v;
-      localStorage.setItem('sumetec_cotizador_dispositivo',dispositivo);
     }
-    await _validarTokenCotizador_(v);
+    if(!reciénVinculado) await _validarTokenCotizador_(v);
     await sumetecMarcarAccesoValidado(v, _COT_HUELLA_VALIDADA);
   }catch(e){
     if(e.message==='TOKEN_INVALIDO'){

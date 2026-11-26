@@ -961,19 +961,21 @@ async function _tokenGateFactEntrar(){
   sumetecEntrando(btn, true);
   const anterior = _tokenFact();
   try {
+    // 2026-11-25: sin tope de 30 s y con reintento del mismo código (ver acceso.js); el token recién entregado ya es la
+    // prueba, así que no se repite el ping (un viaje menos a Google).
+    let reciénVinculado = false;
     if (!v) {
       const dispositivo = localStorage.getItem('sumetec_fact_dispositivo') || crypto.randomUUID();
-      const r = await sumetecFetchLimite(URL_BACKEND_FACT, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ tipo: 'vincular_dispositivo', codigo, nombre, dispositivo }) }).then(x => x.json());
-      if (!r || !r.ok) throw Error((r && r.error) || 'No se pudo vincular');
-      v = r.token;
+      localStorage.setItem('sumetec_fact_dispositivo', dispositivo);   // antes de pedir: un reintento es el mismo teléfono
+      const r = await sumetecVincularDispositivo(URL_BACKEND_FACT, { codigo, nombre, dispositivo },
+        t => { if (err) { err.textContent = t; err.style.display = t ? 'block' : 'none'; } });
+      v = r.token; reciénVinculado = true;
       // Si luego se cancela el PIN, volver a pulsar Vincular no gasta otro código.
       if (input) input.value = v;
-      localStorage.setItem('sumetec_fact_dispositivo', dispositivo);
     }
     localStorage.setItem('sumetec_fact_nombre', nombre);
     _factTokenMem=v;
-    const r = await _post({ tipo: 'ping' });
+    const r = reciénVinculado ? { ok: true } : await _post({ tipo: 'ping' });
     if (!r || r.ok !== true) {
       _factTokenMem=anterior;
       if (err) { err.textContent = 'Token incorrecto — revísalo e intenta otra vez.'; err.style.display = 'block'; }

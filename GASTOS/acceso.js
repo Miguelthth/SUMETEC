@@ -827,6 +827,38 @@ async function sumetecPostJsonSeguro(url, opciones) {
   catch (_) { return { r: { ok: false, error: 'respuesta ilegible del servidor (HTTP ' + (resp && resp.status) + '); temporal, se reintenta' } }; }
 }
 
+// ── Vincular sin quedarse a medias (2026-11-25, Miguel: «operation was aborted» con el correo de aviso ya enviado) ──
+// El servidor SÍ vinculaba, pero el teléfono dejaba de esperar y el código de un solo uso quedaba gastado. Reglas:
+//   · No se corta por reloj: Google tarda distinto cada vez; se espera la respuesta (o a que la red de verdad se caiga).
+//   · Sin red, «servidor ocupado» o respuesta ilegible -> se repite SOLO con el mismo código y el mismo teléfono: el
+//     servidor reconoce ese reintento y vuelve a entregar el acceso aunque el código ya se haya usado (_vinculoEsReintento_).
+//   · Código incorrecto o vencido -> se dice de inmediato (eso no se arregla repitiendo).
+// datos = { app, codigo, dispositivo, nombre }. El ID del teléfono se guarda ANTES de llamar (así un reintento,
+// incluso tras recargar, es el mismo teléfono). avisar(texto) muestra en pantalla en qué va.
+const SUMETEC_VINCULAR_INTENTOS = 4;
+async function sumetecVincularDispositivo(url, datos, avisar) {
+  const decir = t => { try { if (typeof avisar === 'function') avisar(t); } catch (_) {} };
+  const cuerpo = JSON.stringify(Object.assign({}, datos, { tipo: 'vincular_dispositivo' }));
+  let motivo = '';
+  for (let i = 1; i <= SUMETEC_VINCULAR_INTENTOS; i++) {
+    decir(i === 1 ? 'Vinculando con el servidor…' : 'Google tardó en contestar; reintentando con el mismo código (' + i + ' de ' + SUMETEC_VINCULAR_INTENTOS + ')…');
+    let r = null;
+    try {
+      const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, cache: 'no-store', body: cuerpo });
+      try { r = await resp.json(); } catch (_) { motivo = 'Google contestó algo ilegible (HTTP ' + (resp && resp.status) + ')'; }
+    } catch (_) { motivo = 'sin respuesta de Google'; }
+    if (r && r.ok === true && r.token) { decir(''); return r; }
+    if (r) {
+      const t = String(r.error || r.codigo || r.mensaje || '');
+      if (!(r.reintentable || /ocupado|reintenta|ERP_LIBRO_NO_DISPONIBLE|tiempo|timed? ?out|temporal/i.test(t))) { decir(''); throw Error(t || 'No se pudo vincular'); }
+      motivo = t || 'servidor ocupado';
+    }
+    if (i < SUMETEC_VINCULAR_INTENTOS) await new Promise(ok => setTimeout(ok, 1000 * i));
+  }
+  decir('');
+  throw Error('No se pudo vincular (' + motivo + '). Revisa la señal y pulsa «Vincular» otra vez: el mismo código sigue sirviendo unos minutos.');
+}
+
 // D-03: una lista que el servidor devuelve VACÍA (o que pierde más de la mitad) no reemplaza a la copia buena
 // del teléfono: un archivo en blanco en Drive dejaba a la app sin productos/proveedores sin avisar.
 // Devuelve la lista que se debe guardar (la nueva, o la previa si la nueva es sospechosa).

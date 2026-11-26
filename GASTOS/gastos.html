@@ -415,16 +415,17 @@ async function _tgGuardar() {
   const boton = document.getElementById('tg_btn');
   sumetecEntrando(boton, true);
   try {
+    // 2026-11-25: el token recién entregado por el servidor ya es la prueba; no se repite el ping (era un viaje más
+    // a Google y su tope de 12 s cortaba con «operation was aborted» una vinculación que sí había quedado).
+    let reciénVinculado=false;
     if(!v){
       const dispositivo=localStorage.getItem('sumetec_gastos_dispositivo')||crypto.randomUUID();
-      const r=await fetch(getScriptUrl(),{method:'POST',headers:{'Content-Type':'text/plain'},
-        body:JSON.stringify({tipo:'vincular_dispositivo',app:'GASTOS',codigo,dispositivo,nombre})}).then(x=>x.json());
-      if(!r.ok)throw Error(r.error||'No se pudo vincular');
-      v=r.token;
+      localStorage.setItem('sumetec_gastos_dispositivo',dispositivo);   // antes de pedir: un reintento es el mismo teléfono
+      const r=await sumetecVincularDispositivo(getScriptUrl(),{app:'GASTOS',codigo,dispositivo,nombre},t=>{error.textContent=t;});
+      v=r.token; reciénVinculado=true;
       document.getElementById('tg_input').value=v;
-      localStorage.setItem('sumetec_gastos_dispositivo',dispositivo);
     }
-    await _validarTokenGastos_(v);
+    if(!reciénVinculado) await _validarTokenGastos_(v);
     await sumetecMarcarAccesoValidado(v, _GASTOS_HUELLA_VALIDADA);
   } catch (e) {
     if (e.message === 'TOKEN_INVALIDO') { error.textContent = 'El servidor rechazó el token.'; sumetecEntrando(boton, false); return; }

@@ -184,13 +184,10 @@ async function vincular() {
   sumetecEntrando($('#enlazar'), true);
 
   const dispositivo = localStorage.getItem('sumetec_direccion_dispositivo') || crypto.randomUUID();
+  localStorage.setItem('sumetec_direccion_dispositivo', dispositivo);   // antes de pedir: un reintento es el mismo teléfono
   if (!_tokenVinculadoPendiente) {
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ tipo: 'vincular_dispositivo', app: 'DIRECCION', codigo, dispositivo, nombre })
-    }).then(x => x.json());
-    if (!r.ok) throw Error(r.error);
+    // 2026-11-25: reintenta solo con el mismo código si Google tarda o la red se corta (ver acceso.js).
+    const r = await sumetecVincularDispositivo(url, { app: 'DIRECCION', codigo, dispositivo, nombre }, t => { _est.textContent = t; });
     _tokenVinculadoPendiente = r.token;
   }
   const pin = await sumetecPedirPinToken('Dirección', true);
