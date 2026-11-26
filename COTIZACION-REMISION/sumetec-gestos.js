@@ -102,6 +102,7 @@ function mejorarFilas(tb){
 }
 /* "Buscar en catálogo" del prototipo: usa una fila vacía (o agrega una) y abre el buscador de productos del campo Código */
 function buscarCatalogo(cot){
+  if(filaBloqueada(cot)){ aviso('Esta remisión ya está registrada — usa ✏️ Modificar para cambiarla','warn',3500); return; }
   seguro('catalogo',function(){
     var arr=lista(cot), ult=arr[arr.length-1];
     var vacia=ult && !ult.clave && !ult.desc && !(+ult.qty>0) && !(+ult.precio>0);
@@ -117,13 +118,101 @@ function armarTarjetaProductos(add,cot){
   var card=document.createElement('div'); card.className='smg-pcard';
   var head=document.createElement('div'); head.className='smg-phead no-print';
   head.innerHTML='<span class="smg-pt" aria-hidden="true"><b class="smg-ptt"></b><em class="smg-count" data-n="0"></em></span>'+
-    '<button type="button" class="smg-cat" tabindex="-1" aria-hidden="true"></button>';
+    '<div class="smg-pbtns"><button type="button" class="smg-cat" tabindex="-1" aria-hidden="true"></button></div>';
   $('.smg-cat',head).addEventListener('click',function(){ buscarCatalogo(cot); });
   var hint=add.nextElementSibling && add.nextElementSibling.classList.contains('smg-hint') ? add.nextElementSibling : null;
   tw.parentNode.insertBefore(card,tw);
   card.appendChild(head); card.appendChild(tw);
   if(hint) card.appendChild(hint);
   card.appendChild(add);
+  /* «Agregar producto» está arriba y el renglón nuevo sale al final: se trae a la vista */
+  add.addEventListener('click',function(){
+    if(!movil()||navigator.webdriver) return;
+    setTimeout(function(){ var tr=$('tbody',tw); tr=tr&&tr.lastElementChild; if(tr) tr.scrollIntoView({block:'nearest',behavior:'smooth'}); },60);
+  });
+}
+/* Modo regalo: en el celular su botón (el mismo #btnModoRegalo del encabezado de la tabla) se
+   muestra como icono junto a «Buscar en catálogo»; en escritorio regresa a su lugar. */
+function initRegalo(){
+  var b=$('#btnModoRegalo'), caja=$('#documento .smg-pbtns'); if(!b||!caja) return;
+  var casa=b.parentNode;
+  var acomodar=function(){
+    if(movil()) caja.insertBefore(b,caja.firstChild); else casa.appendChild(b);
+  };
+  alCambiarAncho(acomodar); acomodar();
+  try{ if(typeof _formBloqueado!=='undefined' && _formBloqueado && typeof _candadosExtra==='function') _candadosExtra(true); }catch(_){}
+}
+function alCambiarAncho(fn){ if(MQ.addEventListener) MQ.addEventListener('change',fn); else if(MQ.addListener) MQ.addListener(fn); }
+
+/* Altura real del encabezado (con el notch): ahí se pegan los avisos de «sin red» y «editando». */
+function initAlturaEncabezado(){
+  var h=$('.tb'); if(!h) return;
+  var medir=function(){ var a=Math.round(h.getBoundingClientRect().height); if(a) document.documentElement.style.setProperty('--smg-tb',a+'px'); };
+  medir(); if(window.ResizeObserver) new ResizeObserver(medir).observe(h);
+}
+
+/* Observaciones: la caja mide lo que mide su texto, se escriba o lo ponga la app. */
+function initObservaciones(){
+  var base=Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value');
+  ['#obs','#cot_obs'].forEach(function(sel){
+    var t=$(sel); if(!t) return;
+    var ajustar=function(){
+      if(!movil()){ t.style.height=''; return; }
+      if(!t.offsetParent) return;
+      var y=window.scrollY;
+      t.style.height='0px'; t.style.height=(t.scrollHeight+3)+'px';
+      if(window.scrollY!==y) window.scrollTo(0,y);
+    };
+    Object.defineProperty(t,'value',{configurable:true,
+      get:function(){ return base.get.call(this); },
+      set:function(v){ base.set.call(this,v); requestAnimationFrame(ajustar); }});
+    t.addEventListener('input',ajustar);
+    if(window.ResizeObserver){ var ancho=0; new ResizeObserver(function(es){ var w=Math.round(es[0].contentRect.width); if(w!==ancho){ ancho=w; ajustar(); } }).observe(t); }
+    alCambiarAncho(ajustar);
+    if(document.fonts&&document.fonts.ready) document.fonts.ready.then(ajustar);
+    ajustar();
+  });
+}
+
+/* Método de pago: pop-up propio. El <select> sigue ahí (con su valor y sus eventos de siempre);
+   solo se le pone encima un botón que abre las opciones en una hoja de la app. */
+function abrirElegir(s,titulo){
+  var ov=crearOv('ovElegir','<div class="modal-hd"><div class="modal-title"></div><button class="mx" aria-label="Cerrar" onclick="closeOv(\'ovElegir\')">✕</button></div><div class="smg-opciones" role="listbox"></div>');
+  ov.style.zIndex='1200';
+  $('.modal-title',ov).textContent=titulo;
+  var caja=$('.smg-opciones',ov); caja.innerHTML=''; caja.setAttribute('aria-label',titulo);
+  Array.prototype.slice.call(s.options).filter(function(o){ return o.value!==''&&!o.disabled; }).forEach(function(o){
+    var b=document.createElement('button'); b.type='button'; b.setAttribute('role','option');
+    b.setAttribute('aria-selected',String(o.value===s.value)); b.textContent=o.textContent;
+    b.addEventListener('click',function(){
+      s.value=o.value;
+      s.dispatchEvent(new Event('input',{bubbles:true})); s.dispatchEvent(new Event('change',{bubbles:true}));
+      buzz(10); cerrar('ovElegir');
+    });
+    caja.appendChild(b);
+  });
+  if(!caja.children.length){ var p=document.createElement('p'); p.textContent='No hay métodos de pago configurados. Actualiza el catálogo desde Configuración.'; caja.appendChild(p); }
+  buzz(8); abrirOv('ovElegir');
+}
+function initSelectores(){
+  ['#metodoAbono','#prMetodo'].forEach(function(sel){
+    var s=$(sel); if(!s||s.parentNode.classList.contains('smg-sel')) return;
+    var w=document.createElement('div'); w.className='smg-sel no-print';
+    s.parentNode.insertBefore(w,s); w.appendChild(s);
+    var b=document.createElement('button'); b.type='button'; b.className='smg-sel-btn'; b.setAttribute('aria-label','Elegir método de pago');
+    b.addEventListener('click',function(){ if(!s.disabled) abrirElegir(s,'Método de pago'); });
+    w.appendChild(b);
+    /* Que ni las flechas del teclado ni un focus() de la app abran el selector del iPhone */
+    var tab=function(){ s.tabIndex=movil()?-1:0; }; alCambiarAncho(tab); tab();
+    var enfocar=s.focus;
+    s.focus=function(o){
+      if(!movil()) return enfocar.call(s,o);
+      if(s.closest('#pagosSection')) abrirCobro();
+      w.classList.add('smg-falta'); w.scrollIntoView({block:'center',behavior:'smooth'});
+      setTimeout(function(){ w.classList.remove('smg-falta'); },3000);
+    };
+    s.addEventListener('change',function(){ w.classList.remove('smg-falta'); });
+  });
 }
 function borrarFila(tr,cot,alCancelar){
   var id=filaId(tr), it=lista(cot).filter(function(x){ return x._id===id; })[0];
@@ -225,11 +314,18 @@ function cerrar(id){ try{ if(typeof closeOv==='function') closeOv(id); else{ var
 function abrirOv(id){ var o=document.getElementById(id); if(o) o.classList.add('open'); }
 function txt(sel){ var e=$(sel); return e?(e.textContent||'').trim():''; }
 function fila(l,v,extra){ return '<div class="smg-fila '+(extra||'')+'"><span>'+l+'</span><b>'+v+'</b></div>'; }
+/* Qué salió de regalo (no se cobra; solo informa) */
+function filasRegalo(){
+  try{
+    var r=_resumenRegalo(items); if(!(r.pzs>0)) return '';
+    return r.lineas.map(function(it){ return fila('🎁 '+esc(it.desc||it.clave||'producto'),(+it.qty)+' de regalo'); }).join('')+fila('🎁 Total de regalo',esc(txt('#tRegalo')));
+  }catch(_){ return ''; }
+}
 function abrirDesglose(){
   var cot=esCot();
   var cuerpo = cot
     ? fila('Subtotal',txt('#cot_tSub'))+fila('Descuento',txt('#cot_tDesc'))+fila('IVA',txt('#cot_tIva'))+fila('Total',txt('#cot_tTot'),'smg-total')
-    : fila('Productos',txt('#rArts'))+fila('Piezas',txt('#rPzs'))+fila('Subtotal',txt('#tSub'))+fila('Descuento',txt('#tDesc'))+fila('IVA',txt('#tIva'))+fila('Total',txt('#tTot'),'smg-total')+(txt('#saldoDisplay')?fila('Saldo pendiente',txt('#saldoDisplay')):'');
+    : fila('Productos',txt('#rArts'))+fila('Piezas',txt('#rPzs'))+fila('Subtotal',txt('#tSub'))+fila('Descuento',txt('#tDesc'))+fila('IVA',txt('#tIva'))+filasRegalo()+fila('Total',txt('#tTot'),'smg-total')+(txt('#saldoDisplay')?fila('Saldo pendiente',txt('#saldoDisplay')):'');
   var nom=(($(cot?'#cot_c_nombre':'#c_nombre')||{}).value||'').trim()||'Cliente sin nombre';
   var ov=crearOv('ovDesglose','<div class="modal-hd"><div class="modal-title">Desglose del total</div><button class="mx" aria-label="Cerrar" onclick="closeOv(\'ovDesglose\')">✕</button></div>'+
     '<div id="smgDesgSub" style="font-size:12px;color:var(--muted);margin:-8px 0 8px"></div><div id="smgDesgBody"></div>'+
@@ -454,14 +550,154 @@ function abrirGestos(){
 }
 function initMenu(){
   var grupos=$$('#menuMas .menu-mas-grp'), ult=grupos[grupos.length-1]; if(!ult||$('#smgBtnGestos',ult)) return;
-  var b=document.createElement('button'); b.id='smgBtnGestos'; b.type='button'; b.textContent='👆 Gestos de la app';
+  var b=document.createElement('button'); b.id='smgBtnGestos'; b.type='button'; b.innerHTML='<span class="mm-i" aria-hidden="true">👆</span> <span class="mm-t">Gestos de la app</span>';
   b.addEventListener('click',function(){ try{ if(typeof _cerrarMenuMas==='function') _cerrarMenuMas(); }catch(_){} setTimeout(abrirGestos,120); });
   ult.appendChild(b);
+}
+
+/* ───────────────────────── Pantalla principal en tarjetas (como el prototipo) ─────────────────────────
+   Resumen, Observaciones, Firma y Cobro. No mueve ningún elemento ni cambia ids: marca clases,
+   añade encabezados (su texto sale de CSS) y pliega. Con robot todo arranca abierto. */
+function nodo(tag,clase,attrs){ var e=document.createElement(tag); e.className=clase; Object.keys(attrs||{}).forEach(function(k){ e.setAttribute(k,attrs[k]); }); return e; }
+function marcar(el,clase){ if(el) el.classList.add(clase); }
+function encabezado(host,icono,titulo,sub,conResumen,conFlecha){
+  if(!host||$(':scope > .smg-tit',host)) return {};
+  var hijos=[nodo('span','smg-hdx smg-ico smg-ico-'+icono,{'aria-hidden':'true'}),nodo('span','smg-hdx smg-tit',{'aria-hidden':'true','data-t':titulo})];
+  if(sub) hijos.push(nodo('span','smg-hdx smg-sub',{'aria-hidden':'true','data-t':sub}));
+  var sum=conResumen?nodo('span','smg-hdx smg-sum',{'data-t':''}):null; if(sum) hijos.push(sum);
+  if(conFlecha) hijos.push(nodo('span','smg-hdx smg-chev',{'aria-hidden':'true'}));
+  hijos.forEach(function(h){ host.appendChild(h); });
+  return {sum:sum};
+}
+function plegable(cabeza,caja){
+  var poner=function(){ cabeza.setAttribute('aria-expanded',String(caja.classList.contains('smg-abierta'))); };
+  cabeza.addEventListener('click',function(e){
+    if(!movil()) return;
+    var control=e.target.closest('button,input,select,textarea,a'); if(control&&control!==cabeza) return;
+    caja.classList.toggle('smg-abierta'); buzz(8); poner();
+  });
+  cabeza.setAttribute('role','button'); cabeza.tabIndex=0;
+  cabeza.addEventListener('keydown',function(e){ if(movil()&&(e.key==='Enter'||e.key===' ')&&e.target===cabeza){ e.preventDefault(); cabeza.click(); } });
+  if(navigator.webdriver) caja.classList.add('smg-abierta');
+  poner();
+}
+function abrirCobro(){
+  var s=$('#pagosSection'); if(!s) return;
+  s.classList.add('smg-abierta'); var c=$('.cobro-head',s); if(c) c.setAttribute('aria-expanded','true');
+}
+function textoResumen(cot){
+  var p=cot?'#cot_':'#', v=function(id){ var e=$(id); return e?String(e.value||'').trim():''; };
+  var folio=txt(cot?'#cot_folioBadge':'#folioBadge'), fecha=txt(cot?'#cot_fechaDisp':'#fechaDisp'), asesor=v(p+'d_asesor');
+  var l=['SUMETEC — '+(cot?'Cotización':'Remisión')+' '+folio,'Cliente: '+(v(p+'c_nombre')||'Cliente mostrador'),'Fecha: '+fecha+(asesor?' · Asesor: '+asesor:'')];
+  lista(cot).filter(function(it){ return +it.qty>0; }).forEach(function(it){
+    l.push('• '+(+it.qty)+' × '+(it.desc||it.clave||'Producto')+' — '+(it.regalo?'REGALO':fmt((+it.qty||0)*(+it.precio||0))));
+  });
+  l.push('Subtotal: '+txt(p+'tSub'));
+  var desc=txt(p+'tDesc'); if(/[1-9]/.test(desc)) l.push('Descuento: '+desc);
+  l.push('IVA ('+txt(p+'ivaLbl')+'): '+txt(p+'tIva'),'TOTAL: '+txt(p+'tTot'));
+  return l.join('\n');
+}
+function accionResumen(a,cot){
+  if(a==='calc'){ if(typeof abrirCalculadora==='function') abrirCalculadora(); return; }
+  if(a==='limpiar'){
+    if(cot){ mobileNueva(); return; }
+    var hacer=function(){ if(typeof _modoEdicion!=='undefined'&&_modoEdicion) cancelarEdicion(); else nuevaRem(); };
+    var hay=!!(($('#c_nombre')||{}).value||'').trim()||lista(false).some(function(it){ return it.clave||it.desc||+it.qty>0; });
+    if(!hay){ hacer(); return; }
+    popupConfirmar('Se borrará de la pantalla lo capturado en este documento (cliente, productos, observaciones, firma y cobro).','¿Limpiar el formulario?').then(function(ok){ if(ok) hacer(); });
+    return;
+  }
+  if(!lista(cot).some(function(it){ return +it.qty>0; })){ aviso('Agrega al menos un producto con cantidad','warn',2800); return; }
+  var t=textoResumen(cot);
+  if(a==='wa'){ window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank'); return; }
+  var listo=function(){ aviso('Resumen copiado','ok',2000); };
+  var aMano=function(){
+    var ta=document.createElement('textarea'); ta.value=t; ta.setAttribute('readonly',''); ta.style.cssText='position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta); ta.select(); var ok=false; try{ ok=document.execCommand('copy'); }catch(_){} ta.remove();
+    if(ok) listo(); else aviso('No se pudo copiar en este teléfono','err',2800);
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(listo,aMano); else aMano();
+}
+function tarjetaResumen(p,cot){
+  var tot=$('#'+p+'tSub'); if(!tot) return;
+  var b=tot.closest('.lb'), lower=b&&b.parentNode; if(!lower||lower.classList.contains('smg-lower')) return;
+  var cajas=$$(':scope > .lb',lower), obs=cajas[0], a=cajas[1];
+  marcar(lower,'smg-lower'); marcar(obs,'smg-obs'); marcar(a,'smg-res-a'); marcar(b,'smg-res-b');
+  marcar(tot.parentNode,'smg-r-sub'); marcar($('#'+p+'tIva').parentNode,'smg-r-iva'); marcar($('#'+p+'tDesc').parentNode,'smg-r-desc');
+  marcar($('#'+p+'descPct').closest('.rr'),'smg-r-pct');
+  var tf=$('#'+p+'tTot').closest('.tf'); marcar(tf.parentNode===b?tf:tf.parentNode,'smg-r-total');
+  marcar($('#'+p+'tWords'),'smg-r-letras');
+  if(!cot){ marcar($('#tRegaloRow'),'smg-r-regalo'); marcar($('#btnVerUtil').parentNode,'smg-r-util'); }
+  encabezado($(':scope > .bt',a),'res','Resumen');
+  var iva=nodo('span','smg-lbl-iva',{'aria-hidden':'true','data-t':''}); b.appendChild(iva);
+  var lbl=$('#'+p+'ivaLbl');
+  var pintar=function(){ var m=/\d+\s*%/.exec(lbl.textContent||''); iva.setAttribute('data-t',m?m[0]:''); };
+  new MutationObserver(pintar).observe(lbl,{childList:true,characterData:true,subtree:true}); pintar();
+  var acc=nodo('div','smg-acc no-print');
+  [['calc','Calculadora'],['limpiar','Limpiar'],['copiar','Copiar resumen'],['wa','WhatsApp']].forEach(function(x){
+    var btn=nodo('button','',{type:'button','data-a':x[0],'data-t':x[1],'aria-label':x[1]+' (resumen)'});
+    btn.addEventListener('click',function(){ accionResumen(x[0],cot); });
+    acc.appendChild(btn);
+  });
+  b.appendChild(acc);
+  var cab=$(':scope > .bt',obs); encabezado(cab,'obs','Observaciones','(opcional)',false,true); plegable(cab,obs);
+}
+function initTarjetas(){
+  tarjetaResumen('',false); tarjetaResumen('cot_',true);
+  /* Firma: el botón de siempre es el encabezado; #firmaSection es el cuerpo */
+  var bf=$('#btnAgregarFirma'), sec=$('#firmaSection'), img=$('#firmaImg');
+  if(bf&&sec){
+    var cajaF=bf.parentNode; marcar(cajaF,'smg-firma-hd');
+    var hf=encabezado(bf,'firma','Firma del cliente','',true,true);
+    var estado=function(){
+      var firmada=!!(img&&img.style.display!=='none');
+      if(hf.sum) hf.sum.setAttribute('data-t',firmada?'Firma capturada':'Sin firma');
+      var abierta=sec.style.display!=='none';
+      cajaF.classList.toggle('smg-abierta',abierta); bf.setAttribute('aria-expanded',String(abierta));
+    };
+    new MutationObserver(estado).observe(sec,{attributes:true,attributeFilter:['style']});
+    if(img) new MutationObserver(estado).observe(img,{attributes:true,attributeFilter:['style','src']});
+    estado();
+  }
+  /* Cobro */
+  var pagos=$('#pagosSection'), cabeza=pagos&&$('.cobro-head',pagos);
+  if(cabeza){
+    var hc=encabezado(cabeza,'cobro','Cobro','',true,true);
+    var saldo=$('#saldoDisplay'), titulo=$('#cobroTitle');
+    var pintarSaldo=function(){ if(hc.sum) hc.sum.setAttribute('data-t','Saldo '+((saldo.textContent||'').trim()||'$—')); };
+    new MutationObserver(pintarSaldo).observe(saldo,{childList:true,characterData:true,subtree:true}); pintarSaldo();
+    /* El título solo se muestra cuando dice de qué remisión es */
+    var pintarTitulo=function(){ if(/COBRO\s*$/.test((titulo.textContent||'').trim())) titulo.setAttribute('data-vacio',''); else titulo.removeAttribute('data-vacio'); };
+    new MutationObserver(pintarTitulo).observe(titulo,{childList:true,characterData:true,subtree:true}); pintarTitulo();
+    plegable(cabeza,pagos);
+    /* Cuando la app pide algo del cobro (falta cómo se paga, «Registrar pago», abrir desde Cobros), la tarjeta se abre sola */
+    var monto=$('#montoAbono');
+    if(monto){ var enfocar=monto.focus; monto.focus=function(o){ abrirCobro(); enfocar.call(monto,o); }; }
+    ['irAPagos','loadRemCobro'].forEach(function(n){
+      var f=window[n]; if(typeof f!=='function') return;
+      window[n]=function(){ abrirCobro(); return f.apply(this,arguments); };
+    });
+  }
+  /* «Descargar PDF» al final de la pantalla (mismo camino que el botón chico de la barra) */
+  var cot=$('#secCot'), chico=$('#mobileActionPdf');
+  if(cot&&chico&&!$('.smg-pdf')){
+    var pdf=nodo('button','smg-pdf no-print',{type:'button','aria-hidden':'true',tabindex:'-1','data-t':''});
+    pdf.addEventListener('click',function(){ mobileDescargarPdf(); });
+    cot.parentNode.insertBefore(pdf,cot.nextSibling);
+    var sync=function(){
+      pdf.disabled=chico.disabled;
+      pdf.setAttribute('data-t',chico.disabled?('Descargar PDF (se activa al '+(esCot()?'generar':'registrar')+')'):'Descargar PDF');
+    };
+    new MutationObserver(sync).observe(chico,{attributes:true,attributeFilter:['disabled']});
+    var tabs=$('#tbTabs'); if(tabs) new MutationObserver(sync).observe(tabs,{attributes:true,subtree:true,attributeFilter:['class']});
+    sync();
+  }
 }
 
 /* ───────────────────────── Arranque ───────────────────────── */
 function iniciar(){
   seguro('tabs',initTabs); seguro('progreso',initProgreso); seguro('productos',initProductos);
+  seguro('regalo',initRegalo); seguro('altura',initAlturaEncabezado); seguro('observaciones',initObservaciones); seguro('selectores',initSelectores); seguro('tarjetas',initTarjetas);
   seguro('barra',initBarra); seguro('hojas',initHojas);
   seguro('filas',function(){ initFilasSwipe($('#remList')); initFilasSwipe($('#cobrosList')); initFilasSwipe($('#cotHistList')); });
   seguro('pantallas',initPantallas); seguro('encabezado',initEncabezado);

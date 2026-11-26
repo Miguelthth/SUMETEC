@@ -85,6 +85,8 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color
 .menu-mas-grp button{display:block;width:100%;text-align:left;padding:14px 16px;border:none;background:none;font-family:inherit;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;min-height:54px}
 .menu-mas-grp button:hover{background:var(--bg)}
 .menu-mas-grp button+button{border-top:1px solid var(--border)}
+.mm-hd{display:none}
+.menu-mas>*{flex-shrink:0} /* con poca altura el menú se desliza; antes los grupos se encogían y escondían botones */
 .menu-mas-h{padding:0 6px 8px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.8px;color:var(--muted)}
 
 .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--r2);font-size:12.5px;font-weight:500;cursor:pointer;border:none;transition:background .14s;font-family:inherit;white-space:nowrap}
@@ -665,6 +667,15 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color
 .monto-input-grande:focus{border-color:var(--green)}
 .atajo-btn{flex:1;justify-content:center;font-size:13px;font-weight:600;padding:10px 6px}
 @keyframes wm-aparecer{from{opacity:0;transform:translate(-50%,-50%) rotate(-28deg) scale(1.3)}to{opacity:1;transform:translate(-50%,-50%) rotate(-28deg) scale(1)}}
+/* Velo mientras se registra una remisión (nada de atrás se puede tocar) */
+.velo-envio{position:fixed;inset:0;z-index:990;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(11,45,74,.9);color:#fff;text-align:center;padding:24px;touch-action:none}
+.velo-envio small{opacity:.8}
+.velo-giro{width:42px;height:42px;border-radius:50%;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;animation:veloGiro .8s linear infinite}
+@keyframes veloGiro{to{transform:rotate(360deg)}}
+/* «Agregar nuevo…» siempre arriba de las listas de búsqueda */
+.pp-add,.sp-add button{display:block;width:100%;min-height:44px;border:1px solid #bfe0cc;border-radius:10px;background:#E8F5EF;color:#057448;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.pp-add{position:sticky;top:0;z-index:1;margin-bottom:6px}
+.sp-add{padding:8px 10px;border-bottom:1px solid var(--border)}
 /* Ajustes finales: después de los estilos heredados para que ganen en móvil. */
 @media(max-width:780px),(max-height:500px){
   .btn,.ti,.ci-val input,.fv input,.fv select,.fg input,.fg select,.fg textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{min-height:44px}
@@ -795,30 +806,31 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
      motivo por el que #ppGlobal ya vivía aquí afuera). -->
 <div id="menuMasBackdrop" class="no-print" onclick="_cerrarMenuMas()"></div>
 <div id="menuMas" class="menu-mas">
+  <div class="mm-hd"><strong>Más</strong><button type="button" class="mm-cerrar" aria-label="Cerrar" onclick="_cerrarMenuMas();_syncMobileChrome()">✕</button></div>
   <div class="menu-mas-grp">
   <div class="menu-mas-h">Negocio</div>
-  <button type="button" onclick="SumetecPortalPedidos.abrir()">Pedidos de clientes<span id="portalPedidosContadorMenu"></span></button>
-  <button onclick="_cerrarMenuMas();verNegocio()">📊 Resumen del negocio</button>
-  <button onclick="_cerrarMenuMas();abrirCostosSubieron()" title="Productos cuyo costo real subió y su precio no">📈 Costos que subieron</button>
-  <button onclick="_cerrarMenuMas();abrirSimulador()" title="Simula margen/utilidad con un precio nuevo, sin tocar el catálogo real">💲 Simulador de precio</button>
-  <button onclick="_cerrarMenuMas();abrirCalculadora()" title="Calculadora normal y de negocio (las mismas fórmulas que la del ERP)">🧮 Calculadora</button>
+  <button type="button" onclick="SumetecPortalPedidos.abrir()"><span class="mm-i" aria-hidden="true">📥</span><span class="mm-t">Pedidos de clientes<span id="portalPedidosContadorMenu"></span></span></button>
+  <button onclick="_cerrarMenuMas();verNegocio()"><span class="mm-i">📊</span> <span class="mm-t">Resumen del negocio</span></button>
+  <button onclick="_cerrarMenuMas();abrirCostosSubieron()" title="Productos cuyo costo real subió y su precio no"><span class="mm-i">📈</span> <span class="mm-t">Costos que subieron</span></button>
+  <button onclick="_cerrarMenuMas();abrirSimulador()" title="Simula margen/utilidad con un precio nuevo, sin tocar el catálogo real"><span class="mm-i">💲</span> <span class="mm-t">Simulador de precio</span></button>
+  <button onclick="_cerrarMenuMas();abrirCalculadora()" title="Calculadora normal y de negocio (las mismas fórmulas que la del ERP)"><span class="mm-i">🧮</span> <span class="mm-t">Calculadora</span></button>
   </div>
   <div class="menu-mas-grp">
   <div class="menu-mas-h">Caja de este celular</div>
-  <button onclick="_cerrarMenuMas();cierreDelDia()" title="Vendido/cobrado por método/pendiente -- solo de ESTE celular, no de todo el negocio">🧾 Cierre del día</button>
-  <button onclick="_cerrarMenuMas();abrirCorteCaja()" title="Efectivo cobrado en ESTE celular en el turno -- no incluye fondo, retiros ni otros dispositivos">🧮 Corte de caja</button>
+  <button onclick="_cerrarMenuMas();cierreDelDia()" title="Vendido/cobrado por método/pendiente -- solo de ESTE celular, no de todo el negocio"><span class="mm-i">🧾</span> <span class="mm-t">Cierre del día</span></button>
+  <button onclick="_cerrarMenuMas();abrirCorteCaja()" title="Efectivo cobrado en ESTE celular en el turno -- no incluye fondo, retiros ni otros dispositivos"><span class="mm-i">💵</span> <span class="mm-t">Corte de caja</span></button>
   </div>
   <div class="menu-mas-grp">
   <div class="menu-mas-h">Este teléfono</div>
-  <button onclick="_cerrarMenuMas();abrirEmpresa()">🏢 Mi empresa</button>
-  <button onclick="_cerrarMenuMas();abrirCatalogos()" id="btnTokenTab">⚙️ Configuración</button>
-  <button onclick="_cerrarMenuMas();abrirExcepciones()">⚠ Excepciones <span id="badgeExcepciones" style="display:none;background:#c0392b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">•</span></button>
-  <button onclick="_cerrarMenuMas();window.print()">🖨️ Imprimir</button>
+  <button onclick="_cerrarMenuMas();abrirEmpresa()"><span class="mm-i">🏢</span> <span class="mm-t">Mi empresa</span></button>
+  <button onclick="_cerrarMenuMas();abrirCatalogos()" id="btnTokenTab"><span class="mm-i">⚙️</span> <span class="mm-t">Configuración</span></button>
+  <button onclick="_cerrarMenuMas();abrirExcepciones()"><span class="mm-i">⚠️</span> <span class="mm-t">Excepciones <span id="badgeExcepciones" style="display:none;background:#c0392b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">•</span></span></button>
+  <button onclick="_cerrarMenuMas();window.print()"><span class="mm-i">🖨️</span> <span class="mm-t">Imprimir</span></button>
   </div>
   <div class="menu-mas-grp">
   <div class="menu-mas-h">Ajustes</div>
-  <button onclick="_cerrarMenuMas();_mostrarVersionInstalada();sumetecBuscarActualizacion('cotizador')" title="Buscar actualización de software">🔄 Actualización de software</button>
-  <button onclick="_cerrarMenuMas();restablecerDatosLocales()" title="Borrar los datos guardados en este teléfono">🧹 Borrar datos de este teléfono</button>
+  <button onclick="_cerrarMenuMas();_mostrarVersionInstalada();sumetecBuscarActualizacion('cotizador')" title="Buscar actualización de software"><span class="mm-i">🔄</span> <span class="mm-t">Actualización de software</span></button>
+  <button onclick="_cerrarMenuMas();restablecerDatosLocales()" title="Borrar los datos guardados en este teléfono"><span class="mm-i">🧹</span> <span class="mm-t">Borrar datos de este teléfono</span></button>
   </div>
 </div>
 <div id="mobileAction" class="mobile-action no-print" aria-live="polite">
@@ -928,7 +940,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
            (no ensucian el formulario compacto), pero SÍ viajan con la remisión --
            guardarEnDrive() los lee de aquí para registrarDatosCliente(). -->
       <input type="hidden" id="c_rfc"><input type="hidden" id="c_email"><input type="hidden" id="c_contacto"><input type="hidden" id="c_razon"><input type="hidden" id="c_persona_moral">
-      <div class="sp" id="cPanel" style="top:54px;left:16px;right:16px;min-width:unset" onmousedown="event.preventDefault()">
+      <div class="sp" id="cPanel" style="top:54px;left:16px;right:16px;min-width:unset" onmousedown="if(!event.target.closest('input'))event.preventDefault()">
         <!-- MC-34 (2026-09-16): botón ✕ explícito -- tocar fuera ya cerraba este
              panel (listener en :3259), pero Miguel no tenía forma segura de
              cancelarlo sin elegir un cliente; este botón nunca depende de dónde
@@ -937,10 +949,8 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
           <input type="text" placeholder="Buscar por nombre o RFC…" id="cSearch" oninput="filtClientes(this.value)" style="flex:1">
           <button type="button" aria-label="Cerrar" onclick="toggleCPanel()" style="flex-shrink:0;width:38px;border:none;background:var(--bg);color:var(--muted);border-radius:8px;font-size:16px;cursor:pointer">✕</button>
         </div>
+        <div class="sp-add"><button type="button" onclick="abrirNuevoCliente()">＋ Agregar nuevo cliente</button></div>
         <div id="cList"></div>
-        <div style="padding:8px 10px;border-top:1px solid #E5E5E7">
-          <button onclick="abrirNuevoCliente()" style="width:100%;padding:7px;background:#E8F5EF;color:#057448;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">＋ Agregar nuevo cliente</button>
-        </div>
       </div>
       <div class="fr"><span class="fl">Nombre / Razón Social</span><div class="fv"><input id="c_nombre" type="text" placeholder="—" oninput="autosave();_verificarAdeudo(this.value);_actualizarBtnPrecarga(this.value);_autoFillCliente(this.value)"></div></div>
       <div id="adeudoBox" style="display:none;margin:6px 0;padding:10px 12px;background:#fff8e1;border:1.5px solid #f59e0b;border-radius:8px;font-size:12px"></div>
@@ -973,7 +983,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
       <th class="c" style="width:38px">#</th>
       <th class="c" style="width:80px">Cantidad</th>
       <th style="width:130px">Código</th>
-      <th>Descripción <span id="btnModoRegalo" class="no-print" onclick="toggleModoRegalo(event)" title="Actívalo cuando vayas a dar un regalo: aparece la opción 🎁 bajo cada precio" style="float:right;cursor:pointer;font-size:10px;font-weight:700;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:11px;user-select:none">🎁 Regalo</span></th>
+      <th>Descripción <span id="btnModoRegalo" class="no-print" role="button" tabindex="0" aria-label="Modo regalo" aria-pressed="false" onclick="toggleModoRegalo(event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleModoRegalo(event)}" title="Actívalo cuando vayas a dar un regalo: aparece la opción 🎁 bajo cada precio" style="float:right;cursor:pointer;font-size:10px;font-weight:700;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:11px;user-select:none">🎁 Regalo</span></th>
       <th class="r" style="width:120px">Precio Unit.</th>
       <th class="c th-iva" style="width:80px" onclick="toggleIvaPopup(event)">IVA %<div class="iva-popup" id="ivaPopup"><div class="iva-opt" onclick="setIvaGlobal(0,event)">0%</div><div class="iva-opt" onclick="setIvaGlobal(8,event)">8%</div><div class="iva-opt" onclick="setIvaGlobal(16,event)">16%</div></div></th>
       <th class="r" style="width:110px">Importe</th>
@@ -999,6 +1009,7 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
       <div class="tl"><span class="tll">Subtotal</span><span class="tlv" id="tSub">$0.00</span></div>
       <div class="tl"><span class="tll" id="ivaWrap" style="cursor:pointer;user-select:none;position:relative;font-size:14px;font-weight:700;color:var(--text)" onclick="toggleIvaPopup2(event)">IVA <span id="ivaLbl" style="font-size:14px;font-weight:700;color:#b45309">— elegir</span><div class="iva-popup" id="ivaPopup2"><div class="iva-opt" onclick="setIvaGlobal(0,event)">0%</div><div class="iva-opt" onclick="setIvaGlobal(8,event)">8%</div><div class="iva-opt" onclick="setIvaGlobal(16,event)">16%</div></div></span><span class="tlv" id="tIva">$0.00</span></div>
       <div class="tl"><span class="tll">Descuento</span><span class="tlv" id="tDesc">$0.00</span></div>
+      <div class="tl" id="tRegaloRow" style="display:none"><span class="tll">🎁 Regalo</span><span class="tlv" id="tRegalo" style="color:var(--green);text-align:right"></span></div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
         <div class="tf" style="flex:1;margin-top:0"><span class="tf-l">Total</span><span class="tf-v" id="tTot">$0.00 MXN</span></div>
       </div>
@@ -1546,7 +1557,7 @@ function _mostrarAlertaMemoria(){
   if(!b){
     b=document.createElement('div');
     b.id='memBar';
-    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;padding:12px 16px;font-weight:700;text-align:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.35);line-height:1.4';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;font-weight:700;text-align:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.35);line-height:1.4';
     b.innerHTML='⚠️ MEMORIA DEL DISPOSITIVO LLENA — Recupera señal y sincroniza YA, y/o libera espacio. Hasta entonces, lo nuevo podría no guardarse.';
     if(document.body) document.body.appendChild(b);
   }
@@ -3559,15 +3570,30 @@ function imp(it){return it.regalo?0:(+it.qty||0)*(+it.precio||0)} // regalo no s
 let _modoRegalo=false;
 function toggleModoRegalo(e){
   if(e)e.stopPropagation();
+  if(_avisoBloqueado())return; // remisión ya registrada: el modo regalo no se enciende
   _modoRegalo=!_modoRegalo;
-  const b=document.getElementById('btnModoRegalo');
-  if(b){
-    b.style.background=_modoRegalo?'#057448':'rgba(255,255,255,.18)';
-    b.style.color=_modoRegalo?'#fff':'';
-    b.textContent=_modoRegalo?'🎁 Regalo ✓':'🎁 Regalo';
-  }
+  _pintarModoRegalo();
   renderTable();
-  toast(_modoRegalo?'Modo regalo activo — toca "🎁 regalo" bajo el precio del artículo':'Modo regalo desactivado','ok',2500);
+  toast(_modoRegalo?'Modo regalo activo — toca "🎁 regalo" junto al importe del artículo':'Modo regalo desactivado','ok',2500);
+}
+function _pintarModoRegalo(){
+  const b=document.getElementById('btnModoRegalo');if(!b)return;
+  b.style.background=_modoRegalo?'#057448':'rgba(255,255,255,.18)';
+  b.style.color=_modoRegalo?'#fff':'';
+  b.textContent=_modoRegalo?'🎁 Regalo ✓':'🎁 Regalo';
+  b.setAttribute('aria-pressed',String(_modoRegalo));
+}
+// Los regalos NO se cobran (no entran en ningún total). Esto solo informa en el desglose
+// cuántas piezas salieron de regalo y cuánto valían.
+function _resumenRegalo(lista){
+  const lineas=(lista||[]).filter(i=>i.regalo&&+i.qty>0);
+  return {lineas,pzs:lineas.reduce((s,i)=>s+(+i.qty||0),0),valor:lineas.reduce((s,i)=>s+(+i.qty||0)*(+i.precio||0),0)};
+}
+function _pintarRegalo(){
+  const fila=document.getElementById('tRegaloRow'),v=document.getElementById('tRegalo');if(!fila||!v)return;
+  const r=_resumenRegalo(items);
+  fila.style.display=r.pzs>0?'flex':'none';
+  v.textContent=r.pzs>0?(r.pzs+(r.pzs===1?' pza':' pzs')+(r.valor>0?' · '+fmt(r.valor)+' sin cobrar':' · sin cobrar')):'';
 }
 // Contenido de la celda Importe: el monto. El enlace "🎁 regalo" solo aparece si el modo
 // regalo está activo (o si la línea YA es regalo, para poder quitarlo).
@@ -3581,6 +3607,7 @@ function _impCellHtml(it){
 }
 // Marca/desmarca un artículo como REGALO (no se cobra, pero descuenta inventario)
 function toggleRegalo(id){
+  if(_avisoBloqueado())return;
   const it=items.find(i=>i._id===id);if(!it)return;
   it.regalo=!it.regalo;
   renderTable();calcTotals();
@@ -3627,20 +3654,21 @@ function _ppFiltrar(q){
     const msg=sinCatalogo
       ? (navigator.onLine?'Catálogo vacío — abre ⚙️ Catálogos para descargarlo':'📵 Catálogo no disponible sin conexión. Conéctate una vez para descargarlo.')
       : 'Sin resultados';
-    lista.innerHTML='<div style="padding:12px;text-align:center;font-size:12px;color:var(--muted)">'+msg+'</div>'
-      +'<div class="pp-item" style="border-top:2px solid var(--border);color:var(--green);font-weight:700;font-size:12px;grid-column:1/-1" onclick="_ppNuevo()">＋ Agregar nuevo producto</div>';
+    lista.innerHTML=_PP_NUEVO_HTML
+      +'<div style="padding:12px;text-align:center;font-size:12px;color:var(--muted)">'+msg+'</div>';
     return;
   }
-  lista.innerHTML=_ppResultados.map((p,i)=>{
+  lista.innerHTML=_PP_NUEVO_HTML+_ppResultados.map((p,i)=>{
     const cod=p.clave||'';const desc=p.desc||'';const precio=p.precio?'$'+(+p.precio).toFixed(2):'';
     return`<div class="pp-item" onclick="_ppSel(${i})">
       <span class="pp-cod">${cod}</span>
       <span class="pp-desc" title="${desc}">${desc}</span>
       <span class="pp-precio">${precio}</span>
     </div>`;
-  }).join('')+
-  `<div class="pp-item" style="border-top:2px solid var(--border);color:var(--green);font-weight:700;font-size:12px;grid-column:1/-1" onclick="_ppNuevo()">＋ Agregar nuevo producto</div>`;
+  }).join('');
+  lista.scrollTop=0;
 }
+const _PP_NUEVO_HTML='<button type="button" class="pp-add" onclick="_ppNuevo()">＋ Agregar nuevo producto</button>';
 // F5: último precio que se le dio a ESTE cliente por ESTE producto (del historial local).
 // Devuelve {precio, folio, fecha} o null. Permite avisar si el precio genérico difiere.
 function _precioAnteriorCliente(clave){
@@ -3806,6 +3834,7 @@ function _precioCatalogo(clave){
 }
 let _precargaItems=[];
 function abrirPrecarga(){
+  if(_avisoBloqueado())return;
   const nombre=document.getElementById('c_nombre')?.value||'';
   _precargaItems=_pedidoHabitualCliente(nombre);
   if(!_precargaItems.length){toast('Este cliente no tiene pedidos anteriores en este celular','warn');return;}
@@ -3830,6 +3859,7 @@ function abrirPrecarga(){
   document.getElementById('ovPrecarga').classList.add('open');
 }
 function _precargaAplicar(){
+  if(_avisoBloqueado()){closeOv('ovPrecarga');return;}
   let agregados=0;
   // Buscar filas vacías existentes para rellenarlas (bug 9)
   const vacias=items.filter(i=>(!i.clave&&!i.desc&&(+i.qty||0)===0&&(+i.precio||0)===0));
@@ -3871,11 +3901,15 @@ function hidePP(input){setTimeout(_ppCerrar,200);}
 const _esMovil=()=>window.matchMedia&&window.matchMedia('(max-width:780px)').matches;
 function _ajustarHojaTeclado(el){
   if(!el||!window.visualViewport)return;
-  if(!_esMovil()){el.style.removeProperty('bottom');el.style.removeProperty('max-height');return;}
+  if(!_esMovil()){['bottom','max-height','height'].forEach(p=>el.style.removeProperty(p));return;}
   const vv=window.visualViewport;
   const kb=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop)); // alto aprox del teclado
   el.style.setProperty('bottom',kb+'px','important');
-  el.style.setProperty('max-height',(vv.height-12)+'px','important');
+  // La hoja nunca se mete debajo del notch.
+  const alto='calc('+Math.round(vv.height)+'px - env(safe-area-inset-top, 0px) - 8px)';
+  el.style.setProperty('max-height',alto,'important');
+  // Clientes: el buscador vive DENTRO de la hoja; con alto fijo no se mueve al filtrar la lista.
+  if(el.classList&&el.classList.contains('sp'))el.style.setProperty('height',alto,'important');
 }
 function _ajustarHojasAbiertas(){
   ['ppGlobal','cPanel','cot_pp','cot_cPanel'].forEach(id=>{
@@ -4075,6 +4109,7 @@ function calcTotals(){
   // con descuento y regalos -- informativa, no toca el total.
   const tu=document.getElementById('tUtil');
   if(tu)tu.innerHTML=_utilidadLineaHTML(items,dp);
+  if(typeof _pintarRegalo==='function')_pintarRegalo();
   items.forEach(it=>{
     const el=document.getElementById('margen'+it._id);if(!el)return;
     const m=margenLinea(it,dp).margenPct;
@@ -7459,6 +7494,8 @@ function abrirNuevoCliente(){
   document.getElementById('ncBtnGuardar').style.display='';
   document.getElementById('ncBtnSoloAhora').style.display='';
   closeOv('ovHist'); document.getElementById('cPanel').classList.remove('open'); cPanelOpen=false;
+  // La hoja de clientes de Cotización también se cierra: queda por encima de esta ventana.
+  document.getElementById('cot_cPanel')?.classList.remove('open'); if(typeof _cotCPanelOpen!=='undefined')_cotCPanelOpen=false;
   document.getElementById('ovNuevoCliente').classList.add('open');
   document.getElementById('nc_nombre').focus();
 }
@@ -7571,7 +7608,7 @@ function abrirNuevoProducto(rowId, prefill){
   document.getElementById('np_clave').value = prefill||'';
   document.getElementById('np_desc').value = '';
   document.getElementById('np_precio').value = '';
-  const ivaInfo=document.getElementById('npIvaInfo');if(ivaInfo)ivaInfo.textContent=ivaGlobal;
+  const ivaInfo=document.getElementById('npIvaInfo');if(ivaInfo)ivaInfo.textContent=(typeof _enModoCotizacion==='function'&&_enModoCotizacion())?_ivaGlobalCot:ivaGlobal;
   const info = document.getElementById('npTargetInfo');
   info.textContent = rowId != null ? 'Se insertará en la fila seleccionada de la tabla.' : 'Se agregará como nueva fila al final.';
   document.getElementById('ovNuevoProducto').classList.add('open');
@@ -7581,7 +7618,8 @@ function guardarNuevoProducto(soloAhora){
   const clave=document.getElementById('np_clave').value.trim();
   const desc=document.getElementById('np_desc').value.trim();
   const precio=parseFloat(document.getElementById('np_precio').value)||0;
-  const iva=ivaGlobal; // hereda el IVA de la remisión — ver hallazgo "IVA confuso" de la auditoría 2026-09-10
+  const enCot=typeof _enModoCotizacion==='function'&&_enModoCotizacion();
+  const iva=enCot?_ivaGlobalCot:ivaGlobal; // hereda el IVA del documento — ver hallazgo "IVA confuso" de la auditoría 2026-09-10
   if(!clave||!desc){toast('Código y descripción son obligatorios','err');return}
   const prod={clave,desc,precio,iva};
   if(!soloAhora){
@@ -7596,12 +7634,16 @@ function guardarNuevoProducto(soloAhora){
     toast('Producto agregado a la tabla ✓','ok');
   }
   if(_npTargetId!=null){
-    const it=items.find(i=>i._id===_npTargetId);
-    if(it){it.clave=clave;it.desc=desc;it.precio=precio;it.iva=iva;}
+    const it=(enCot?_cotItems:items).find(i=>i._id===_npTargetId);
+    if(it){it.clave=clave;it.desc=desc;it.precio=precio;it.iva=iva;if(enCot&&!(+it.qty>0))it.qty=1;}
+  } else if(enCot){
+    addRowCot({clave,desc,precio,iva,qty:1});
   } else {
     addRow({clave,desc,precio,iva});
   }
-  closeOv('ovNuevoProducto'); renderTable(); calcTotals();
+  closeOv('ovNuevoProducto');
+  if(enCot){renderTableCot();calcTotalsCot();autosaveCot();}
+  else{renderTable();calcTotals();}
 }
 
 // ── ENCABEZADO REPETIBLE (impresión) ──────────────────────
@@ -8303,7 +8345,7 @@ function _abrirVistaPreviaPDF(doc,filename,info){
   ov.style.cssText='position:fixed;inset:0;z-index:9999;background:#1a1a1a;display:flex;flex-direction:column';
   const btn='flex:1;justify-content:center;padding:12px 6px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;display:flex;align-items:center;gap:4px';
   ov.innerHTML=`
-    <div style="background:#023561;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <div style="background:#023561;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;align-items:center;gap:8px;flex-shrink:0">
       <span style="flex:1;color:#fff;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${esc(info.folio)} · ${esc(info.cliente)}</span>
       <button id="_vpCerrar" aria-label="Cerrar" style="background:rgba(255,255,255,.15);color:#fff;border:none;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;flex-shrink:0">✕</button>
     </div>
@@ -8415,7 +8457,7 @@ function mostrarVisorPDF(blob, blobUrl, filename){
   ov.id = '_visor_ov';
   ov.style.cssText='position:fixed;inset:0;z-index:9999;background:#1a1a1a;display:flex;flex-direction:column';
   ov.innerHTML = isIOS ? `
-    <div style="background:#023561;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <div style="background:#023561;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;align-items:center;gap:8px;flex-shrink:0">
       <span style="flex:1;color:#fff;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${filename}</span>
       <button onclick="_imprimirVisor()" style="background:rgba(255,255,255,.12);color:#fff;padding:7px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.2);font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;cursor:pointer;font-family:inherit">📂 Abrir PDF</button>
       <button onclick="_compartirVisor()" style="background:#057448;color:#fff;padding:7px 11px;border-radius:8px;border:none;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;cursor:pointer;font-family:inherit">↑ Compartir</button>
@@ -8591,6 +8633,8 @@ function _bloquearFormulario(){
   const ar=document.querySelector('.add-row');if(ar){ar.disabled=true;ar.style.opacity='.35';}
   const br=document.getElementById('btnRegistrar');if(br){br.disabled=true;br.style.opacity='.5';br.innerHTML='🔒 Registrado';}
   const ivaTh=document.querySelector('.th-iva');if(ivaTh)ivaTh.style.pointerEvents='none';
+  if(_modoRegalo){_modoRegalo=false;_pintarModoRegalo();}
+  document.documentElement?.classList.add('sm-form-bloqueado');
   // MC-26 (2026-09-16): "deja cambiar clientes" -- los campos c_nombre/c_dir/etc
   // quedaban disabled, pero 🔍 Buscar seguía abriendo el dropdown y selCliente()
   // sigue escribiendo esos valores por JS (disabled solo bloquea al USUARIO
@@ -8603,6 +8647,7 @@ function _bloquearFormulario(){
 }
 function _desbloquearFormulario(){
   _formBloqueado=false;
+  document.documentElement?.classList.remove('sm-form-bloqueado');
   ['c_nombre','c_dir','c_cp','c_tel','obs','d_asesor','d_pago','descPct'].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=false;el.style.opacity='';}});
   document.querySelectorAll('.ti').forEach(el=>{el.disabled=false;});
   const ar=document.querySelector('.add-row');if(ar){ar.disabled=false;ar.style.opacity='';}
@@ -8633,6 +8678,14 @@ function _candadosExtra(bloquear){
   apagar(document.getElementById('ivaWrap'));
   apagar(document.getElementById('firmaPreview'));
   apagar(document.getElementById('btnBorrarFirma'));
+  // 2026-11-25 (Miguel: «cuando mando una remisión TODO debe bloquearse; todavía puedo pulsar Regalo»):
+  // también el regalo, los botones de IVA, «Precargar pedido» y «Buscar en catálogo».
+  apagar(document.getElementById('btnModoRegalo'));
+  apagar(document.querySelector('#documento .sm-iva-chips'));
+  apagar(document.querySelector('#precargaWrap button'));
+  apagar(document.querySelector('#documento .smg-cat'));
+  const firmaImg=document.getElementById('firmaImg'); // con firma guardada se sigue pudiendo abrir para verla
+  if(!bloquear||!firmaImg||firmaImg.style.display==='none')apagar(document.getElementById('btnAgregarFirma'));
   const enEdicion=!!_modoEdicion;
   const mostrarCaptura=!bloquear||enEdicion;
   ['abonoArea','btnPendiente','btnPagarTotal'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=mostrarCaptura?'':'none';});
@@ -8687,6 +8740,17 @@ function prepararPago(tipo){
 }
 
 // ── REGISTRAR — botón principal ───────────────────────────────
+let _enviandoRemision=false;
+// Cubre la app mientras se registra (los pop-ups propios quedan encima, z-index 1000).
+function _veloEnvio(on){
+  let v=document.getElementById('veloEnvio');
+  if(!on){if(v)v.remove();return;}
+  document.activeElement?.blur?.();
+  if(v||!document.body?.appendChild)return;
+  v=document.createElement('div');v.id='veloEnvio';v.className='velo-envio no-print';v.setAttribute('role','status');
+  v.innerHTML='<span class="velo-giro" aria-hidden="true"></span><b>Registrando la remisión…</b><small>No cierres la app.</small>';
+  document.body.appendChild(v);
+}
 async function registrarTodo(){
   // MC-26 (2026-09-16, hallazgo real de Miguel): el botón de abajo en celular
   // (#mobileActionPrimary) es un elemento APARTE de #btnRegistrar -- bloquear
@@ -8789,10 +8853,14 @@ async function registrarTodo(){
     }
   }catch(_){ /* el aviso nunca debe impedir registrar una venta */ }
 
+  // Mientras se guarda, toda la pantalla queda cubierta y un segundo toque no registra otra.
+  if(_enviandoRemision)return;
+  _enviandoRemision=true;
   const btn=document.getElementById('btnRegistrar');
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Registrando…';}
 
   try{
+    _veloEnvio(true);
     // Auditoría de tiempos (2026-11-12): si el colchón de folios está vacío, la reserva arranca YA, mientras se espera el GPS (antes era uno
     // después del otro: hasta 3 s de GPS y luego hasta 15 s de folio). registrarRemision espera esa misma reserva, no pide otra.
     try{if(!folioApartado()&&isOnline)apartarFolio(15000);}catch(_){}
@@ -8877,6 +8945,8 @@ async function registrarTodo(){
     toast('Error al registrar: '+err.message,'err',4000);
     console.error('registrarTodo',err);
   }finally{
+    _enviandoRemision=false;
+    _veloEnvio(false);
     if(!_formBloqueado&&btn){btn.disabled=false;btn.innerHTML='✅ REGISTRAR';}
     // Siempre limpiar cualquier toast de loading que quedara pegado
     const t=document.getElementById('toast');
@@ -9912,6 +9982,12 @@ function _desglosePopupHTML(rem){
   if(dp>0){
     html+='<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Descuento</span><span>-'+fmt(desc)+'</span></div>';
   }
+  // Lo que salió de regalo (informativo: no está sumado en ningún renglón de arriba).
+  if(typeof _resumenRegalo==='function'){
+    _resumenRegalo(activeItems).lineas.forEach(it=>{
+      html+='<div style="display:flex;justify-content:space-between;gap:10px;color:var(--green,#057448)"><span>🎁 '+esc(it.desc||it.clave||'producto')+'</span><span style="white-space:nowrap">'+(+it.qty)+' de regalo</span></div>';
+    });
+  }
   // Propuesta 5, decisión de Miguel: oculta tras un <details> (arranca
   // cerrado) -- este popup puede estar de frente al cliente justo al cobrar.
   const utilLinea=_utilidadLineaHTML(activeItems,dp);
@@ -10411,15 +10487,13 @@ async function popupPrompt(mensaje,valorDefault,titulo){
         Datos del Cliente
         <button class="sbtn" onclick="toggleCPanelCot()">🔍 Buscar cliente</button>
       </div>
-      <div class="sp" id="cot_cPanel" style="top:54px;left:16px;right:16px;min-width:unset" onmousedown="event.preventDefault()">
+      <div class="sp" id="cot_cPanel" style="top:54px;left:16px;right:16px;min-width:unset" onmousedown="if(!event.target.closest('input'))event.preventDefault()">
         <div style="display:flex;align-items:stretch;gap:6px">
           <input type="text" placeholder="Buscar por nombre o RFC…" id="cot_cSearch" oninput="filtClientesCot(this.value)" style="flex:1">
           <button type="button" aria-label="Cerrar" onclick="toggleCPanelCot()" style="flex-shrink:0;width:38px;border:none;background:var(--bg);color:var(--muted);border-radius:8px;font-size:16px;cursor:pointer">✕</button>
         </div>
+        <div class="sp-add"><button type="button" onclick="abrirNuevoCliente()">+ Agregar nuevo cliente</button></div>
         <div id="cot_cList"></div>
-        <div style="padding:8px 10px;border-top:1px solid #E5E5E7">
-          <button onclick="abrirNuevoCliente()" style="width:100%;padding:7px;background:#E8F5EF;color:#057448;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">+ Agregar nuevo cliente</button>
-        </div>
       </div>
       <div class="fr"><span class="fl">Nombre / Razón Social</span><div class="fv"><input id="cot_c_nombre" type="text" placeholder="-" oninput="autosaveCot();_autoFillClienteCot(this.value)"></div></div>
       <div class="fr"><span class="fl">Razón social fiscal</span><div class="fv"><input id="cot_c_razon" type="text" placeholder="-" oninput="autosaveCot()"></div></div>
@@ -10708,6 +10782,8 @@ function abrirCotizacion(){
 
 function _activarModoCot(){
   document.querySelector('.page').style.display='none';
+  // El panel de Cobro es de la remisión: en Cotización no pinta nada (salía arriba de todo).
+  const cobro=document.getElementById('pagosSection');if(cobro)cobro.style.display='none';
   document.getElementById('secCot').style.display='';
   // Ocultar botones de remisiones. I-4: 'badgePendientes' YA NO se oculta --
   // ya cuenta también la cola de cotizaciones (cola_cot_r, ver _pendientesTotal),
@@ -10751,6 +10827,7 @@ function _activarModoRem(){
 function _ejecutarVolverRem(nueva=false){
   document.getElementById('secCot').style.display='none';
   document.querySelector('.page').style.display='';
+  const cobro=document.getElementById('pagosSection');if(cobro)cobro.style.display='';
   // Restaurar botones de remisiones ('badgePendientes' ya no se toca -- ver nota en _activarModoCot)
   ['btnNueva','tbDiv1','btnHist','btnCobros','tbDiv2','btnDescargarPDF']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
@@ -10873,8 +10950,11 @@ function toggleCPanelCot(){
 }
 function filtClientesCot(q){
   const list=document.getElementById('cot_cList');if(!list)return;
-  const hits=CLIENTES.filter(c=>!q||(c.nombre||'').toLowerCase().includes(q.toLowerCase())).slice(0,15);
-  list.innerHTML=hits.map(c=>`<div class="sp-item" onmousedown="selClienteCot('${escAttr(c.nombre||'')}','${escAttr(c.rfc||'')}','${escAttr(c.dir||'')}','${escAttr(c.cp||'')}','${escAttr(c.tel||'')}','${escAttr(c.contacto||'')}','${escAttr(c.email||'')}')"><div class="sp-name">${esc(c.nombre)}</div><div class="sp-sub">${esc(c.tel||'')} ${esc(c.rfc||'')}</div></div>`).join('');
+  // Igual que el buscador de Remisiones: nombre o RFC, 30 resultados y aviso cuando no hay.
+  const s=String(q||'').toLowerCase();
+  const hits=CLIENTES.filter(c=>!s||String(c.nombre||'').toLowerCase().includes(s)||String(c.rfc||'').toLowerCase().includes(s)).slice(0,30);
+  list.innerHTML=hits.length?hits.map(c=>`<div class="sp-item" style="flex-direction:column;align-items:flex-start;gap:1px" onclick="selClienteCot('${escAttr(c.nombre||'')}','${escAttr(c.rfc||'')}','${escAttr(c.dir||'')}','${escAttr(c.cp||'')}','${escAttr(c.tel||'')}','${escAttr(c.contacto||'')}','${escAttr(c.email||'')}')"><div class="sp-name">${esc(c.nombre)}</div><div class="sp-sub">${esc(c.tel||'')} ${esc(c.rfc||'')}</div></div>`).join('')
+    :'<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Sin resultados</div>';
 }
 function selClienteCot(n,r,d,cp,t,co,e){
   if(globalThis.ComercialCliente)consultarComercialCliente(n);
@@ -11096,16 +11176,21 @@ function _cotPpFiltrar(e,rowId){
   _cotPpRowId=rowId;
   const q=(e.target.value||'').trim().toLowerCase();
   const pp=document.getElementById('cot_pp');if(!pp)return;
+  // Igual que el buscador de productos de Remisiones (2026-11-25): lo escrito a la vista,
+  // «Agregar nuevo producto» arriba, aviso cuando no hay resultados y la hoja no se cierra al tocarla.
   const hits=PRODUCTOS.filter(p=>!q||(p.clave||'').toLowerCase().includes(q)||(p.desc||'').toLowerCase().includes(q)).slice(0,30);
-  if(!hits.length){pp.classList.remove('open');return;}
   const rect=e.target.getBoundingClientRect();
-  pp.style.cssText=`position:fixed;top:${rect.bottom+2}px;left:${rect.left}px;width:${Math.max(320,rect.width)}px;z-index:3000;`;
-  pp.innerHTML=hits.map((p,i)=>`<div class="pp-item" onmousedown="_cotPpSel(${i})" style="cursor:pointer">
+  pp.style.cssText=`position:fixed;top:${rect.bottom+2}px;left:${Math.max(0,Math.min(rect.left,window.innerWidth-370))}px;width:${Math.max(320,rect.width)}px;z-index:3000;`;
+  pp.onmousedown=ev=>ev.preventDefault();
+  pp.innerHTML=`<div class="pp-search pp-eco">${q?esc(e.target.value):'Buscar código o descripción…'}</div>
+  <div class="pp-lista"><button type="button" class="pp-add" onclick="_cotPpNuevo()">＋ Agregar nuevo producto</button>`
+  +(hits.length?hits.map((p,i)=>`<div class="pp-item" onclick="_cotPpSel(${i})" style="cursor:pointer">
     <span class="pp-cod">${esc(p.clave)}</span>
     <span class="pp-desc">${esc(p.desc)}</span>
     <span class="pp-precio">$${(+p.precio||0).toFixed(2)}</span>
-  </div>`).join('');
-  pp._fuente=hits;pp.classList.add('open');
+  </div>`).join(''):'<div style="padding:12px;text-align:center;font-size:12px;color:var(--muted)">'+(PRODUCTOS.length?'Sin resultados':'Catálogo vacío')+'</div>')
+  +'</div>';
+  pp._fuente=hits;pp._texto=e.target.value||'';pp.classList.add('open');
   _ajustarHojaTeclado(pp);setTimeout(()=>_ajustarHojaTeclado(pp),350); // sube la hoja sobre el teclado (celular)
 }
 function _cotPpSel(idx){
@@ -11151,6 +11236,11 @@ function _cotInfoMargen(rowId){
   ov.classList.add('open');
 }
 function _cotPpCerrar(){document.getElementById('cot_pp')?.classList.remove('open');}
+function _cotPpNuevo(){
+  const pp=document.getElementById('cot_pp');
+  abrirNuevoProducto(_cotPpRowId,String(pp?._texto||'').replace(/'/g,''));
+  _cotPpCerrar();
+}
 
 // ── Generar cotización ────────────────────────────────────────────────────
 // I-3: valida y muestra el desglose ANTES de generar nada (PDF/subida) --

@@ -7,10 +7,28 @@
      sumetec-gestos.js y siempre delega en las funciones que ya existen.
    ═══════════════════════════════════════════════════════════════════════════ */
 /* En escritorio estos elementos no se ven (la capa es solo de celular) */
-.smg-handle,.smg-progress,.smg-hint,.smg-ptr,.smg-acts,.smg-brand,.smg-phead{display:none}
+.smg-handle,.smg-progress,.smg-hint,.smg-ptr,.smg-acts,.smg-brand,.smg-phead,.smg-sel-btn,.smg-hdx,.smg-lbl-iva,.smg-acc,.smg-pdf{display:none}
+.smg-sel{display:contents}
 .smg-pcard{display:contents}   /* en escritorio el envoltorio no existe visualmente */
 
+/* Letras del prototipo (2026-11-26, Miguel: «sí, descárgalas»): Manrope y Archivo, de Google Fonts (licencia OFL),
+   guardadas en fonts/ para que funcionen sin internet. Solo las usa la capa de celular. */
+@font-face{font-family:'Manrope';font-style:normal;font-weight:400 800;font-display:swap;src:url(fonts/manrope-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:400 800;font-display:swap;src:url(fonts/manrope-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Archivo';font-style:normal;font-weight:600 800;font-display:swap;src:url(fonts/archivo-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Archivo';font-style:normal;font-weight:600 800;font-display:swap;src:url(fonts/archivo-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+
 @media screen and (max-width:780px){
+
+  /* ── Letras: Manrope para todo; Archivo para la marca y las cifras, como en el prototipo ── */
+  html[data-app=cotizador] body{font-family:'Manrope',system-ui,sans-serif}
+  html[data-app=cotizador] body :is(button,input,select,textarea){font-family:'Manrope',system-ui,sans-serif}
+  html[data-app=cotizador] body :is(.qty-stepper input,.mobile-action-total strong,.sm-iva-chips button,.td-cl .ti.cl,.pp-cod){font-family:'Manrope',system-ui,sans-serif!important}
+  html[data-app=cotizador] body :is(.smg-brand,.items-table td.td-imp,.calc-pant,.smg-res-b .tf-v,#mobileActionTotal,.rem-to,.cobro-saldo,.pp-precio,.smg-fila.smg-total b){font-family:'Archivo','Manrope',sans-serif!important}
 
   /* ── Sensación táctil: todo lo tocable "se hunde" un poco ── */
   button,.btn,.rem-i,.cobro-row,.sbtn,.mobile-nav button,.tb-tab,.menu-mas button{
@@ -244,6 +262,9 @@
   html body .items-table tbody tr.smg-row td.td-cl::before{display:block;content:"Código";margin:0;font-size:11.5px;font-weight:700;letter-spacing:0;text-transform:none;color:#4A5D6E;white-space:nowrap}
   html body .items-table tbody tr.smg-row td.td-cl .ti.cl{flex:1;min-width:0;width:100%;min-height:32px!important;padding:4px 8px;font-size:16px;border:1.5px solid var(--border);border-radius:8px;background:#F4F7F9}
   html body .items-table tbody tr.smg-row td.td-del{order:2;flex:none;position:static;width:auto;align-self:center}
+  /* El área táctil extra del bote (::after con inset:-4px) debe medirse desde el BOTÓN. Sin esto se
+     medía desde la tarjeta completa y tocar Código, Descripción o el regalo caía en «Eliminar». */
+  html body .items-table tbody tr.smg-row td.td-del .del-btn{position:relative}
   html body .items-table tbody tr.smg-row td.td-del .del-btn{width:32px!important;height:32px!important;min-height:32px!important;padding:0;border:1.5px solid #F0C9C4;border-radius:9px;background:#fff
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C0392B' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'/%3E%3C/svg%3E") center/16px no-repeat;font-size:0;color:transparent}
   html body .items-table tbody tr.smg-row td.td-desc{order:3;flex:0 0 100%;text-align:left}
@@ -280,9 +301,227 @@
   html body .mobile-nav button small{font-size:11px;font-weight:700}
   html body .mobile-nav button[aria-current=page]{background:none;color:var(--green)}
   html body .mobile-nav button[aria-current=page]::before{background:var(--green)}
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     AJUSTES DE iPHONE (2026-11-25, pedido de Miguel)
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* ── 5. Zonas seguras: el notch no tapa nada y abajo no queda hueco ── */
+  html[data-app=cotizador]{--sm-pie:max(8px,calc(env(safe-area-inset-bottom,0px) - 14px));
+    --smg-nav:calc(51px + var(--sm-pie));scroll-padding-top:calc(var(--smg-tb,90px) + 8px)}
+  html body{padding-bottom:calc(var(--smg-nav) + 62px)}
+  html body .tb{padding:calc(5px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 6px max(14px,env(safe-area-inset-left,0px))}
+  html body #netBar,html body #editBanner,html body #cotEditBanner{top:var(--smg-tb,90px)!important}
+  html body .mobile-nav{height:var(--smg-nav);padding-top:4px;padding-bottom:var(--sm-pie);align-content:start;background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none}
+  html body .mobile-action{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none}
+  html body .mobile-nav button{min-height:46px;height:46px}
+  html body .mobile-action{bottom:var(--smg-nav)}
+  html body .ov.module-screen{inset:0 0 var(--smg-nav) 0!important;padding-top:env(safe-area-inset-top,0px)!important;background:#0F2A44!important}
+  html body .ov.module-screen .modal{padding-bottom:14px!important;scroll-padding-top:64px}
+  html body .ov.module-screen .modal>.mi{position:sticky;top:-14px;z-index:5;background:#fff;box-shadow:0 8px 10px -8px rgba(15,42,68,.25)}
+  html body .toast{bottom:calc(var(--smg-nav) + 62px);right:12px;left:12px;max-width:none;text-align:center;pointer-events:none;visibility:hidden}
+  html body .toast.show{visibility:visible}
+  html body:has(.ov.open,.sp.open,.pp-global.open) .toast{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateY(-120px)}
+  html body:has(.ov.open,.sp.open,.pp-global.open) .toast.show{transform:none}
+  /* El pie con logo y correo no se usa en el teléfono (sí sale al imprimir) */
+  html body .doc>.doc-ft{display:none}
+
+  /* ── 6. Productos: «Agregar producto» arriba de la lista; el regalo es solo un icono ── */
+  /* Los renglones de Cotización se ven igual que los de Remisión */
+  html body .items-table tbody tr.smg-row td.td-n{font-size:0!important}
+  html body #cot_tblBody tr.smg-row td.td-cl .ti{flex:1;min-width:0;width:100%;min-height:32px!important;padding:4px 8px;font-weight:600;color:var(--green);border:1.5px solid var(--border);border-radius:8px;background:#F4F7F9}
+  html body #secCot .doc-hd .doc-meta{white-space:normal;overflow:visible;line-height:1.35}
+  html body .smg-pcard .smg-phead{order:0}
+  html body .smg-pcard .add-row{order:1;margin-bottom:6px}
+  html body .smg-pcard .table-wrap{order:2}
+  html body .smg-pcard .smg-hint{order:3;margin:2px 0 0}
+  html body .items-table tbody tr.smg-row{scroll-margin:calc(var(--smg-tb,90px) + 8px) 0 150px}
+  .smg-pbtns{display:flex;align-items:center;gap:6px}
+  html body .smg-phead #btnModoRegalo{float:none!important;display:grid!important;place-items:center;width:40px;height:34px;padding:0!important;
+    border-radius:999px;border:1.5px solid var(--border);background:#F4F7F9!important;font-size:0!important;cursor:pointer;user-select:none}
+  html body .smg-phead #btnModoRegalo::before{content:"🎁";font-size:17px;line-height:1}
+  html body .smg-phead #btnModoRegalo[aria-pressed=true]{background:#057448!important;border-color:#057448;box-shadow:0 0 0 3px var(--green-light)}
+  html body .items-table tbody tr.smg-row td.td-imp>div{display:block;width:max-content;margin:0 0 4px auto;font-size:12px!important;line-height:1!important;opacity:1!important;font-weight:800;
+    border:1px solid #bfe0cc;border-radius:999px;background:#E8F5EF;padding:8px 11px}
+  html body .items-table tbody tr.smg-row td.td-imp>span{font-size:13px!important;line-height:36px}
+
+  /* ── 7. Observaciones: crece con su texto (la altura la pone sumetec-gestos.js) ── */
+  html body .doc textarea.obs-ta{display:block;min-height:76px!important;overflow:hidden;resize:none;padding:8px 10px;border:1.5px solid var(--border);
+    border-radius:10px;background:#F4F7F9;line-height:1.5;color:var(--text);outline:none}
+  html body .doc textarea.obs-ta:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-light);background:#fff;padding:8px 10px}
+
+  /* ── 8. Pantalla principal como el prototipo (2026-11-26): Resumen, Observaciones, Firma y Cobro,
+     cada uno en SU tarjeta. Los elementos de siempre no se mueven: solo se acomodan con CSS. ── */
+  html[data-app=cotizador]{--green:#0E7C4A;--green2:#0A6339;--green-light:#E3F3EA;--navy:#0F2A44;--navy-soft:#16395C;
+    --text:#122334;--muted:#4A5D6E;--border:#DCE5EB;--bg:#EEF2F5}
+  html body .tb-status.ok .dot{background:#3ED598}
+  .smg-hdx{display:inline-block}
+  /* Los títulos originales quedan ocultos por completo (sin su separación entre letras ni su icono) */
+  html body .doc>.smg-lower>.lb>.bt{letter-spacing:0;gap:0}
+  html body .doc>.smg-lower>.lb>.bt>svg{display:none}
+  /* «Ver utilidad» sin emoji; el texto cambia según si la utilidad está a la vista */
+  html body .doc .smg-r-util>#btnVerUtil{font-size:0!important;min-height:40px!important}
+  html body .smg-r-util>#btnVerUtil::after{content:"Ocultar utilidad";font-size:13.5px}
+  html body .smg-r-util:has(>#tUtil[style*="display:none"])>#btnVerUtil::after,html body .smg-r-util:has(>#tUtil[style*="display: none"])>#btnVerUtil::after{content:"Ver utilidad"}
+  .smg-ico{width:15px;height:15px;flex:none;margin-right:7px;background:center/15px no-repeat}
+  .smg-ico-res{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230E7C4A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='2' width='16' height='20' rx='2'/%3E%3Cpath d='M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01'/%3E%3C/svg%3E")}
+  .smg-ico-obs{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230E7C4A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/%3E%3C/svg%3E")}
+  .smg-ico-firma{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230E7C4A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z'/%3E%3C/svg%3E")}
+  .smg-ico-cobro{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230E7C4A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='2'/%3E%3Cpath d='M2 10h20'/%3E%3C/svg%3E")}
+  .smg-tit{font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#4A5D6E;white-space:nowrap}
+  .smg-tit::before,.smg-sub::before,.smg-sum::before{content:attr(data-t)}
+  .smg-sub{margin-left:6px;font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:#8496A5}
+  .smg-sum{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:8px;font-size:12px;font-weight:700;letter-spacing:0;text-transform:none;color:#8496A5}
+  .smg-chev{width:17px;height:17px;flex:none;margin-left:auto;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238496A5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") center/17px no-repeat;transition:transform .25s}
+  .smg-sum+.smg-chev{margin-left:8px}
+  .smg-abierta .smg-chev{transform:rotate(180deg)}
+
+  /* Tarjeta «Resumen» */
+  html body .doc>.smg-lower{display:grid;order:4;position:relative;grid-template-columns:repeat(6,minmax(0,1fr));column-gap:7px;align-content:start;margin-top:6px;padding:0 13px;border:0}
+  html body .smg-lower::before{content:"";grid-column:1/-1;grid-row:1/13;margin:0 -13px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 2px rgba(15,42,68,.06),0 8px 24px -14px rgba(15,42,68,.22)}
+  html body .smg-lower>.smg-res-a,html body .smg-lower>.smg-res-b{display:contents}
+  html body .smg-res-b>.bt{display:none}
+  html body .smg-res-a>.rr:not(.smg-r-pct){display:none}
+  html body .smg-res-a>*,html body .smg-res-b>*,html body .smg-r-util>*,html body .smg-acc>*{position:relative;z-index:1;grid-column:1/-1;min-width:0}
+  html body .smg-res-a>.bt{grid-row:1;display:flex;align-items:center;margin:0;padding:10px 0 4px;font-size:0}
+  html body .smg-res-b>.smg-r-sub{grid-row:2}
+  html body .smg-res-b>.smg-r-desc{grid-row:3}
+  html body .smg-res-b>.smg-r-iva{grid-row:4}
+  html body .smg-res-b>.smg-r-regalo{grid-row:5}
+  html body .smg-res-b>.smg-r-total{grid-row:6;margin-top:3px;border-top:1.5px solid var(--border);padding-top:5px}
+  html body .smg-res-b>.tl{border:0;padding:2px 0;font-size:14px}
+  html body .smg-res-b>.tl .tll,html body .smg-res-b #ivaWrap,html body .smg-res-b #cot_ivaWrap{color:#4A5D6E!important;font-size:14px!important;font-weight:600!important}
+  html body .smg-res-b #ivaLbl,html body .smg-res-b #cot_ivaLbl{font-size:14px!important;font-weight:700!important}
+  html body .smg-res-b>.tl .tlv{font-weight:800}
+  html body .smg-res-b .tf{margin:0;padding:0;background:none;border-radius:0}
+  html body .smg-res-b .tf-l{color:var(--text);font-size:14px;font-weight:800;text-transform:none;letter-spacing:0}
+  html body .smg-res-b .tf-v{color:var(--green);font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+  html body .smg-res-b>.smg-r-letras{display:none}
+  html body .smg-res-a>.smg-r-pct{grid-row:7/9;grid-column:1/4;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:3px;margin:8px 0 0;padding:0;border:0}
+  html body .smg-r-pct .rl{font-size:11.5px;font-weight:700;color:#4A5D6E}
+  html body .smg-r-pct .rl::after{content:" %"}
+  html body .smg-r-pct>div>span{display:none}
+  html body .smg-r-pct .di{width:100%;min-height:40px;text-align:left;border:1.5px solid var(--border);border-radius:10px;background:#F4F7F9;padding:5px 10px}
+  html body .smg-res-b>.smg-lbl-iva{display:flex;align-items:center;gap:6px;grid-row:7;grid-column:4/-1;margin-top:8px;font-size:11.5px;font-weight:700;color:#4A5D6E;line-height:1.25}
+  .smg-lbl-iva::before{content:"IVA"}
+  .smg-lbl-iva::after{content:attr(data-t);font-size:10.5px;font-weight:800;background:var(--green-light);color:var(--green);border-radius:6px;padding:1px 6px}
+  .smg-lbl-iva[data-t=""]::after{display:none}
+  html body .smg-res-b>.sm-iva-chips{grid-row:8;grid-column:4/-1;gap:5px;margin:3px 0 0;padding:0;background:none;border-radius:10px}
+  html body .smg-res-b>.sm-iva-chips.falta{box-shadow:0 0 0 2px #e9c46a}
+  html body .smg-res-b>.sm-iva-chips button{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40px;padding:2px 0;border:1.5px solid var(--border);border-radius:10px;background:#F4F7F9;color:#4A5D6E;font-family:inherit;font-size:14px;font-weight:800;line-height:1.15}
+  html body .smg-res-b>.sm-iva-chips button::after{font-size:9.5px;font-weight:600}
+  .sm-iva-chips button[data-v="0"]::after{content:"Sin IVA"}
+  .sm-iva-chips button[data-v="8"]::after{content:"Frontera"}
+  .sm-iva-chips button[data-v="16"]::after{content:"General"}
+  html body .smg-res-b>.sm-iva-chips button[aria-pressed=true]{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 6px 14px -6px rgba(14,124,74,.55)}
+  html body .smg-res-b>.smg-r-util{display:contents}
+  html body .smg-r-util>#btnVerUtil{grid-row:9;grid-column:1/4}
+  html body .smg-r-util>#tUtil{grid-row:10;margin-top:8px;background:var(--green-light);border-radius:10px;padding:8px 10px;font-size:13px}
+  html body .smg-res-b>.smg-acc{display:contents}
+  html body .smg-r-util>#btnVerUtil,html body .smg-acc>button{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:40px;margin:8px 0 0;padding:6px;border:1.5px solid var(--border);border-radius:10px;background:#F4F7F9;color:var(--text);font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+  html body .smg-r-util>#btnVerUtil::before{content:"";width:15px;height:15px;flex:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23122334' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17l6-6 4 4 8-8'/%3E%3Cpath d='M14 7h7v7'/%3E%3C/svg%3E") center/15px no-repeat}
+  .smg-acc>button::after{content:attr(data-t)}
+  .smg-acc>button[data-a=calc]::before{content:"";width:15px;height:15px;flex:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23122334' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='2' width='16' height='20' rx='2'/%3E%3Cpath d='M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01'/%3E%3C/svg%3E") center/15px no-repeat}
+  html body .smg-acc>button[data-a=calc]{grid-row:9;grid-column:4/-1}
+  html body #secCot .smg-acc>button[data-a=calc]{grid-column:1/-1}
+  html body .smg-acc>button:not([data-a=calc]){grid-row:11;margin:7px 0 10px;min-height:38px;font-size:12.5px}
+  html body .smg-acc>button[data-a=limpiar]{grid-column:1/3}
+  html body .smg-acc>button[data-a=copiar]{grid-column:3/5}
+  html body .smg-acc>button[data-a=wa]{grid-column:5/-1}
+  html body .smg-res-b>#btnPagoRapido{grid-row:12;margin:0 0 10px!important}
+
+  /* Tarjetas plegables: Observaciones, Firma y Cobro */
+  html body .doc>.smg-lower>.lb.smg-obs{grid-row:13;grid-column:1/-1;position:relative;z-index:1;margin:6px -13px 0;padding:0 12px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 2px rgba(15,42,68,.06),0 8px 24px -14px rgba(15,42,68,.22)}
+  html body .smg-obs>.bt{display:flex;align-items:center;min-height:44px;margin:0;font-size:0;cursor:pointer}
+  html body .doc .smg-obs:not(.smg-abierta)>textarea.obs-ta{display:none}
+  html body .doc>.smg-lower>.lb.smg-obs.smg-abierta{padding-bottom:10px}
+  html body #documento>.smg-firma-hd{order:6;display:block;margin-top:6px;padding:0 12px!important;background:#fff;border:1px solid var(--border)!important;border-radius:14px;box-shadow:0 1px 2px rgba(15,42,68,.06),0 8px 24px -14px rgba(15,42,68,.22)}
+  html body #documento>.smg-firma-hd>button{display:flex;align-items:center;width:100%;min-height:44px;padding:0;font-size:0!important;text-align:left}
+  html body #documento>.smg-firma-hd>button>#firmaToggleIcon{display:none}
+  html body #documento>.smg-firma-hd.smg-abierta{border-bottom:0!important;border-radius:14px 14px 0 0;box-shadow:none}
+  html body #documento>#firmaSection{order:7;background:#fff;border:1px solid var(--border);border-top:0;border-radius:0 0 14px 14px;padding:0 12px 12px!important}
+  html body #documento>#firmaSection>div>div:first-child{display:none}
+  html body #captureLayout>.page{margin-bottom:0}
+  html body #captureLayout>#pagosSection{margin:6px 12px 0!important;background:#fff;border:1px solid var(--border);border-radius:14px!important;box-shadow:0 1px 2px rgba(15,42,68,.06),0 8px 24px -14px rgba(15,42,68,.22)!important}
+  html body #pagosSection .cobro-head{display:grid!important;grid-template-columns:auto auto minmax(0,1fr) auto!important;align-items:center;column-gap:0!important;row-gap:6px!important;padding:0 12px!important;min-height:44px;background:#fff!important;color:var(--text)!important;cursor:pointer}
+  html body #pagosSection .cobro-head>.smg-ico{grid-row:1;grid-column:1}
+  html body #pagosSection .cobro-head>.smg-tit{grid-row:1;grid-column:2;line-height:44px}
+  html body #pagosSection .cobro-head>.smg-sum{grid-row:1;grid-column:3;justify-self:end}
+  html body #pagosSection .cobro-head>.smg-chev{grid-row:1;grid-column:4}
+  html body #pagosSection #cobroTitle{grid-row:2;grid-column:1/-1;font-size:13px!important;font-weight:700!important;letter-spacing:0!important;color:var(--text)}
+  html body #pagosSection #cobroTitle[data-vacio]{display:none}
+  html body #pagosSection .cobro-actions{grid-row:3;grid-column:1/-1;margin:0 0 4px!important}
+  html body #pagosSection .cobro-actions>div:last-child{display:none!important}
+  html body #pagosSection #btnPendiente,html body #pagosSection #btnPagarTotal{background:#F4F7F9!important;color:var(--text)!important;border:1.5px solid var(--border)!important}
+  html body #captureLayout>#pagosSection:not(.smg-abierta) :is(#pagosControles,#pagosHistorial,.cobro-actions,#cobroTitle){display:none!important}
+  html body #pagosSection #pagosControles{padding:4px 12px 12px!important}
+  html body #pagosSection #abonoArea .btn-g{background:var(--navy);color:#fff}
+
+  /* Tarjeta de cliente con su título arriba, y «Descargar PDF» al final (el botón chico de la barra se quita) */
+  html body #documento>.doc-hd::before{content:"CLIENTE";display:block;min-height:17px;margin-bottom:4px;padding-left:22px;font-size:12px;font-weight:800;letter-spacing:.07em;color:#4A5D6E;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230E7C4A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5'/%3E%3C/svg%3E") left center/15px no-repeat}
+  html body #documento .cards .card:first-child>.ch>span{display:none!important}
+  html body #documento .cards .card:first-child{padding-top:0}
+  html body>.smg-pdf{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 24px);min-height:44px;margin:8px 12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--text);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}
+  html body>.smg-pdf::before{content:"";width:17px;height:17px;flex:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23122334' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12M7 10l5 5 5-5M4 21h16'/%3E%3C/svg%3E") center/17px no-repeat}
+  .smg-pdf::after{content:attr(data-t)}
+  html body>.smg-pdf:disabled{opacity:.6}
+  html:not(.smg-robot) body .mobile-action .mobile-action-pdf{display:none!important}
+  html:not(.smg-robot) body .mobile-action{grid-template-columns:minmax(0,1fr) auto!important}
+
+  /* ── 9. Listas de búsqueda (clientes y productos): la misma hoja, buscador y «Agregar» arriba ── */
+  html body #cPanel.sp.open,html body #cot_cPanel.sp.open{display:flex!important;flex-direction:column;overflow:hidden!important;z-index:2000!important;padding-bottom:0}
+  html body .sp.open>*{flex:none}
+  html body .sp.open>#cList,html body .sp.open>#cot_cList{flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0px)}
+  html body .sp::before,html body .pp-global::before{flex:none}
+  html body .pp-global.open{display:flex!important;flex-direction:column;overflow:hidden;padding-bottom:0}
+  html body .pp-global.open>.pp-search{flex:none}
+  html body .pp-global.open>#ppLista,html body .pp-global.open>.pp-lista{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px))}
+  html body .pp-eco{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html body .pp-add,html body .sp-add button{min-height:46px;font-size:14.5px}
+  html body .pp-item{grid-template-columns:minmax(0,.8fr) minmax(0,1.4fr) auto}
+
+  /* ── 10. Método de pago: pop-up propio en lugar del selector del iPhone ── */
+  .smg-sel{display:block!important;position:relative}
+  html body .smg-sel select{pointer-events:none;-webkit-appearance:none;appearance:none;padding-right:36px!important}
+  html body .smg-sel::after{content:"▾";position:absolute;right:14px;top:calc(50% - 4px);transform:translateY(-50%);color:var(--muted);pointer-events:none}
+  .smg-sel-btn{display:block!important;position:absolute;inset:0;width:100%;border:0;background:transparent;border-radius:10px;cursor:pointer}
+  .smg-sel.smg-falta select{border-color:#c0392b!important;box-shadow:0 0 0 3px rgba(192,57,43,.2)}
+  .smg-opciones{display:grid;gap:8px}
+  .smg-opciones button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:50px;padding:10px 14px;border:1.5px solid var(--border);
+    border-radius:12px;background:#F4F7F9;color:#0F2A44;font-family:inherit;font-size:15px;font-weight:700;text-align:left;cursor:pointer}
+  .smg-opciones button[aria-selected=true]{border-color:var(--green);background:var(--green-light);color:var(--green)}
+  .smg-opciones button[aria-selected=true]::after{content:"✓";font-size:17px}
+
+  /* ── 11. «Más»: pantalla completa con cuadrícula fija ── */
+  html body .menu-mas{top:0!important;bottom:var(--smg-nav)!important;max-height:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;
+    padding:calc(env(safe-area-inset-top,0px) + 4px) 12px 12px!important;gap:6px!important;background:#eef2f6!important;overflow-y:auto}
+  html body .menu-mas>*{flex:none}
+  html body .menu-mas .mm-hd{display:flex;align-items:center;justify-content:space-between}
+  html body .menu-mas .mm-hd strong{font-size:19px;color:#0F2A44}
+  html body .menu-mas .mm-hd button.mm-cerrar{width:44px!important;min-height:40px!important;justify-content:center;font-size:16px!important;background:#fff!important;border:1px solid var(--border)!important;border-radius:12px!important}
+  html body .menu-mas .menu-mas-grp{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;background:transparent;box-shadow:none;border-radius:0;overflow:visible}
+  html body .menu-mas .menu-mas-h{grid-column:1/-1;padding:2px 2px 0!important}
+  html body .menu-mas .menu-mas-grp button{grid-column:span 2;flex-direction:column!important;justify-content:center;gap:3px!important;min-height:74px!important;padding:8px 4px!important;
+    background:#fff!important;border:1px solid var(--border)!important;border-radius:14px!important;text-align:center!important;white-space:normal;line-height:1.2;
+    font-size:12.5px!important;font-weight:700!important;box-shadow:0 1px 2px rgba(15,42,68,.06)}
+  html body .menu-mas .menu-mas-grp button:first-of-type:nth-last-of-type(2),html body .menu-mas .menu-mas-grp button:first-of-type:nth-last-of-type(2)~button,
+  html body .menu-mas .menu-mas-grp button:first-of-type:nth-last-of-type(4),html body .menu-mas .menu-mas-grp button:first-of-type:nth-last-of-type(4)~button,
+  html body .menu-mas .menu-mas-grp button:first-of-type:nth-last-of-type(5)~button:nth-of-type(n+4){grid-column:span 3}
+  html body .menu-mas .mm-i{font-size:22px;line-height:1.1}
+  html body .menu-mas .mm-t{display:block;max-width:100%}
+}
+/* Teléfonos bajitos (iPhone SE): la cuadrícula de «Más» se aprieta para caber sin deslizar */
+@media screen and (max-width:780px) and (max-height:700px){
+  html body .menu-mas .menu-mas-grp button{min-height:58px!important;padding:5px 4px!important;font-size:12px!important}
+  html body .menu-mas .mm-i{font-size:18px}
+  html body .menu-mas{gap:4px!important}
+}
+/* App instalada en el iPhone: sin esto puede quedar una franja vacía abajo (barra de estado transparente) */
+@media screen and (max-width:780px) and (display-mode:standalone){
+  html{min-height:calc(100% + env(safe-area-inset-top,0px))}
 }
 
 @media (prefers-reduced-motion:reduce){
   .page,#secCot,.ov .modal,.ov>div,.smg-row,.mobile-action,.smg-thumb{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
-@media print{.smg-progress,.smg-hint,.smg-acts,.smg-ptr,.smg-handle{display:none!important}}
+@media print{.smg-progress,.smg-hint,.smg-acts,.smg-ptr,.smg-handle,.smg-hdx,.smg-lbl-iva,.smg-acc,.smg-pdf{display:none!important}}

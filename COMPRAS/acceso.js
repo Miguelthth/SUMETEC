@@ -660,7 +660,7 @@ function sumetecPedirPinToken(nombre, crear=false, mensaje='') {
   _sumetecPinPromesa = new Promise(resolve=>{
     const dlg=document.createElement('dialog'), app=SUMETEC_APP_TOKEN[nombre];
     // «¿Olvidaste tu PIN?»: borra SOLO el token cifrado (las colas pendientes se conservan) y recarga en Vincular.
-    const olvidar=!crear&&app?()=>{ sumetecOlvidarTokenCifrado(app); dlg.close('cancelar'); location.reload(); }:null;
+    const olvidar=!crear&&app?()=>{ sumetecOlvidarTokenCifrado(app); dlg.close('cancelar'); sumetecRecargar(); }:null;
     sumetecTecladoPin(dlg,{modo:crear?'crear':'desbloquear',nombre,mensaje,olvidar});
     dlg.addEventListener('close',()=>{
       const ins=dlg.querySelectorAll('input');
@@ -1025,6 +1025,12 @@ async function sumetecAutorizarBorrado(app, op = {}) {
   const hecho = await _sumetecTecladoCodigoDireccion(op.nombre || app, 'Dirección tiene un código de 6 dígitos para este teléfono (Dirección → Permisos). Escríbelo aquí. Sirve una sola vez.', validar);
   return hecho !== null;
 }
+// 2026-11-26: recargar la app SIN que el botón «Atrás» (sumetec-atras.js) la cancele. Al cerrar un aviso, ese archivo hace
+// history.go(-1) 30 ms después y eso abortaba location.reload(): la app se quedaba mostrando los datos viejos tras «Contenido borrado».
+function sumetecRecargar() {
+  if (typeof window !== 'undefined' && typeof window.sumetecAtrasPausar === 'function') window.sumetecAtrasPausar();
+  if (typeof location !== 'undefined' && location.reload) location.reload();
+}
 // 2026-11-17 (Miguel): al terminar de borrar los datos de un teléfono SIEMPRE se dice «Contenido borrado» en un popup centrado
 // (antes era un aviso que se iba solo o la app recargaba sin decir nada). Devuelve una promesa que se cumple al tocar Entendido.
 function sumetecAvisoContenidoBorrado(detalle) {
@@ -1088,7 +1094,7 @@ async function sumetecBorrarDatosLocales(app, op = {}) {
   if (!v.ok) { avisar('No se pudo borrar todo: ' + v.error); return { ok: false, motivo: 'ERROR', resumen: v.resumen }; }
   const resumen = v.resumen;
   await sumetecAvisoContenidoBorrado();
-  if (op.recargar !== false && typeof location !== 'undefined' && location.reload) location.reload();
+  if (op.recargar !== false) sumetecRecargar();
   return { ok: true, resumen };
 }
 
@@ -1156,7 +1162,7 @@ async function sumetecSondearBorradoRemoto(app) {
     await _sumetecConfirmarBorradoRemoto(app);
     _sumetecFranjaBorrado('');
     await sumetecAvisoContenidoBorrado('Dirección ordenó borrar los datos de este teléfono. La app sigue vinculada y todo lo enviado sigue en el servidor.');
-    if (typeof location !== 'undefined' && location.reload) location.reload();
+    sumetecRecargar();
     return { estado: 'borrado', resumen: v.resumen };
   } catch (e) { return { estado: 'error', error: String(e && e.message || e) }; }
   finally { E.ocupado = false; }

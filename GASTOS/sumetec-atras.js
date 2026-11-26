@@ -32,8 +32,19 @@
     return r;
   }
   let orden = [], mapa = new Map(), prof = 0, ignorar = 0, pend = false, url = location.href;
+  // 2026-11-26: si la app se está recargando, NO tocar el historial. Al cerrar el aviso «Contenido borrado» la app llamaba a
+  // location.reload() y 30 ms después este archivo hacía history.go(-1) por la ventana cerrada: eso CANCELABA la recarga y la app
+  // seguía mostrando los datos viejos. `sumetecAtrasPausar()` (lo llama acceso.js antes de recargar) lo apaga para siempre en esta
+  // página; `beforeunload` lo apaga 3 s (si la salida se cancela, el botón Atrás vuelve a funcionar).
+  let saliendo = false, saliendoFijo = false, reloj = 0;
+  window.sumetecAtrasPausar = () => { saliendo = saliendoFijo = true; };
+  addEventListener('beforeunload', () => {
+    saliendo = true; clearTimeout(reloj);
+    reloj = setTimeout(() => { if (!saliendoFijo) saliendo = false; }, 3000);
+  });
   function sync() {
     pend = false;
+    if (saliendo) return;
     const cs = capas(), ks = cs.map(c => c.k);
     mapa = new Map(cs.map(c => [c.k, c]));
     orden = orden.filter(k => ks.includes(k));
