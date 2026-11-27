@@ -3,8 +3,8 @@
 // verdad. Dos cachés (mismo criterio que Dirección, punto 7 del checklist
 // pwa-actualizacion-sin-cache): el shell de código cambia seguido; las
 // fuentes del tema (~220 KB) casi nunca cambian.
-const CACHE = 'sumetec-compras-631e92d6bf';
-const CACHE_ASSETS = 'sumetec-compras-assets-089af8bd65';
+const CACHE = 'sumetec-compras-2d09e03461';
+const CACHE_ASSETS = 'sumetec-compras-assets-87acca9c8d';
 const PREFIJO = 'sumetec-compras-';
 
 // Versión ACEPTADA (2026-09-29, pedido de Miguel: «que no se actualice sola hasta que le dé
@@ -53,7 +53,8 @@ const MANIFIESTO_PRECACHE = './precache-manifest.json';
 const ARCHIVOS_ASSETS = [
   './fonts/ibm-plex-sans-variable.woff2', './fonts/ibm-plex-mono-400.woff2',
   './fonts/ibm-plex-mono-500.woff2', './fonts/ibm-plex-mono-600.woff2',
-  './fonts/bootstrap-icons.woff2'
+  './fonts/bootstrap-icons.woff2',
+  './fonts/manrope-latin.woff2', './fonts/manrope-latin-ext.woff2', './fonts/archivo-latin.woff2', './fonts/archivo-latin-ext.woff2'
 ];
 
 async function precachearShell() {

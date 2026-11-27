@@ -1,5 +1,5 @@
 <!doctype html>
-<html data-sync-app="compras" lang="es" data-app="compras">
+<html data-sync-app="compras" lang="es" data-app="compras" data-ui="mejorada">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover">
@@ -11,48 +11,31 @@
        mismo tema del ERP, generado por 16.- IDENTIDAD-NEGOCIO/generar_tema.py.
        No editar sumetec-tema.css ni tema-inicial.js a mano. -->
   <script src="tema-inicial.js"></script>
+  <!-- Diseño mejorado (2026-11-26): se ve en claro aunque el teléfono esté en oscuro; el botón del menú sigue mandando. -->
+  <script>try{if(!localStorage.getItem('sumetec_tema'))document.documentElement.removeAttribute('data-tema')}catch(_){}</script>
   <link rel="stylesheet" href="sumetec-tema.css">
   <link rel="stylesheet" href="actualizacion.css">
   <link rel="stylesheet" href="estilos.css?v=20260924a">
   <link rel="stylesheet" href="acceso.css">
   <title>SUMETEC Compras</title>
-<style id="sm-final">
-/* Pantallas encima (Cobros, Más, modales): el scroll se queda dentro y no mueve la pantalla de atrás */
-.ov,.ov .modal,.modal,dialog,.menu-mas,.sp,.pp-global{overscroll-behavior:contain}
-html.sm-bloqueo,html.sm-bloqueo body{overflow:hidden!important}
-/* Cantidades y montos: se escriben, sin flechitas */
-input[type=number]{-moz-appearance:textfield;appearance:textfield}
-input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-/* Campo llenado por la IA (OCR): lima de marca, se quita al editarlo */
-.ia-tocado{background:color-mix(in srgb,#76b82a 15%,var(--sm-surface,#fff))!important;border-color:#76b82a!important}
-.gasto-iva-chips.ia-tocado{background:color-mix(in srgb,#76b82a 15%,transparent)!important}
-
-/* ═══ Estándar visual v2 · barra superior (Inicio) y menú de ajustes, iguales en las 6 apps ═══ */
-html body .tb,html body > header,html body header.sm-barra{background:linear-gradient(170deg,#03305a,#04223c)!important;color:#fff;min-height:56px;box-shadow:0 6px 18px rgb(2 25 45 / .22)}
-html body .sm-kicker,html body header h1 .kicker,html body .barra-kicker,html body .sm-barra .marca small{font-size:10.5px!important;font-weight:600!important;letter-spacing:.14em!important;text-transform:uppercase;color:#9fd25a!important;opacity:1!important}
-html body header h1,html body .sm-barra-titulo,html body .sm-barra .marca strong{font-size:16px!important;font-weight:700!important;color:#fff!important}
-html body .sm-header-chip.sm-status-chip,html body header .status-chip,html body .sm-barra .sm-chip,html body .tb-status{min-height:30px;padding:0 11px!important;border-radius:999px!important;background:rgb(255 255 255 / .1)!important;border:1px solid rgb(255 255 255 / .16)!important;color:#fff!important;font-size:11.5px!important;font-weight:600!important;white-space:nowrap}
-html body .sm-menu-boton,html body header .menu-btn,html body .sm-barra .btn-barra{min-width:40px!important;min-height:40px!important;border-radius:12px!important;border:1px solid rgb(255 255 255 / .18)!important;background:rgb(255 255 255 / .06)!important;color:#fff!important}
-html body .menu-mas,html body .menu-fact,html body .gasto-menu,html body .mas-menu,html body .menu-opciones{border-radius:16px!important;padding:6px!important;background:var(--sm-surface,#fff)!important;color:var(--sm-ink,#17242b);border:1px solid var(--sm-line,#dbe3ec)!important;box-shadow:0 18px 40px rgb(9 32 53 / .22)!important;overscroll-behavior:contain;max-height:calc(100dvh - 90px);overflow-y:auto}
-html body .menu-mas{background:#eef2f6!important;gap:6px!important}
-html body .menu-mas-grp,html body .mas-menu-grupo{border-radius:12px;overflow:hidden;background:var(--sm-surface,#fff)}
-html body .menu-mas-h,html body .menu-fact-titulo,html body .gasto-menu-titulo,html body .mas-menu-titulo,html body .menu-opciones > small{display:block;padding:10px 12px 4px!important;font-size:11px!important;font-weight:700!important;letter-spacing:.08em!important;text-transform:uppercase;color:var(--sm-muted,#616f7f)!important;background:none!important}
-html body .menu-mas button,html body .menu-fact button,html body .gasto-menu button,html body .mas-menu button,html body .menu-opciones button{display:flex!important;align-items:center;gap:10px;width:100%;min-height:48px!important;padding:0 12px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:inherit!important;font:inherit;font-size:14px!important;font-weight:500!important;text-align:left;cursor:pointer}
-html body .menu-mas button:hover,html body .menu-fact button:hover,html body .gasto-menu button:hover,html body .mas-menu button:hover,html body .menu-opciones button:hover{background:var(--sm-surface-2,#eef2f6)!important}
-html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
-html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
-</style>
-<!-- Estándar visual v3 (2026-10): color de la app, sin scroll lateral, animación. Va al final. -->
-<link rel="stylesheet" href="sumetec-v3.css">
+<link rel="stylesheet" href="sumetec-mejorada.css">
 <!-- Atrás del teléfono cierra lo último que se abrió (2026-10) -->
 <script src="sumetec-atras.js" defer></script>
 <script src="sumetec-foto.js" defer></script>
 </head>
 <body>
-  <header class="sm-barra">
-    <span class="barra-titulos"><span class="barra-kicker">SUMETEC</span><span class="sm-barra-titulo">Compras</span></span>
-    <button type="button" id="estado" class="sm-chip sm-chip-boton" style="margin-left:auto" aria-label="Estado de envío (toca para enviar pendientes)">Sin conexión</button>
-    <button type="button" class="btn-barra" id="btnMasMenu" aria-haspopup="true" aria-expanded="false" aria-controls="masMenu" aria-label="Más opciones"><span class="btn-barra-puntos" aria-hidden="true">⋮</span></button>
+  <header class="sm-barra smx-top">
+    <div class="smx-top-fila">
+      <span class="barra-titulos smx-marca"><span class="barra-kicker smx-logo">SUME<b>TEC</b></span><span class="sm-barra-titulo smx-app">Compras</span></span>
+      <div class="smx-acciones">
+        <button type="button" id="smxAvisos" class="smx-avisos" aria-label="Avisos pendientes"><b>0</b> avisos</button>
+        <button type="button" id="estado" class="sm-chip sm-chip-boton smx-enlinea" aria-label="Estado de envío (toca para enviar pendientes)">Sin conexión</button>
+      </div>
+    </div>
+    <div class="cv-avance" aria-hidden="true">
+      <div class="cv-pista"><i id="cv-barra"></i></div>
+      <div class="cv-pasos"><span>Proveedor</span><span>Líneas</span><span>Pagos</span><span>Total</span></div>
+    </div>
   </header>
 
   <!-- Rediseño 2026-09-24: enviar, tema y versión salen de la pantalla a este
@@ -60,19 +43,33 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <div id="masMenu" class="mas-menu" hidden>
     <div class="mas-menu-grupo">
       <span class="mas-menu-titulo">Este teléfono</span>
-      <button type="button" id="enviar-compras"><i class="bi bi-cloud-arrow-up"></i> Enviar compras pendientes</button>
+      <button type="button" id="enviar-compras"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><span>Enviar compras pendientes<small aria-hidden="true">Manda la cola al ERP</small></span></button>
+      <button type="button" id="mEstado"><i class="bi bi-arrow-repeat" aria-hidden="true"></i><span>Estado de envío<small aria-hidden="true">Cola, último envío y conexión</small></span></button>
+      <button type="button" id="mFacturas"><i class="bi bi-receipt" aria-hidden="true"></i><span>Pendientes de factura<small aria-hidden="true">Compras sin CFDI completo</small></span></button>
+      <button type="button" id="mCalculadora"><i class="bi bi-calculator" aria-hidden="true"></i><span>Calculadora<small aria-hidden="true">Sumas rápidas sin salir de la app</small></span></button>
+      <button type="button" id="mGestos"><i class="bi bi-chevron-right" aria-hidden="true"></i><span>Gestos de la app<small aria-hidden="true">Lo que puedes hacer deslizando</small></span></button>
+      <button type="button" id="mErp"><i class="bi bi-shop" aria-hidden="true"></i><span>¿Qué es ERP?<small aria-hidden="true">Cómo llega tu compra a administración</small></span></button>
+      <button type="button" id="mAyuda"><i class="bi bi-info-circle" aria-hidden="true"></i><span>¿Cómo usar?<small aria-hidden="true">Guía rápida de Compras</small></span></button>
+      <button type="button" id="mLimpiar"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Limpiar formulario<small aria-hidden="true">Empezar una captura nueva</small></span></button>
+      <button type="button" id="mBloquear"><i class="bi bi-lock" aria-hidden="true"></i><span>Bloquear la app<small aria-hidden="true">Volver a pedir el PIN</small></span></button>
     </div>
     <div class="mas-menu-grupo">
       <span class="mas-menu-titulo">Ajustes</span>
-      <button type="button" onclick="_cerrarMasMenu_();alternarTemaSumetec()"><i class="bi bi-moon-stars"></i> Modo claro / oscuro</button>
-      <button type="button" id="badgeVersion" onclick="_cerrarMasMenu_();_mostrarVersionInstalada()" title="Buscar actualización de software"><i class="bi bi-info-circle"></i> Actualización de software</button>
-      <button type="button" onclick="_cerrarMasMenu_();limpiarCacheLocal()" title="Borrar los datos guardados en este teléfono"><i class="bi bi-eraser"></i> Borrar datos de este teléfono</button>
+      <button type="button" onclick="_cerrarMasMenu_();alternarTemaSumetec()"><i class="bi bi-moon-stars" aria-hidden="true"></i><span>Modo claro / oscuro<small aria-hidden="true">Cambia los colores</small></span></button>
+      <button type="button" id="badgeVersion" onclick="_cerrarMasMenu_();_mostrarVersionInstalada()" title="Buscar actualización de software"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Actualización de software<small aria-hidden="true">Buscar versión nueva</small></span></button>
+      <div class="smx-peligro"><span>Zona de peligro</span><button type="button" onclick="_cerrarMasMenu_();limpiarCacheLocal()" title="Borrar los datos guardados en este teléfono"><i class="bi bi-trash" aria-hidden="true"></i><span>Borrar datos de este teléfono<small aria-hidden="true">Copias guardadas aquí</small></span></button></div>
     </div>
   </div>
 
   <div class="hoja">
     <main id="app"></main>
   </div>
+
+  <nav class="smx-nav" aria-label="Navegación principal">
+    <button type="button" id="navCap" class="activo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg><span>Capturar</span></button>
+    <button type="button" id="navHis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Historial</span></button>
+    <button type="button" id="btnMasMenu" aria-haspopup="true" aria-expanded="false" aria-controls="masMenu" aria-label="Más opciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg><span>Más</span></button>
+  </nav>
 
   <dialog id="eq-modal">
     <form method="dialog" onsubmit="return false">
@@ -150,6 +147,8 @@ html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{colo
   <script src="sync_cliente.js"></script>
 <script src="acceso.js"></script>
   <script src="app.js"></script>
+  <script src="sumetec-mejorada.js"></script>
+  <script src="compras-ui.js"></script>
   <div id="sumetecActualizacion" role="status" aria-live="assertive"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje" aria-hidden="true">⚙</span><strong id="sumetecActualizacionTitulo">Actualización disponible</strong><p id="sumetecActualizacionMensaje"></p><button id="sumetecActualizarBoton" type="button" hidden>Actualizar</button></div></div>
   <script src="actualizacion.js"></script>
 <script id="sm-final">

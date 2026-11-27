@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html data-sync-app="gastos" lang="es" data-app="gastos">
+<html data-sync-app="gastos" lang="es" data-app="gastos" data-ui="mejorada">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -17,6 +17,8 @@
      día/noche aquí a propósito (F5b, 2026-09-11): sigue el sistema solo,
      sin agregar un control nuevo a la barra de Gastos. -->
 <script src="tema-inicial.js"></script>
+<!-- Diseño mejorado (2026-11-26): se ve en claro aunque el teléfono esté en oscuro; el botón del menú sigue mandando. -->
+<script>try{if(!localStorage.getItem('sumetec_tema'))document.documentElement.removeAttribute('data-tema')}catch(_){}</script>
 <link rel="stylesheet" href="sumetec-tema.css">
 <link rel="stylesheet" href="actualizacion.css">
 <link rel="stylesheet" href="acceso.css">
@@ -229,62 +231,49 @@ body{padding-bottom:max(110px,calc(90px + env(safe-area-inset-bottom)))}
 .gasto-reciente-fila:hover{background:var(--sm-surface-2)}
 .gasto-reciente-dup{border:0;padding:0 4px;font-size:17px;color:var(--sm-accent)}
 </style>
-<style id="sm-final">
-/* Pantallas encima (Cobros, Más, modales): el scroll se queda dentro y no mueve la pantalla de atrás */
-.ov,.ov .modal,.modal,dialog,.menu-mas,.sp,.pp-global{overscroll-behavior:contain}
-html.sm-bloqueo,html.sm-bloqueo body{overflow:hidden!important}
-/* Cantidades y montos: se escriben, sin flechitas */
-input[type=number]{-moz-appearance:textfield;appearance:textfield}
-input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-/* Campo llenado por la IA (OCR): lima de marca, se quita al editarlo */
-.ia-tocado{background:color-mix(in srgb,#76b82a 15%,var(--sm-surface,#fff))!important;border-color:#76b82a!important}
-.gasto-iva-chips.ia-tocado{background:color-mix(in srgb,#76b82a 15%,transparent)!important}
-.sm-par{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
-.sm-par input,.sm-par select{width:100%;min-width:0}
-
-/* ═══ Estándar visual v2 · barra superior (Inicio) y menú de ajustes, iguales en las 6 apps ═══ */
-html body .tb,html body > header,html body header.sm-barra{background:linear-gradient(170deg,#03305a,#04223c)!important;color:#fff;min-height:56px;box-shadow:0 6px 18px rgb(2 25 45 / .22)}
-html body .sm-kicker,html body header h1 .kicker,html body .barra-kicker,html body .sm-barra .marca small{font-size:10.5px!important;font-weight:600!important;letter-spacing:.14em!important;text-transform:uppercase;color:#9fd25a!important;opacity:1!important}
-html body header h1,html body .sm-barra-titulo,html body .sm-barra .marca strong{font-size:16px!important;font-weight:700!important;color:#fff!important}
-html body .sm-header-chip.sm-status-chip,html body header .status-chip,html body .sm-barra .sm-chip,html body .tb-status{min-height:30px;padding:0 11px!important;border-radius:999px!important;background:rgb(255 255 255 / .1)!important;border:1px solid rgb(255 255 255 / .16)!important;color:#fff!important;font-size:11.5px!important;font-weight:600!important;white-space:nowrap}
-html body .sm-menu-boton,html body header .menu-btn,html body .sm-barra .btn-barra{min-width:40px!important;min-height:40px!important;border-radius:12px!important;border:1px solid rgb(255 255 255 / .18)!important;background:rgb(255 255 255 / .06)!important;color:#fff!important}
-html body .menu-mas,html body .menu-fact,html body .gasto-menu,html body .mas-menu,html body .menu-opciones{border-radius:16px!important;padding:6px!important;background:var(--sm-surface,#fff)!important;color:var(--sm-ink,#17242b);border:1px solid var(--sm-line,#dbe3ec)!important;box-shadow:0 18px 40px rgb(9 32 53 / .22)!important;overscroll-behavior:contain;max-height:calc(100dvh - 90px);overflow-y:auto}
-html body .menu-mas{background:#eef2f6!important;gap:6px!important}
-html body .menu-mas-grp,html body .mas-menu-grupo{border-radius:12px;overflow:hidden;background:var(--sm-surface,#fff)}
-html body .menu-mas-h,html body .menu-fact-titulo,html body .gasto-menu-titulo,html body .mas-menu-titulo,html body .menu-opciones > small{display:block;padding:10px 12px 4px!important;font-size:11px!important;font-weight:700!important;letter-spacing:.08em!important;text-transform:uppercase;color:var(--sm-muted,#616f7f)!important;background:none!important}
-html body .menu-mas button,html body .menu-fact button,html body .gasto-menu button,html body .mas-menu button,html body .menu-opciones button{display:flex!important;align-items:center;gap:10px;width:100%;min-height:48px!important;padding:0 12px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:inherit!important;font:inherit;font-size:14px!important;font-weight:500!important;text-align:left;cursor:pointer}
-html body .menu-mas button:hover,html body .menu-fact button:hover,html body .gasto-menu button:hover,html body .mas-menu button:hover,html body .menu-opciones button:hover{background:var(--sm-surface-2,#eef2f6)!important}
-html body .menu-mas button .bi,html body .gasto-menu button .bi,html body .mas-menu button .bi,html body .menu-opciones button .bi{font-size:17px;color:var(--sm-navy,#023561);width:22px}
-html body .gasto-menu-peligro,html body .menu-opciones button[id*=bloquear]{color:#bc2f2f!important}
-</style>
-<!-- Estándar visual v3 (2026-10): color de la app, sin scroll lateral, animación. Va al final. -->
-<link rel="stylesheet" href="sumetec-v3.css">
+<link rel="stylesheet" href="sumetec-mejorada.css">
 <!-- Atrás del teléfono cierra lo último que se abrió (2026-10) -->
 <script src="sumetec-atras.js" defer></script>
 <script src="sumetec-foto.js" defer></script>
 </head>
 <body>
 
-<header>
-  <h1 id="tituloApp"><span class="sm-kicker">SUMETEC</span>Gastos</h1>
-  <div class="sm-header-meta">
-    <button id="badgePendientes" class="sm-header-chip sm-status-chip" type="button" onclick="verColaPendiente()" aria-label="Ver estado y pendientes de envío"><span class="sm-status-dot"></span><span id="badgePendientesTexto">En línea</span></button>
-    <button id="btnMenuGastos" class="sm-header-chip sm-menu-boton" type="button" onclick="_toggleMenuGastos_()" aria-haspopup="true" aria-expanded="false" aria-controls="menuGastos" aria-label="Más opciones">⋮</button>
+<header class="smx-top">
+  <div class="smx-top-fila">
+    <h1 id="tituloApp" class="smx-marca"><span class="sm-kicker smx-logo">SUME<b>TEC</b></span><span class="smx-app">Gastos</span></h1>
+    <div class="sm-header-meta">
+      <button type="button" id="smxAvisos" class="smx-avisos" aria-label="Avisos pendientes"><b>0</b> avisos</button>
+      <button id="badgePendientes" class="sm-header-chip sm-status-chip smx-enlinea" type="button" onclick="verColaPendiente()" aria-label="Ver estado y pendientes de envío"><span class="sm-status-dot smx-punto"></span><span id="badgePendientesTexto">En línea</span></button>
+    </div>
   </div>
 </header>
 
 <div id="menuGastos" class="gasto-menu" hidden>
   <span class="gasto-menu-titulo">Este teléfono</span>
-  <button type="button" onclick="_cerrarMenuGastos_();verColaPendiente()"><i class="bi bi-cloud-arrow-up"></i> Cola pendiente de envío</button>
-  <button type="button" onclick="_cerrarMenuGastos_();exportarGastosCSV()"><i class="bi bi-download"></i> Exportar gastos (.csv)</button>
+  <button type="button" onclick="_cerrarMenuGastos_();verColaPendiente()"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><span>Cola pendiente de envío<small aria-hidden="true">Revisar, reenviar o descartar</small></span></button>
+  <button type="button" id="mEnviar"><i class="bi bi-send" aria-hidden="true"></i><span>Enviar gastos pendientes<small aria-hidden="true">Manda la cola al ERP</small></span></button>
+  <button type="button" id="mEstado"><i class="bi bi-arrow-repeat" aria-hidden="true"></i><span>Ver estado<small aria-hidden="true">Conexión y cola de envío</small></span></button>
+  <button type="button" id="mResumen"><i class="bi bi-graph-down" aria-hidden="true"></i><span>Resumen del mes<small aria-hidden="true">Totales, gráfica y por tipo</small></span></button>
+  <button type="button" onclick="_cerrarMenuGastos_();exportarGastosCSV()"><i class="bi bi-download" aria-hidden="true"></i><span>Exportar gastos (.csv)<small aria-hidden="true">Para Excel o contabilidad</small></span></button>
+  <button type="button" id="mGestos"><i class="bi bi-chevron-right" aria-hidden="true"></i><span>Gestos de la app<small aria-hidden="true">Atajos con el dedo</small></span></button>
+  <button type="button" id="mAyuda"><i class="bi bi-info-circle" aria-hidden="true"></i><span>¿Cómo usar?<small aria-hidden="true">Capturar, revisar y enviar</small></span></button>
+  <button type="button" id="mErp"><i class="bi bi-shop" aria-hidden="true"></i><span>¿Qué es ERP?<small aria-hidden="true">El sistema central de SUMETEC</small></span></button>
+  <button type="button" id="mBloquear"><i class="bi bi-lock" aria-hidden="true"></i><span>Bloquear la app<small aria-hidden="true">Volver a pedir el PIN</small></span></button>
   <div class="gasto-menu-separador"></div>
   <span class="gasto-menu-titulo">Ajustes</span>
-  <button type="button" onclick="_cerrarMenuGastos_();alternarTemaSumetec()"><i class="bi bi-moon-stars"></i> Modo claro / oscuro</button>
-  <button type="button" onclick="_cerrarMenuGastos_();_mostrarVersionInstalada()" title="Buscar actualización de software"><i class="bi bi-info-circle"></i> Actualización de software</button>
-  <button type="button" class="gasto-menu-peligro" onclick="_cerrarMenuGastos_();limpiarCacheLocal()" title="Borrar los datos guardados en este teléfono"><i class="bi bi-eraser"></i> Borrar datos de este teléfono</button>
+  <button type="button" onclick="_cerrarMenuGastos_();alternarTemaSumetec()"><i class="bi bi-moon-stars" aria-hidden="true"></i><span>Modo claro / oscuro<small aria-hidden="true">Cambia los colores</small></span></button>
+  <button type="button" onclick="_cerrarMenuGastos_();_mostrarVersionInstalada()" title="Buscar actualización de software"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Actualización de software<small aria-hidden="true">Buscar versión nueva</small></span></button>
+  <div class="smx-peligro"><span>Zona de peligro</span><button type="button" class="gasto-menu-peligro" onclick="_cerrarMenuGastos_();limpiarCacheLocal()" title="Borrar los datos guardados en este teléfono"><i class="bi bi-trash" aria-hidden="true"></i><span>Borrar datos de este teléfono<small aria-hidden="true">Copias guardadas aquí</small></span></button></div>
 </div>
 
 <div id="app"></div>
+
+<nav class="smx-nav" aria-label="Navegación principal">
+  <button type="button" data-vista-gasto="capturar" class="activo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span>Capturar</span></button>
+  <button type="button" data-vista-gasto="historial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg><span>Historial</span></button>
+  <button type="button" data-vista-gasto="resumen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M8 17v-6M13 17V7M18 17v-3"/></svg><span>Resumen</span></button>
+  <button id="btnMenuGastos" type="button" onclick="_toggleMenuGastos_()" aria-haspopup="true" aria-expanded="false" aria-controls="menuGastos" aria-label="Más opciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg><span>Más</span><b class="smx-insignia" id="gvInsignia" hidden aria-hidden="true">0</b></button>
+</nav>
 
 <div id="tokenGate" class="sumetec-acceso" style="--acento:#f06452">
   <div class="sumetec-acceso-panel">
@@ -803,8 +792,8 @@ function _actualizarPreviewGasto_() {
 // el chip solo lo escribe y dispara 'change' (el mismo onchange de siempre).
 function _htmlChipsIva_(selId) {
   return `<div class="gasto-iva-chips" role="group" aria-label="Tasa de IVA" data-sel="${selId}">` +
-    [['0.16', '16%'], ['0.08', '8%'], ['0', '0%']].map(([v, l]) =>
-      `<button type="button" class="gasto-iva-chip" data-valor="${v}" aria-pressed="false" onclick="_elegirIvaGasto_(this)">${l}</button>`).join('') +
+    [['0.16', '16%', 'General'], ['0.08', '8%', 'Frontera'], ['0', '0%', 'Sin IVA']].map(([v, l, n]) =>
+      `<button type="button" class="gasto-iva-chip" data-valor="${v}" aria-pressed="false" onclick="_elegirIvaGasto_(this)">${l}<small aria-hidden="true">${n}</small></button>`).join('') +
     '</div>';
 }
 function _elegirIvaGasto_(btn) {
@@ -1014,10 +1003,10 @@ function renderGastos() {
   const hoyStr = _fechaLocal_();
   const gastosHoy = recientes.filter(g => g.fecha === hoyStr);
   const totalHoy = gastosHoy.reduce((s, g) => s + (+g.total || 0), 0);
-  const hoyHtml = `<div class="gasto-hoy">
-      <span class="gasto-hoy-etiqueta">Hoy en este teléfono</span>
-      <strong class="gasto-hoy-total">$${totalHoy.toFixed(2)}</strong>
-      <span class="gasto-hoy-cuenta">${gastosHoy.length} gasto${gastosHoy.length === 1 ? '' : 's'}</span>
+  const hoyHtml = `<div class="gv-rapido">
+      <div class="gv-caja principal"><small class="gasto-hoy-etiqueta">Hoy en este teléfono</small><b class="gasto-hoy-total">$${totalHoy.toFixed(2)}</b><span class="gasto-hoy-cuenta">${gastosHoy.length} gasto${gastosHoy.length === 1 ? '' : 's'}</span></div>
+      <div class="gv-caja"><small>Este mes</small><b id="gvMes">$0.00</b><span id="gvMesN">0 gastos</span></div>
+      <div class="gv-caja"><small>Por enviar</small><b id="gvPend">$0.00</b><span id="gvPendN">0 pendientes</span></div>
     </div>`;
   const filasRecientes = recientes.length ? recientes.slice(0, 5).map((g, i) => `
     <div class="fila-producto gasto-reciente gasto-reciente-fila" role="button" tabindex="0" aria-label="Repetir ${esc(g.concepto)}" onclick="_duplicarGastoReciente_(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();_duplicarGastoReciente_(${i})}">
@@ -1031,53 +1020,58 @@ function renderGastos() {
 
   document.getElementById('app').innerHTML = `
     ${_htmlConteoHuerfano_()}
+    <div id="gv-capturar" class="gv-vista">
+    <div class="gv-avance" aria-hidden="true"><span class="gv-paso" data-paso="1"><i>1</i> Datos</span><span class="gv-linea" data-linea="1"></span><span class="gv-paso" data-paso="2"><i>2</i> Importe</span><span class="gv-linea" data-linea="2"></span><span class="gv-paso" data-paso="3"><i>3</i> Guardar</span></div>
+    ${hoyHtml}
     ${_htmlAntiguedadListasGasto_()}
     <div id="pendFacturaCaja"></div>
-    ${hoyHtml}
     <div class="gastos-layout">
+    <div>
     <div class="card">
-      <div class="gasto-bloque">
+      <h2 class="smx-h2"><i class="bi bi-camera" aria-hidden="true"></i> Foto del ticket</h2>
       <input type="file" id="gas_foto" accept="image/*" capture="environment" onchange="_onFotoGastoElegida_()" style="display:none">
       <input type="file" id="gas_archivo" accept="image/*,.heic,.heif,application/pdf" onchange="_archivoGastoElegido_()" style="display:none">
       <div class="gasto-ticket">
-        <button id="gasBtnOcrTop" class="btn gasto-ocr-principal" type="button" onclick="document.getElementById('gas_foto').click()"><i class="bi bi-camera"></i> Tomar foto del ticket</button>
-        <label for="gas_archivo" class="gasto-archivo" title="Elegir archivo (foto, HEIC o PDF)" aria-label="Elegir archivo (foto, HEIC o PDF)"><i class="bi bi-file-earmark-text"></i></label>
+        <button id="gasBtnOcrTop" class="btn gasto-ocr-principal" type="button" onclick="document.getElementById('gas_foto').click()"><span class="gv-foto-ic" aria-hidden="true"><i class="bi bi-camera"></i></span><span><b>Tomar foto del ticket</b><small aria-hidden="true">La IA llena fecha, total, IVA y proveedor. Tú lo revisas antes de guardar.</small></span></button>
+        <label for="gas_archivo" class="gasto-archivo" title="Elegir archivo (foto, HEIC o PDF)" aria-label="Elegir archivo (foto, HEIC o PDF)"><i class="bi bi-file-earmark-text"></i><small>Archivo</small></label>
       </div>
-      <div class="gasto-ocr-ayuda">La IA llena fecha, total, IVA y proveedor. Tú lo revisas antes de guardar. El botón de archivo acepta foto, HEIC o PDF.</div>
       <img id="gasFotoPreview" class="gasto-foto-preview" alt="Vista previa de la foto del ticket">
       <button id="gasBtnOcr" class="btn secondary" type="button" style="width:100%;margin-top:8px;display:none" onclick="_leerTicketConIA_()">🔍 Leer ticket otra vez</button>
-      <div id="gasOcrEstado" style="font-size:12px;color:var(--sm-muted);margin-top:4px"></div>
-      </div>
+      <div id="gasOcrEstado" class="smx-hint"></div>
+    </div>
+    <div class="card">
       <fieldset class="gasto-bloque gasto-datos">
-        <legend>1. Datos del gasto</legend>
-      <div class="sm-par">
-        <div>
-          <label for="gas_fecha" style="font-size:13px;font-weight:600;display:block">Fecha</label>
-          <input type="date" id="gas_fecha" value="${_fechaLocal_()}">
-        </div>
-        <div>
-          <label for="gas_forma" style="font-size:13px;font-weight:600;display:block">Forma de pago</label>
-          <select id="gas_forma"><option value="">— elige —</option>${opcionesForma}</select>
-        </div>
+        <legend class="sm-oculto">1. Datos del gasto</legend>
+        <h2 class="smx-h2" aria-hidden="true"><i class="bi bi-file-earmark-text"></i> Datos del gasto</h2>
+      <div class="sm-par smx-par">
+        <label for="gas_fecha" class="form-label"><span>Fecha<span aria-hidden="true"> *</span></span>
+          <input type="date" id="gas_fecha" value="${_fechaLocal_()}" onchange="_actualizarPreviewGasto_()">
+        </label>
+        <label for="gas_forma" class="form-label"><span>Forma de pago<span aria-hidden="true"> *</span></span>
+          <select id="gas_forma" onchange="_actualizarPreviewGasto_()"><option value="">— elige —</option>${opcionesForma}</select>
+        </label>
       </div>
-      <label for="gas_concepto" style="font-size:13px;font-weight:600;margin-top:8px;display:block">Concepto</label>
-      <input type="text" id="gas_concepto" placeholder="Ej. Gasolina de la camioneta" oninput="_actualizarPreviewGasto_()">
-      <div class="sm-par" style="margin-top:8px">
-        <div>
-          <label for="gas_tipo" style="font-size:13px;font-weight:600;display:block">Tipo de gasto</label>
-          <select id="gas_tipo"><option value="">— elige —</option>${opcionesTipo}</select>
-        </div>
-        <div>
-          <label for="gas_proveedor" style="font-size:13px;font-weight:600;display:block">Proveedor <span style="font-weight:400;color:var(--sm-muted)">(opcional)</span></label>
-          <input type="text" id="gas_proveedor" placeholder="Ej. Tornimaster" value="${esc(proveedorRecordado)}" list="dl_gas_proveedor" autocomplete="off" oninput="_resumenMasCamposGasto_()"><datalist id="dl_gas_proveedor"></datalist>
-          ${proveedorRecordado ? '<div style="font-size:10.5px;color:var(--sm-muted);margin-top:2px">💡 tu último proveedor — bórralo si es otro</div>' : ''}
-        </div>
+      <label for="gas_concepto" class="form-label"><span>Concepto<span aria-hidden="true"> *</span></span>
+        <input type="text" id="gas_concepto" placeholder="Ej. Gasolina de la camioneta" oninput="_actualizarPreviewGasto_()">
+      </label>
+      <div class="sm-par smx-par">
+        <label for="gas_tipo" class="form-label"><span>Tipo de gasto<span aria-hidden="true"> *</span></span>
+          <select id="gas_tipo" onchange="_actualizarPreviewGasto_()"><option value="">— elige —</option>${opcionesTipo}</select>
+        </label>
+        <label for="gas_proveedor" class="form-label">Proveedor (opcional)
+          <input type="text" id="gas_proveedor" placeholder="Ej. Tornimaster" value="${esc(proveedorRecordado)}" list="dl_gas_proveedor" autocomplete="off" oninput="_resumenMasCamposGasto_()">
+        </label>
       </div>
+      <datalist id="dl_gas_proveedor"></datalist>
+      ${proveedorRecordado ? '<div class="smx-hint">💡 Proveedor: es el último que usaste — bórralo si es otro.</div>' : ''}
       </fieldset>
+    </div>
 
+    <div class="card">
       <fieldset class="gasto-bloque gasto-importes">
-        <legend>2. Importe</legend>
-      <label style="font-size:13px;font-weight:600;display:block">¿Cómo lo vas a capturar?</label>
+        <legend class="sm-oculto">2. Importe</legend>
+        <h2 class="smx-h2" aria-hidden="true"><i class="bi bi-cash-stack"></i> Importe</h2>
+      <span class="gv-etq">¿Cómo capturas el monto?</span>
       <div class="gasto-modos" role="radiogroup" aria-label="Forma de capturar el importe">
         <label class="gasto-modo">
           <input type="radio" name="gasModo" value="A" checked onchange="_cambiarModoGasto_('A')"> Base + IVA
@@ -1091,44 +1085,65 @@ function renderGastos() {
       </div>
 
       <div id="gasCamposA">
-        <label for="gas_montoA" style="font-size:13px;font-weight:600;display:block">Monto sin IVA</label>
-        <input type="number" step="0.01" min="0" id="gas_montoA" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
-        <label for="gas_ivaA" style="font-size:13px;font-weight:600;display:block;margin-top:10px">IVA</label>
-        <select id="gas_ivaA" class="gasto-select-oculto" aria-hidden="true" tabindex="-1" onchange="_actualizarPreviewGasto_()">
-          <option value="" selected>— elige —</option><option value="0.16">16%</option><option value="0.08">8%</option><option value="0">0% (sin IVA)</option>
-        </select>
-        ${_htmlChipsIva_('gas_ivaA')}
+        <div class="gv-montos">
+          <label for="gas_montoA" class="form-label"><span>Monto sin IVA<span aria-hidden="true"> *</span></span>
+            <input type="number" step="0.01" min="0" id="gas_montoA" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
+          </label>
+          <div>
+            <span class="gv-etq">Tasa de IVA</span>
+            <select id="gas_ivaA" class="gasto-select-oculto sm-oculto" aria-label="IVA" aria-hidden="true" tabindex="-1" onchange="_actualizarPreviewGasto_()">
+              <option value="" selected>— elige —</option><option value="0.16">16%</option><option value="0.08">8%</option><option value="0">0% (sin IVA)</option>
+            </select>
+            ${_htmlChipsIva_('gas_ivaA')}
+          </div>
+        </div>
       </div>
       <div id="gasCamposB" style="display:none">
-        <label for="gas_totalBC" style="font-size:13px;font-weight:600;display:block">Total (ya con IVA incluido)</label>
-        <input type="number" step="0.01" min="0" id="gas_totalBC" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
-        <label for="gas_ivaB" style="font-size:13px;font-weight:600;display:block;margin-top:10px">Tasa de IVA</label>
-        <select id="gas_ivaB" class="gasto-select-oculto" aria-hidden="true" tabindex="-1" onchange="_actualizarPreviewGasto_()">
-          <option value="" selected>— elige —</option><option value="0.16">16%</option><option value="0.08">8%</option><option value="0">0% (sin IVA)</option>
-        </select>
-        ${_htmlChipsIva_('gas_ivaB')}
+        <div class="gv-montos">
+          <label for="gas_totalBC" class="form-label"><span>Total con IVA<span aria-hidden="true"> *</span></span>
+            <input type="number" step="0.01" min="0" id="gas_totalBC" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
+          </label>
+          <div>
+            <span class="gv-etq">Tasa de IVA</span>
+            <select id="gas_ivaB" class="gasto-select-oculto sm-oculto" aria-label="Tasa de IVA" aria-hidden="true" tabindex="-1" onchange="_actualizarPreviewGasto_()">
+              <option value="" selected>— elige —</option><option value="0.16">16%</option><option value="0.08">8%</option><option value="0">0% (sin IVA)</option>
+            </select>
+            ${_htmlChipsIva_('gas_ivaB')}
+          </div>
+        </div>
       </div>
       <div id="gasCamposC" style="display:none">
-        <label for="gas_totalC" style="font-size:13px;font-weight:600;display:block">Total (el que dice el ticket)</label>
-        <input type="number" step="0.01" min="0" id="gas_totalC" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
-        <label for="gas_ivaC" style="font-size:13px;font-weight:600;display:block;margin-top:6px">IVA en pesos (el que dice el ticket/CFDI — gasolina, IEPS)</label>
-        <input type="number" step="0.01" min="0" id="gas_ivaC" inputmode="decimal" oninput="_actualizarPreviewGasto_()">
+        <div class="gv-montos">
+          <label for="gas_totalC" class="form-label">Total (el que dice el ticket)
+            <input type="number" step="0.01" min="0" id="gas_totalC" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
+          </label>
+          <label for="gas_ivaC" class="form-label">IVA en pesos (del ticket / CFDI)
+            <input type="number" step="0.01" min="0" id="gas_ivaC" class="gasto-monto" inputmode="decimal" placeholder="0.00" oninput="_actualizarPreviewGasto_()">
+          </label>
+        </div>
+        <div class="smx-hint">Úsalo cuando el ticket trae el IVA ya separado (gasolina, IEPS).</div>
+      </div>
+      <div class="gv-desglose" aria-hidden="true">
+        <div class="smx-renglon"><span>Base</span><b id="gvBase">$0.00</b></div>
+        <div class="smx-renglon"><span>IVA</span><b id="gvIva">$0.00</b></div>
+        <div class="smx-renglon grande"><span>Total</span><b id="gvTotal">$0.00</b></div>
       </div>
       </fieldset>
+    </div>
 
       <fieldset class="gasto-bloque gasto-evidencia">
-        <legend>3. Datos opcionales</legend>
-      <button type="button" class="gasto-mas-toggle" aria-expanded="false" aria-controls="gasMasCampos" onclick="_toggleMasCamposGasto_(this)"><span class="gasto-mas-titulo">UUID del CFDI</span><span id="gasMasResumen" class="gasto-mas-resumen"></span><span class="gasto-mas-flecha" aria-hidden="true">▾</span></button>
+        <legend class="sm-oculto">3. Datos opcionales</legend>
+      <button type="button" class="gasto-mas-toggle" aria-expanded="false" aria-controls="gasMasCampos" onclick="_toggleMasCamposGasto_(this)"><span class="gasto-mas-titulo">Datos opcionales · UUID del CFDI</span><span id="gasMasResumen" class="gasto-mas-resumen"></span><span class="gasto-mas-flecha" aria-hidden="true">▾</span></button>
       <div id="gasMasCampos" class="gasto-evidencia-extra">
-      <label for="gas_uuid_cfdi" style="font-size:13px;font-weight:600;display:block;margin-top:10px">🧾 UUID del CFDI (opcional, si ya tienes la factura)</label>
-      <input type="text" id="gas_uuid_cfdi" placeholder="folio fiscal del XML" oninput="_resumenMasCamposGasto_()">
+      <label for="gas_uuid_cfdi" class="form-label">🧾 UUID del CFDI (opcional, si ya tienes la factura)
+        <input type="text" id="gas_uuid_cfdi" placeholder="folio fiscal del XML" oninput="_resumenMasCamposGasto_()">
+      </label>
       </div>
       </fieldset>
-
     </div>
     <div class="gastos-col-lateral">
     <div class="card">
-      <span class="gasto-recientes-titulo">Recientes · toca para repetir</span>
+      <h2 class="smx-h2 gasto-recientes-titulo">Recientes · toca para repetir</h2>
       ${filasRecientes}
       <button type="button" class="btn secondary" style="width:100%;margin-top:8px" onclick="_abrirHistorialGastos_()"><i class="bi bi-clock-history"></i> Historial y filtros (${recientes.length})</button>
     </div>
@@ -1137,7 +1152,10 @@ function renderGastos() {
     <div class="gasto-barra-guardar">
       <div id="gasPreview" class="gasto-resumen" aria-live="polite"></div>
       <button id="gasGuardar" class="btn" type="button" onclick="_guardarGasto_()">Guardar</button>
-    </div>`;
+    </div>
+    </div>
+    <div id="gv-historial" class="gv-vista" hidden></div>
+    <div id="gv-resumen" class="gv-vista" hidden></div>`;
   _cambiarModoGasto_('A');
   _pintarPendientesFactura_();      // lo guardado en el teléfono, al instante
   _cargarPendientesFactura_();      // y la lista fresca del ERP, sin bloquear la captura
@@ -1519,6 +1537,7 @@ async function _guardarGasto_() {
   if (!guardadoEnCola) return;
 
   toast('✅ Gasto guardado y en cola de envío.');
+  if (typeof SMX !== 'undefined') SMX.exito('Gasto guardado', '$' + r.total.toFixed(2) + ' · Quedó pendiente de enviar al ERP.');
   _gastoTocadoPorOcr = false;
   _gastoFotoComprimidaB64 = '';
   renderGastos();
@@ -2048,6 +2067,8 @@ actualizarBadgePendientes();
 })();
 </script>
 
+<script src="sumetec-mejorada.js"></script>
+<script src="gastos-ui.js"></script>
 <script src="./version.js"></script>
 <div id="sumetecActualizacion" role="status" aria-live="assertive"><div class="sumetec-actualizacion-tarjeta"><span class="sumetec-engranaje" aria-hidden="true">⚙</span><strong id="sumetecActualizacionTitulo">Actualización disponible</strong><p id="sumetecActualizacionMensaje"></p><button id="sumetecActualizarBoton" type="button" hidden>Actualizar</button></div></div>
 <script src="./actualizacion.js"></script>
@@ -2086,7 +2107,7 @@ function hayTrabajoSinGuardarGastos() {
   if (_campoEditadoPorUsuario_(document.activeElement)) return true;
   const app = document.getElementById('app');
   if (!app) return false;
-  return [...app.querySelectorAll('input, textarea')].some(_campoEditadoPorUsuario_);
+  return [...app.querySelectorAll('input, textarea')].filter(el => !(el.closest && el.closest('#gv-historial'))).some(_campoEditadoPorUsuario_);
 }
 </script>
 <dialog id="codigo-modal" style="border:1px solid #ccc;border-radius:12px;padding:20px;max-width:340px;width:calc(100% - 32px)">

@@ -5,8 +5,8 @@
 // las fuentes del tema (~220 KB) casi nunca cambian -- solo si el ERP
 // cambia de marca. Si compartieran una sola caché, corregir una coma en el
 // HTML forzaría a redescargar las fuentes completas en el siguiente uso.
-const CACHE = 'sumetec-gas-7484e69448'; // bump obligatorio o los celulares siguen con la app vieja
-const CACHE_ASSETS = 'sumetec-gas-assets-089af8bd65';
+const CACHE = 'sumetec-gas-a2c0a7e06d'; // bump obligatorio o los celulares siguen con la app vieja
+const CACHE_ASSETS = 'sumetec-gas-assets-87acca9c8d';
 const PREFIJO = 'sumetec-gas-';
 
 // Versión ACEPTADA (2026-09-29, pedido de Miguel: «que no se actualice sola hasta que le dé
@@ -59,7 +59,8 @@ const MANIFIESTO_PRECACHE = './precache-manifest.json';
 const ARCHIVOS_ASSETS = [
   './fonts/ibm-plex-sans-variable.woff2', './fonts/ibm-plex-mono-400.woff2',
   './fonts/ibm-plex-mono-500.woff2', './fonts/ibm-plex-mono-600.woff2',
-  './fonts/bootstrap-icons.woff2'
+  './fonts/bootstrap-icons.woff2',
+  './fonts/manrope-latin.woff2', './fonts/manrope-latin-ext.woff2', './fonts/archivo-latin.woff2', './fonts/archivo-latin-ext.woff2'
 ];
 
 async function precachearShell() {

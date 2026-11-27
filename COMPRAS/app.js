@@ -13,8 +13,9 @@ function estado() {
   const el = $('#estado');
   const pendientes = leer(COLAS.compras).length + (typeof _leerAbonosCompra_==='function'?_leerAbonosCompra_().length:0);
   const fijar = (variante, texto) => {
-    el.className = 'sm-chip sm-chip-boton' + (variante ? ' sm-chip--' + variante : '');
-    el.innerHTML = `<span class="sm-chip-punto"></span>${texto}`;
+    el.className = 'sm-chip sm-chip-boton smx-enlinea' + (variante ? ' sm-chip--' + variante : '');
+    el.dataset && (el.dataset.estado = navigator.onLine ? 'en-linea' : 'sin-red');
+    el.innerHTML = `<span class="sm-chip-punto smx-punto"></span>${texto}`;
   };
   if (_comprasEnviando) return fijar('info', `Enviando ${_comprasEnviando}…`);
   if (_comprasUltimoError) return fijar('err', _comprasUltimoError);

@@ -169,8 +169,31 @@ function _restaurarBorradorCompra_(formulario) {
   return true;
 }
 
+// Detalle de lo capturado en ESTE teléfono (2026-11-26, diseño mejorado): el historial ahora permite ver, duplicar y
+// sumar por proveedor. Va en su propia llave, sin la foto, y se borra junto con el historial.
+const CLAVE_DETALLES_COMPRAS = 'sumetec_compras_historial_detalle';
+function _detalleDeCompra_(c) {
+  return {
+    proveedor: c.proveedor || '', fecha: c.fecha || '', folio: c.folio || '', condicion: c.condicion || '',
+    situacionFactura: c.situacionFactura || '', subtotal: Number(c.subtotal || 0), iva: Number(c.iva || 0), total: Number(c.total || 0),
+    lineas: (c.lineas || []).map(l => ({ codigo: l.codigo || '', descripcion: l.descripcion || '', cantidad: Number(l.cantidad || 0), costoUnitario: Number(l.costoUnitario || 0) })),
+    pagos: (c.pagos || []).map(p => ({ fecha: p.fecha || '', monto: Number(p.monto || 0), metodo: p.metodo || '' })),
+  };
+}
+function _leerDetallesCompras_() {
+  try { return JSON.parse(localStorage.getItem(CLAVE_DETALLES_COMPRAS) || '{}') || {}; } catch (_) { return {}; }
+}
+function _guardarDetallesCompras_(mapa) {
+  const claves = Object.keys(mapa);
+  claves.slice(0, Math.max(0, claves.length - MAX_HISTORIAL_COMPRAS)).forEach(k => delete mapa[k]);
+  try { localStorage.setItem(CLAVE_DETALLES_COMPRAS, JSON.stringify(mapa)); } catch (_) { /* es solo un recibo local */ }
+}
+
 function _registrarEnvioCompras_(compras) {
   if (!compras || !compras.length) return;
+  const detalles = _leerDetallesCompras_();
+  compras.forEach(c => { detalles[c.id] = _detalleDeCompra_(c); });
+  _guardarDetallesCompras_(detalles);
   const historial = leer(CLAVE_HISTORIAL_COMPRAS);
   const ahora = new Date().toISOString();
   compras.forEach(c => {
@@ -261,7 +284,8 @@ async function procesarColaCompras(pedir) {
     if (hayEquiv) await _enviarColaEquiv_(pin);
     if(hayAbonos) await _enviarAbonosCompra_(pin);
   } catch (_) { /* se reintenta en el siguiente ciclo */ }
-  if (typeof document !== 'undefined') _actualizarBotonEnviar_();
+  // 2026-11-26: el reenvío automático también repinta el historial (antes la compra ya enviada seguía como «Pendiente de envío»).
+  if (typeof document !== 'undefined') { _actualizarBotonEnviar_(); _renderHistorialComprasDireccion_(); }
   if (typeof estado === 'function') estado();
 }
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
@@ -328,18 +352,25 @@ function _escHtmlCompra_(s) {
 
 function _htmlHistorialComprasDireccion_(items) {
   if (!items.length) return '<p class="vacio">Sin compras recientes.</p>';
-  const filas = items.map(it => `<li class="historial-item">
+  const filas = items.map(it => `<li class="historial-item" data-compra="${_escHtmlCompra_(it.id)}">
     <span class="proveedor">${_escHtmlCompra_(it.proveedor || '(sin proveedor)')}</span>
     <span class="total">$${Number(it.total || 0).toFixed(2)}</span>
-    <span class="badge">${_badgeEstadoCompraDireccion_(it.estado)}</span>
-    ${it.estado === 'RECHAZADA' ? `<small class="motivo" style="color:#c0392b">Motivo: ${_escHtmlCompra_(it.motivo)}</small>
-      <button type="button" class="btn btn-outline-secondary" onclick="_reintentarCompra_('${_escHtmlCompra_(it.id)}')">Reintentar</button>
-      <button type="button" class="btn btn-outline-secondary" onclick="_descartarCompra_('${_escHtmlCompra_(it.id)}')">Descartar</button>` : ''}
-    ${it.estado === 'PENDIENTE_ENVIO' ? `<button type="button" class="btn btn-outline-secondary" onclick="_descartarCompra_('${_escHtmlCompra_(it.id)}')">Descartar</button>` : ''}
-    ${!['PENDIENTE_ENVIO','RECHAZADA','ANULADA'].includes(it.estado) ? `<button type="button" class="btn btn-outline-secondary" data-abonar-compra="${_escHtmlCompra_(it.id)}">Abonar / liquidar</button>` : ''}
+    ${typeof _htmlMetaCompra_ === 'function' ? _htmlMetaCompra_(it) : ''}
+    <span class="badge ${typeof _claseEstadoCompra_ === 'function' ? _claseEstadoCompra_(it.estado) : ''}">${_badgeEstadoCompraDireccion_(it.estado)}</span>
+    ${it.estado === 'RECHAZADA' ? `<small class="motivo" style="color:#c0392b">Motivo: ${_escHtmlCompra_(it.motivo)}</small>` : ''}
     ${it.otroTelefono ? '<small class="otro-telefono">📱 Enviada desde otro teléfono</small>' : ''}
     ${it.folio ? `<small class="folio">Folio ERP: ${_escHtmlCompra_(it.folio)}</small>` : ''}
     ${it.fecha ? `<small class="fecha">${_escHtmlCompra_(String(it.fecha).replace('T', ' '))}</small>` : ''}
+    <div class="cv-acciones">
+      ${it.estado === 'RECHAZADA' ? `<button type="button" class="btn btn-outline-secondary" onclick="_reintentarCompra_('${_escHtmlCompra_(it.id)}')">Reintentar</button>
+      <button type="button" class="btn btn-outline-secondary peligro" onclick="_descartarCompra_('${_escHtmlCompra_(it.id)}')">Descartar</button>` : ''}
+      ${it.estado === 'PENDIENTE_ENVIO' ? `<button type="button" class="btn btn-outline-secondary peligro" onclick="_descartarCompra_('${_escHtmlCompra_(it.id)}')">Descartar</button>` : ''}
+      ${!['PENDIENTE_ENVIO','RECHAZADA','ANULADA'].includes(it.estado) ? `<button type="button" class="btn btn-outline-secondary" data-abonar-compra="${_escHtmlCompra_(it.id)}">Abonar / liquidar</button>` : ''}
+      <button type="button" class="btn btn-outline-secondary" data-ver-compra="${_escHtmlCompra_(it.id)}">Ver</button>
+      ${it.detalle ? `<button type="button" class="btn btn-outline-secondary" data-duplicar-compra="${_escHtmlCompra_(it.id)}">Duplicar</button>` : ''}
+      <button type="button" class="btn btn-outline-secondary" data-wa-compra="${_escHtmlCompra_(it.id)}">WhatsApp</button>
+      <button type="button" class="btn btn-outline-secondary" data-copiar-compra="${_escHtmlCompra_(it.id)}">Copiar</button>
+    </div>
   </li>`).join('');
   // La leyenda dice explícitamente de cuándo es el estado del ERP -- nunca se
   // presenta como "así está ahora mismo" si el snapshot ya lleva rato viejo.
@@ -348,6 +379,107 @@ function _htmlHistorialComprasDireccion_(items) {
     ? `<p class="leyenda">Estado del ERP según el último resumen (${_escHtmlCompra_(String(primeraConTs.snapshotTs).replace('T', ' '))}).</p>`
     : '<p class="leyenda">Aún no se ha podido consultar el ERP en este teléfono.</p>';
   return leyenda + `<ul class="historial-compras">${filas}</ul>`;
+}
+
+function _claseEstadoCompra_(estado) {
+  if (estado === 'RECHAZADA' || estado === 'ANULADA') return 'red';
+  return estado === 'IMPORTADO' ? 'ok' : 'warn';
+}
+function _fechaBonitaCompra_(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+  return m ? `${+m[3]} ${['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][+m[2] - 1]} ${m[1]}` : '';
+}
+// Saldo según lo capturado y abonado en este teléfono (lo que se pague en el ERP no se conoce aquí).
+function _saldoCompra_(d) {
+  if (!d) return 0;
+  const pagado = (d.pagos || []).reduce((a, p) => a + Number(p.monto || 0), 0) + Number(d.abonado || 0);
+  return Math.max(0, Math.round((Number(d.total || 0) - pagado) * 100) / 100);
+}
+function _htmlMetaCompra_(it) {
+  const d = it.detalle;
+  if (!d) return '';
+  const partes = [_fechaBonitaCompra_(d.fecha), d.folio ? 'Folio ' + d.folio : '', d.lineas.length ? d.lineas.length + (d.lineas.length === 1 ? ' línea' : ' líneas') : '',
+    d.condicion === 'CONTADO' ? 'Contado' : d.condicion ? 'Crédito' : '', d.condicion === 'CREDITO' && _saldoCompra_(d) > 0 ? 'Saldo $' + _saldoCompra_(d).toFixed(2) : ''];
+  return `<small class="meta">${_escHtmlCompra_(partes.filter(Boolean).join(' · '))}</small>`;
+}
+// Cada renglón del historial con lo que este teléfono sabe de esa compra (la cola pendiente trae todo; lo enviado, su recibo).
+function _comprasConDetalle_(items) {
+  const cola = new Map(leer(COLAS.compras).map(c => [c.id, _detalleDeCompra_(c)]));
+  const guardados = _leerDetallesCompras_();
+  return items.map(it => {
+    const d = cola.get(it.id) || guardados[it.id];
+    return d ? Object.assign({}, it, { detalle: d }) : it;
+  });
+}
+function _textoCompra_(it) {
+  const d = it.detalle, dinero = n => '$' + Number(n || 0).toFixed(2);
+  const lineas = d ? d.lineas.map(l => `• ${l.cantidad} × ${l.descripcion || l.codigo} — ${dinero(l.cantidad * l.costoUnitario)}`) : [];
+  return ['COMPRA SUMETEC', 'Proveedor: ' + (it.proveedor || '(sin proveedor)'),
+    d ? 'Fecha: ' + _fechaBonitaCompra_(d.fecha) + (d.folio ? ' · Folio ' + d.folio : '') : '', ...lineas,
+    d ? 'Subtotal: ' + dinero(d.subtotal) : '', d ? 'IVA: ' + dinero(d.iva) : '', 'TOTAL: ' + dinero(it.total),
+    d && d.condicion ? 'Condición: ' + (d.condicion === 'CONTADO' ? 'Contado' : 'Crédito') : '',
+    it.estado ? 'Estado: ' + _badgeEstadoCompraDireccion_(it.estado) : ''].filter(Boolean).join('\n');
+}
+function _copiarTextoCompra_(texto) {
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(() => _mostrarResultadoCompra_('Resumen copiado.', false), () => alert('No se pudo copiar.'));
+  else alert('Copiar no está disponible en este navegador.');
+}
+function _whatsCompra_(texto) { window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener'); }
+function _verCompra_(it) {
+  const d = it.detalle, e = _escHtmlCompra_, dinero = n => '$' + Number(n || 0).toFixed(2);
+  const renglon = (a, b, c) => `<div class="smx-renglon${c || ''}"><span>${a}</span><b>${b}</b></div>`;
+  const cuerpo = `<p class="smx-desc">${e(_badgeEstadoCompraDireccion_(it.estado))}${it.folio ? ' · Folio ERP ' + e(it.folio) : ''}</p>` + (d
+    ? d.lineas.map(l => renglon(`${l.cantidad} × ${e(l.descripcion || l.codigo)}${l.codigo ? ` <small>(${e(l.codigo)})</small>` : ''}`, dinero(l.cantidad * l.costoUnitario))).join('') +
+      renglon('Subtotal', dinero(d.subtotal)) + renglon('IVA', dinero(d.iva)) +
+      (d.pagos.length ? renglon('Pagos', d.pagos.map(p => e(p.metodo) + ' ' + dinero(p.monto)).join(' · ')) : '') +
+      renglon('Total', dinero(d.total), ' grande') + (_saldoCompra_(d) > 0 ? renglon('Saldo (según este teléfono)', dinero(_saldoCompra_(d))) : '')
+    : renglon('Total', dinero(it.total), ' grande') + '<p class="smx-hint">El desglose solo está en el teléfono que capturó esta compra.</p>');
+  SMX.hoja(it.proveedor || 'Compra', cuerpo, [
+    { texto: 'WhatsApp', alTocar: () => _whatsCompra_(_textoCompra_(it)), queda: true },
+    { texto: 'Copiar', alTocar: () => _copiarTextoCompra_(_textoCompra_(it)), queda: true },
+    { texto: 'Cerrar', clase: 'btn-primary' }]);
+}
+// Copia una compra a la captura como compra NUEVA: fecha de hoy, sin folio, sin pagos, sin UUID y sin foto.
+async function _duplicarCompra_(it) {
+  const d = it.detalle, f = document.querySelector('#form-compra');
+  if (!d || !f) return;
+  if ((f.proveedor.value || f.subtotal.value || document.querySelector('#lineas-compra li')) &&
+      !await sumetecConfirmar('Se reemplazará lo que llevas capturado con una copia de la compra de ' + (it.proveedor || 'este proveedor') + '.\n\n¿Continuar?')) return;
+  const lineas = document.querySelector('#lineas-compra'), pagos = document.querySelector('#pagos-compra');
+  delete f.dataset.ivaPct;
+  f.proveedor.value = d.proveedor; f.fecha.value = _fechaLocalDireccion_(); f.folio.value = '';
+  f.condicion.value = d.condicion === 'CONTADO' ? 'CONTADO' : 'CREDITO';
+  lineas.innerHTML = ''; pagos.innerHTML = '';
+  d.lineas.forEach(l => {
+    lineas.insertAdjacentHTML('beforeend', _filaLineaCompra());
+    const li = lineas.lastElementChild;
+    li.querySelector('.codigo').value = l.codigo; li.querySelector('.descripcion').value = l.descripcion;
+    li.querySelector('.cantidad').value = l.cantidad; li.querySelector('.costo').value = l.costoUnitario;
+  });
+  f.subtotal.value = d.subtotal.toFixed(2); f.iva.value = d.iva.toFixed(2); f.total.value = d.total.toFixed(2);
+  f.dispatchEvent(new Event('change', { bubbles: true }));
+  document.querySelector('.compras-tab[data-panel=capturar]').click();
+  window.scrollTo(0, 0);
+  _mostrarResultadoCompra_('Copia lista: revisa importes, IVA y fecha antes de guardar.', false);
+}
+
+// ── Cifras de arriba y gráfica por proveedor (solo lo que este teléfono conoce; nada se manda al servidor) ──
+function _pintarCifrasCompras_(todos) {
+  const pon = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+  const mes = _fechaLocalDireccion_().slice(0, 7), pesos = n => '$' + Math.round(n).toLocaleString('es-MX');
+  const vivas = todos.filter(x => x.estado !== 'ANULADA');
+  const delMes = vivas.filter(x => String((x.detalle && x.detalle.fecha) || x.fecha || _fechaLocalDireccion_()).slice(0, 7) === mes);
+  pon('cv-mes', pesos(delMes.reduce((a, x) => a + Number(x.total || 0), 0)));
+  pon('cv-pend', vivas.filter(x => x.estado !== 'IMPORTADO').length);
+  pon('cv-saldo', pesos(vivas.reduce((a, x) => a + (x.detalle && x.detalle.condicion === 'CREDITO' ? _saldoCompra_(x.detalle) : 0), 0)));
+  pon('cv-cuenta', todos.length);
+  const caja = document.getElementById('cv-grafica');
+  if (!caja) return;
+  const por = new Map();
+  delMes.forEach(x => por.set(x.proveedor || '(sin proveedor)', (por.get(x.proveedor || '(sin proveedor)') || 0) + Number(x.total || 0)));
+  const top = [...por].sort((a, b) => b[1] - a[1]).slice(0, 4);
+  caja.innerHTML = top.length ? top.map(([n, v]) => `<div class="smx-barra-fila"><span>${_escHtmlCompra_(n)}</span><span><i style="width:${Math.max(4, Math.round(v / (top[0][1] || 1) * 100))}%"></i></span><b>${pesos(v)}</b></div>`).join('')
+    : '<p class="smx-hint">Sin compras este mes en este teléfono.</p>';
 }
 
 // «Reintentar» suelta el freno de una compra rechazada; «Descartar» la borra (con confirmación: NO llegará al ERP).
@@ -375,7 +507,15 @@ function _leerSnapshotCacheDireccion_() {
 }
 
 // 2026-11-17 (Miguel): el historial de compras se puede filtrar (texto/folio, estado y periodo), igual que el de Gastos.
-const _filtroHistCompras_ = { texto: '', estado: '', periodo: 'todo' };
+const _filtroHistCompras_ = { texto: '', estado: '', periodo: 'todo', grupo: '' };
+function _enGrupoCompra_(it, grupo) {
+  const d = it.detalle;
+  if (grupo === 'pend') return !['IMPORTADO', 'ANULADA'].includes(it.estado);
+  if (grupo === 'imp') return it.estado === 'IMPORTADO';
+  if (grupo === 'cred') return !!d && d.condicion === 'CREDITO';
+  if (grupo === 'fact') return !!d && !['FACTURADO', 'NO_SE_FACTURARA'].includes(d.situacionFactura);
+  return true;
+}
 function _filtrarHistorialCompras_(items, f) {
   const hoy = new Date().toISOString().slice(0, 10), txt = (f.texto || '').trim().toLowerCase();
   let desde = '';
@@ -385,14 +525,17 @@ function _filtrarHistorialCompras_(items, f) {
   return items.filter(it => {
     if (f.estado && it.estado !== f.estado) return false;
     if (desde && !(String(it.fecha || '').slice(0, 10) >= desde)) return false;
-    if (txt && !((it.proveedor || '') + ' ' + (it.folio || '')).toLowerCase().includes(txt)) return false;
+    if (f.grupo && !_enGrupoCompra_(it, f.grupo)) return false;
+    const productos = it.detalle ? it.detalle.folio + ' ' + it.detalle.lineas.map(l => l.codigo + ' ' + l.descripcion).join(' ') : '';
+    if (txt && !((it.proveedor || '') + ' ' + (it.folio || '') + ' ' + productos).toLowerCase().includes(txt)) return false;
     return true;
   });
 }
 function _htmlBarraHistorialCompras_() {
   const f = _filtroHistCompras_, op = (v, t, a) => '<option value="' + v + '"' + (a === v ? ' selected' : '') + '>' + t + '</option>';
   return '<div id="hc-barra" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px">' +
-    '<input id="hc-texto" type="search" placeholder="Buscar proveedor o folio" autocomplete="off" value="' + _escHtmlCompra_(f.texto) + '" style="grid-column:1/-1;padding:9px;border:1px solid #c9d3de;border-radius:9px;font:inherit">' +
+    '<input id="hc-texto" type="search" placeholder="Buscar proveedor, folio o producto" autocomplete="off" value="' + _escHtmlCompra_(f.texto) + '" style="grid-column:1/-1;padding:9px;border:1px solid #c9d3de;border-radius:9px;font:inherit">' +
+    '<div class="smx-chips" role="group" aria-label="Filtrar compras">' + [['', 'Todas'], ['pend', 'Pendientes de ERP'], ['imp', 'Importadas'], ['cred', 'A crédito'], ['fact', 'Pend. de factura']].map(([g, t]) => '<button type="button" data-grupo="' + g + '" aria-pressed="' + (f.grupo === g) + '">' + t + '</button>').join('') + '</div>' +
     '<select id="hc-periodo" style="padding:9px;border:1px solid #c9d3de;border-radius:9px;font:inherit">' + op('todo', 'Todo', f.periodo) + op('hoy', 'Hoy', f.periodo) + op('7d', 'Últimos 7 días', f.periodo) + op('mes', 'Este mes', f.periodo) + '</select>' +
     '<select id="hc-estado" style="padding:9px;border:1px solid #c9d3de;border-radius:9px;font:inherit">' + op('', 'Todos los estados', f.estado) + op('PENDIENTE_ENVIO', 'Pendientes de envío', f.estado) + op('RECHAZADA', 'Detenidas', f.estado) + op('IMPORTADO', 'Integradas en el ERP', f.estado) + op('ANULADA', 'Anuladas', f.estado) + '</select></div>' +
     '<p id="hc-cuenta" class="leyenda" style="margin:0 0 6px"></p>';
@@ -410,14 +553,26 @@ function _renderHistorialComprasDireccion_() {
     };
     el.querySelector('#hc-barra').addEventListener('input', cambio);
     el.querySelector('#hc-barra').addEventListener('change', cambio);
+    el.querySelectorAll('[data-grupo]').forEach(b => b.onclick = () => {
+      _filtroHistCompras_.grupo = b.dataset.grupo;
+      el.querySelectorAll('[data-grupo]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      _renderHistorialComprasDireccion_();
+    });
   }
   const todos = _historialComprasDireccion_(leer(COLAS.compras), leer(CLAVE_HISTORIAL_COMPRAS), _leerSnapshotCacheDireccion_(), { otrosTelefonos: _ajusteCompras01_('ver_compras_otros_telefonos', 1) === 1 });
-  const items = _filtrarHistorialCompras_(todos, _filtroHistCompras_);
+  const completos = _comprasConDetalle_(todos);
+  _pintarCifrasCompras_(completos);
+  const items = _filtrarHistorialCompras_(completos, _filtroHistCompras_);
   const cuenta = el.querySelector('#hc-cuenta');
   if (cuenta) cuenta.textContent = items.length + ' de ' + todos.length + ' compra(s) · total $' + items.reduce((a, x) => a + Number(x.total || 0), 0).toFixed(2);
   const lista = el.querySelector('#hc-lista');
   lista.innerHTML = (todos.length && !items.length ? '<p class="vacio">Ninguna compra con esos filtros.</p>' : _htmlHistorialComprasDireccion_(items)) + _htmlAbonosCompra_();
   el.querySelectorAll('[data-abonar-compra]').forEach(b=>b.onclick=()=>_abrirAbonoCompra_(b.dataset.abonarCompra));
+  const porId = id => completos.find(x => String(x.id) === id);
+  el.querySelectorAll('[data-ver-compra]').forEach(b => b.onclick = () => _verCompra_(porId(b.dataset.verCompra)));
+  el.querySelectorAll('[data-duplicar-compra]').forEach(b => b.onclick = () => _duplicarCompra_(porId(b.dataset.duplicarCompra)));
+  el.querySelectorAll('[data-wa-compra]').forEach(b => b.onclick = () => _whatsCompra_(_textoCompra_(porId(b.dataset.waCompra))));
+  el.querySelectorAll('[data-copiar-compra]').forEach(b => b.onclick = () => _copiarTextoCompra_(_textoCompra_(porId(b.dataset.copiarCompra))));
   el.querySelectorAll('[data-descartar-abono]').forEach(b=>b.onclick=async()=>{if(!await _autorizarCompras_('descartar_abono','libre'))return;if(await sumetecConfirmarBorrado({verbo:'Descartar',objeto:'este abono',detalle:'El servidor lo rechazó y no lo aplicó. Podrás capturarlo de nuevo.',irreversible:true})){localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().filter(x=>x.id!==b.dataset.descartarAbono)));_renderHistorialComprasDireccion_();if(typeof estado==='function')estado();}});
   el.querySelectorAll('[data-reintentar-abono]').forEach(b=>b.onclick=()=>{localStorage.setItem('sumetec_compras_abonos',JSON.stringify(_leerAbonosCompra_().map(x=>x.id===b.dataset.reintentarAbono?{...x,_retryAt:0,detenido:false}:x))); procesarColaCompras(true);});
 }
@@ -814,11 +969,16 @@ async function _actualizarSnapshotCompras_(pin) {
 
 function _filaLineaCompra() {
   return `<li class="linea">
+    <button type="button" class="cv-asa" aria-hidden="true" tabindex="-1">⠿</button>
+    <span class="cv-tag" aria-hidden="true"></span>
     <input placeholder="Código" aria-label="Código del producto" class="codigo form-control mono" list="dl-productos-compra" onchange="_codigoCompraElegido_(this)">
-    <input placeholder="Descripción" aria-label="Descripción del producto" class="descripcion form-control">
-    <input placeholder="Cant." aria-label="Cantidad" type="number" min="0" step="0.01" class="cantidad form-control">
-    <input placeholder="Costo" aria-label="Costo unitario" type="number" min="0" step="0.000001" class="costo form-control">
-    <button type="button" aria-label="Eliminar línea" class="quitar btn btn-outline-secondary"><i class="bi bi-x-lg"></i></button>
+    <button type="button" aria-label="Eliminar línea" class="quitar btn btn-outline-secondary"><i class="bi bi-trash"></i></button>
+    <input placeholder="Descripción del producto" aria-label="Descripción del producto" class="descripcion form-control">
+    <div class="cv-numeros">
+      <label>Cant.<input placeholder="Cant." aria-label="Cantidad" type="number" min="0" step="0.01" inputmode="decimal" class="cantidad form-control"></label>
+      <label>Costo unit.<input placeholder="Costo" aria-label="Costo unitario" type="number" min="0" step="0.000001" inputmode="decimal" class="costo form-control"></label>
+      <div class="cv-celda"><span class="cv-lbl">Importe</span><span class="cv-importe">$0.00</span></div>
+    </div>
   </li>`;
 }
 
@@ -828,10 +988,13 @@ function _opcionesMetodoCompra_(actual) {
 }
 function _filaPagoCompra() {
   return `<li class="pago">
-    <input placeholder="Fecha" aria-label="Fecha del pago" type="date" class="fecha form-control">
-    <input placeholder="Monto" aria-label="Monto del pago" type="number" min="0.01" step="0.01" class="monto form-control">
-    <select aria-label="Método de pago" class="metodo form-select" required>${_opcionesMetodoCompra_()}</select>
-    <button type="button" aria-label="Eliminar pago" class="quitar btn btn-outline-secondary"><i class="bi bi-x-lg"></i></button>
+    <span class="cv-tag" aria-hidden="true"></span>
+    <button type="button" aria-label="Eliminar pago" class="quitar btn btn-outline-secondary"><i class="bi bi-trash"></i></button>
+    <div class="cv-pago">
+      <label>Fecha<input placeholder="Fecha" aria-label="Fecha del pago" type="date" class="fecha form-control"></label>
+      <label>Monto<input placeholder="0.00" aria-label="Monto del pago" type="number" min="0.01" step="0.01" inputmode="decimal" class="monto form-control"></label>
+      <label class="ancho">Método de pago<select aria-label="Método de pago" class="metodo form-select" required>${_opcionesMetodoCompra_()}</select></label>
+    </div>
   </li>`;
 }
 
@@ -867,92 +1030,127 @@ function _leerPagosCompra(ul) {
 }
 
 function formularioComprasDireccion() {
-  return `<h1>Compras</h1>
-<p class="text-muted">Queda "Pendiente de ERP" hasta que se revise e importe -- no mueve el stock teórico.</p>
+  return `<h1 class="sm-oculto">Compras</h1>
 <div class="compras-tabs" role="tablist" aria-label="Sección">
   <button type="button" class="compras-tab activa" data-panel="capturar" role="tab" aria-selected="true">Capturar</button>
-  <button type="button" class="compras-tab" data-panel="historial" role="tab" aria-selected="false">Historial</button>
+  <button type="button" class="compras-tab" data-panel="historial" role="tab" aria-selected="false">Historial<span class="cv-cuenta" id="cv-cuenta" aria-hidden="true">0</span></button>
 </div>
 <div id="panel-capturar" class="compras-panel">
-<form id="form-compra" class="card"><div class="card-body compras-form-grid">
+<div class="cv-stats">
+  <div class="smx-stat verde"><b id="cv-mes">$0</b><small>Compras del mes</small></div>
+  <div class="smx-stat ambar"><b id="cv-pend">0</b><small>Pendientes de ERP</small></div>
+  <div class="smx-stat"><b id="cv-saldo">$0</b><small>Por pagar (este teléfono)</small></div>
+</div>
+<form id="form-compra" class="compras-form-grid">
   <div class="compras-campos">
-    <div class="compras-foto-cta">
-      <label class="btn btn-primary btn-bloque compras-foto-btn" for="compra_foto"><i class="bi bi-camera"></i> Tomar foto del ticket</label>
-      <input type="file" id="compra_foto" class="visually-oculto" accept="image/*" capture="environment" onchange="_onFotoCompraElegida_()">
-      <label class="btn btn-outline-secondary btn-bloque" for="compra_archivo" style="margin-top:6px"><i class="bi bi-paperclip"></i> Elegir archivo (foto, HEIC o PDF)</label>
+    <div class="card compras-foto-cta">
+      <h2 class="smx-h2">📷 Foto del ticket<span class="smx-der">evidencia de la compra</span></h2>
+      <div class="cv-foto">
+        <span class="cv-ic" aria-hidden="true">🧾</span>
+        <p>La IA llena proveedor, fecha, subtotal, IVA y total -- tú los revisas.</p>
+        <label class="btn btn-primary compras-foto-btn" for="compra_foto">Tomar foto</label>
+        <input type="file" id="compra_foto" class="visually-oculto" accept="image/*" capture="environment" onchange="_onFotoCompraElegida_()">
+      </div>
+      <label class="btn btn-outline-secondary cv-archivo" for="compra_archivo"><i class="bi bi-file-earmark-text"></i> Elegir archivo (foto, HEIC o PDF)</label>
       <input type="file" id="compra_archivo" class="visually-oculto" accept="image/*,.heic,.heif,application/pdf" onchange="_archivoCompraElegido_()">
-      <p class="text-muted" style="font-size:12px;margin:6px 0 0">La IA llena proveedor, fecha, subtotal, IVA y total -- tú los revisas.</p>
-      <img id="compraFotoPreview" style="display:none;max-height:160px;border-radius:var(--sm-r-sm);margin-top:8px;object-fit:contain">
+      <img id="compraFotoPreview" alt="Foto del ticket de la compra" style="display:none;margin-top:8px">
       <!-- Sin ícono: _onFotoCompraElegida_/_leerTicketCompraConIA_ (abajo) fijan
            el texto completo del botón con .textContent -- un ícono aquí
            desaparecería en cuanto cualquiera de esas dos lo tocara. -->
       <button id="compraBtnOcr" type="button" class="btn btn-primary" style="width:100%;margin-top:8px;display:none" onclick="_leerTicketCompraConIA_()">🔍 Leer ticket</button>
-      <div id="compraOcrEstado" class="text-muted" style="font-size:12px;margin-top:4px"></div>
+      <div id="compraOcrEstado" class="smx-hint"></div>
     </div>
-    <label class="form-label" for="compra-proveedor">Proveedor<input id="compra-proveedor" class="form-control" name="proveedor" required list="dl-proveedores-compra" autocomplete="off"><datalist id="dl-proveedores-compra"></datalist><datalist id="dl-productos-compra"></datalist></label>
-    <label class="form-label" for="compra-fecha">Fecha<input id="compra-fecha" class="form-control" name="fecha" type="date" required></label>
-    <details id="mas-campos-compra" class="compras-detalles">
-      <summary>Más campos<span class="compras-detalles-resumen">Folio · Evidencia · Factura · UUID</span></summary>
-      <div class="compras-detalles-body">
-        <label class="form-label" for="compra-folio">Folio del proveedor<input id="compra-folio" class="form-control mono" name="folio"></label>
-        <label class="form-label" for="compra-evidencia">Evidencia
-          <select id="compra-evidencia" name="evidencia" class="form-select">${EVIDENCIAS_COMPRA_DIRECCION.map(x => `<option>${x}</option>`).join('')}</select>
-        </label>
-        <label class="form-label" for="compra-situacion">Situación de factura
-          <select id="compra-situacion" name="situacionFactura" class="form-select">${SITUACIONES_FACTURA_DIRECCION.map(x => `<option value="${x}">${ETIQUETAS_SITUACION_FACTURA[x] || x}</option>`).join('')}</select>
-        </label>
-        <label class="form-label" id="compra-uuid-wrap" for="compra-uuid" style="display:none">UUID CFDI (documento facturado)<input id="compra-uuid" class="form-control mono" name="uuidCfdi"></label>
+    <div class="card">
+      <h2 class="smx-h2">🏢 Datos de la compra</h2>
+      <div class="cv-campo">
+        <label class="form-label" for="compra-proveedor">Proveedor<input id="compra-proveedor" class="form-control" name="proveedor" required list="dl-proveedores-compra" autocomplete="off" placeholder="Escribe o elige un proveedor reciente"></label>
+        <datalist id="dl-proveedores-compra"></datalist><datalist id="dl-productos-compra"></datalist>
+        <div class="smx-chips" id="cv-prov-chips" role="group" aria-label="Recientes de este teléfono"></div>
       </div>
-    </details>
-    <details class="compras-detalles">
-      <summary>Líneas<span class="compras-detalles-resumen">opcional, se revisan en el ERP</span></summary>
-      <div class="compras-detalles-body">
-        <ul id="lineas-compra"></ul>
-        <button type="button" id="agregar-linea" class="btn btn-outline-secondary"><i class="bi bi-plus-lg"></i> Agregar línea</button>
+      <div class="smx-par cv-campo">
+        <label class="form-label" for="compra-fecha">Fecha<input id="compra-fecha" class="form-control" name="fecha" type="date" required></label>
+        <label class="form-label" for="compra-folio">Folio (opcional)<input id="compra-folio" class="form-control mono" name="folio" autocomplete="off"></label>
       </div>
-    </details>
-    <details class="compras-detalles">
-      <summary>Pagos<span class="compras-detalles-resumen">si ya se pagó algo desde el cajón</span></summary>
-      <div class="compras-detalles-body">
-        <ul id="pagos-compra"></ul>
-        <button type="button" id="agregar-pago" class="btn btn-outline-secondary"><i class="bi bi-plus-lg"></i> Agregar pago</button>
+      <div class="smx-par cv-campo">
+        <div class="form-label">IVA
+          <div class="cv-segmento" role="group" aria-label="Calcular IVA sobre el subtotal">
+            <button type="button" class="compras-chip" data-pct="0.16" aria-pressed="false">16%</button>
+            <button type="button" class="compras-chip" data-pct="0.08" aria-pressed="false">8%</button>
+            <button type="button" class="compras-chip" data-pct="0" aria-pressed="false">0%</button>
+          </div>
+        </div>
+        <div class="form-label">Condición
+          <div class="compras-condicion cv-segmento" role="group" aria-label="Condición">
+            <button type="button" class="compras-seg" data-condicion="CREDITO" aria-pressed="true">Crédito</button>
+            <button type="button" class="compras-seg" data-condicion="CONTADO" aria-pressed="false">Contado</button>
+          </div>
+        </div>
       </div>
-    </details>
+      <select id="compra-condicion" name="condicion" class="form-select sm-oculto" aria-hidden="true" tabindex="-1"><option>CREDITO</option><option>CONTADO</option></select>
+      <details id="mas-campos-compra" class="compras-detalles" open>
+        <summary>Más campos<span class="compras-detalles-resumen">Evidencia · Factura · UUID</span></summary>
+        <div class="compras-detalles-body">
+          <div class="smx-par cv-campo">
+            <label class="form-label" for="compra-evidencia">Evidencia
+              <select id="compra-evidencia" name="evidencia" class="form-select">${EVIDENCIAS_COMPRA_DIRECCION.map(x => `<option>${x}</option>`).join('')}</select>
+            </label>
+            <label class="form-label" for="compra-situacion">Situación de factura
+              <select id="compra-situacion" name="situacionFactura" class="form-select">${SITUACIONES_FACTURA_DIRECCION.map(x => `<option value="${x}">${ETIQUETAS_SITUACION_FACTURA[x] || x}</option>`).join('')}</select>
+            </label>
+          </div>
+          <label class="form-label" id="compra-uuid-wrap" for="compra-uuid" style="display:none">UUID CFDI (documento facturado)<input id="compra-uuid" class="form-control mono" name="uuidCfdi"></label>
+        </div>
+      </details>
+    </div>
   </div>
   <div class="compras-resumen">
-    <label class="form-label" for="compra-subtotal">Subtotal<input id="compra-subtotal" class="form-control compras-monto" name="subtotal" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
-    <div class="compras-iva-chips" role="group" aria-label="Calcular IVA sobre el subtotal">
-      <span class="compras-iva-etiqueta">IVA</span>
-      <button type="button" class="compras-chip" data-pct="0.16" aria-pressed="false">16%</button>
-      <button type="button" class="compras-chip" data-pct="0.08" aria-pressed="false">8%</button>
-      <button type="button" class="compras-chip" data-pct="0" aria-pressed="false">0%</button>
+    <details class="card compras-detalles" open>
+      <summary class="smx-h2">📦 Líneas<span class="smx-der" id="cv-lineas-cnt">opcional, se revisan en el ERP</span></summary>
+      <div class="compras-detalles-body">
+        <div class="smx-chips cv-catalogo" id="cv-catalogo" role="group" aria-label="Usados antes en este teléfono"></div>
+        <ul id="lineas-compra"></ul>
+        <button type="button" id="agregar-linea" class="btn btn-outline-secondary">＋ Agregar línea</button>
+        <p class="smx-hint">Gestos: desliza una línea a la izquierda para eliminarla · mantén presionada para duplicarla · arrastra ⠿ para reordenar.</p>
+      </div>
+    </details>
+    <details class="card compras-detalles" open>
+      <summary class="smx-h2">💳 Pagos<span class="smx-der" id="cv-pagos-cnt">si ya se pagó algo</span></summary>
+      <div class="compras-detalles-body">
+        <ul id="pagos-compra"></ul>
+        <button type="button" id="agregar-pago" class="btn btn-outline-secondary">＋ Agregar pago</button>
+        <div class="cv-saldo" id="cv-saldo-linea"><span>Saldo pendiente</span><b class="num" id="cv-saldo-val">$0.00</b></div>
+        <div id="compras-pagado-resta" class="smx-hint"></div>
+      </div>
+    </details>
+    <div class="card">
+      <h2 class="smx-h2">🧮 Resumen</h2>
+      <label class="form-label" for="compra-subtotal">Subtotal<input id="compra-subtotal" class="form-control compras-monto" name="subtotal" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
+      <button type="button" class="btn btn-outline-secondary" id="cv-suma-lineas" hidden></button>
+      <div class="compras-importes">
+        <label class="form-label" for="compra-iva">IVA en pesos<input id="compra-iva" class="form-control" name="iva" type="number" min="0" step="0.01" inputmode="decimal" value="0"></label>
+        <label class="form-label" for="compra-total">Total<input id="compra-total" class="form-control" name="total" type="number" min="0.01" step="0.01" inputmode="decimal" required></label>
+      </div>
     </div>
-    <div class="compras-importes">
-      <label class="form-label" for="compra-iva">IVA en pesos<input id="compra-iva" class="form-control" name="iva" type="number" min="0" step="0.01" inputmode="decimal" value="0"></label>
-      <label class="form-label" for="compra-total">Total<input id="compra-total" class="form-control" name="total" type="number" min="0.01" step="0.01" inputmode="decimal" required></label>
-    </div>
-    <div class="compras-condicion" role="group" aria-label="Condición">
-      <button type="button" class="compras-seg" data-condicion="CREDITO" aria-pressed="true">Crédito</button>
-      <button type="button" class="compras-seg" data-condicion="CONTADO" aria-pressed="false">Contado</button>
-    </div>
-    <select id="compra-condicion" name="condicion" class="form-select sm-oculto" aria-hidden="true" tabindex="-1"><option>CREDITO</option><option>CONTADO</option></select>
-    <div id="compras-pagado-resta" class="text-muted" style="font-size:12px"></div>
     <div class="compras-barra-guardar">
-      <div class="compras-barra-total" aria-live="polite"><strong id="compras-total-vivo">$0.00</strong><span id="compras-desglose-vivo">Captura subtotal e IVA</span></div>
-      <button class="btn btn-success"><i class="bi bi-check-circle"></i> Guardar</button>
+      <div class="compras-barra-total" aria-live="polite" title="Toca para ver el desglose"><strong id="compras-total-vivo">$0.00</strong><span id="compras-desglose-vivo">Captura subtotal e IVA</span></div>
+      <button class="btn btn-success">Guardar <span aria-hidden="true">compra</span></button>
     </div>
   </div>
-</div></form>
+</form>
 <p id="resultado-compra" class="text-muted" role="status"></p>
 </div>
 <div id="panel-historial" class="compras-panel" hidden>
+<section aria-label="Compras por proveedor" class="card">
+  <h2 class="smx-h2">📊 Compras por proveedor<span class="smx-der">este mes</span></h2>
+  <div id="cv-grafica"></div>
+</section>
 <section aria-label="Pendientes de factura" class="card"><div class="card-body">
   <div id="pendFacturaCaja"></div>
-  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="_cargarPendientesFactura_()">🧾 Ver pendientes de factura</button>
+  <button type="button" class="btn btn-outline-secondary btn-sm btn-bloque" onclick="_cargarPendientesFactura_()">🧾 Ver pendientes de factura</button>
 </div></section>
-<section aria-label="Historial reciente de compras" class="card"><div class="card-body">
+<section aria-label="Historial reciente de compras">
   <div id="historial-compras"></div>
-</div></section>
+</section>
 </div>`;
 }
 
@@ -963,7 +1161,7 @@ function _actualizarBotonEnviar_() {
   if (!btn) return;
   const pendientes = leer(COLAS.compras).length;
   btn.dataset.pendientes = String(pendientes);
-  btn.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Enviar compras pendientes' + (pendientes ? ` <span class="mas-menu-cuenta">${pendientes}</span>` : '');
+  btn.innerHTML = '<i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><span>Enviar compras pendientes<small aria-hidden="true">' + (pendientes ? 'Tienes ' + pendientes + ' esperando envío' : 'No hay compras pendientes') + '</small></span>' + (pendientes ? ` <span class="mas-menu-cuenta">${pendientes}</span>` : '');
 }
 
 // Total en vivo en la barra fija de abajo, junto a Guardar. Solo lectura:
@@ -982,9 +1180,46 @@ function _pintarTotalVivoCompra_() {
   const sub = n(f.subtotal.value), iva = n(f.iva.value);
   document.querySelectorAll('.compras-chip').forEach(b => {
     const pct = Number(b.dataset.pct);
-    b.setAttribute('aria-pressed', String(sub > 0 && Math.abs(sub * pct - iva) < 0.005));
+    b.setAttribute('aria-pressed', String(sub > 0 ? Math.abs(sub * pct - iva) < 0.005 : !!f.dataset && f.dataset.ivaPct === b.dataset.pct));
   });
   document.querySelectorAll('.compras-seg').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.condicion === f.condicion.value)));
+  _pintarCapturaCompra_();
+}
+
+// Importe de cada línea, cuentas de las tarjetas, saldo y la barra de avance. Solo lectura.
+function _pintarCapturaCompra_() {
+  const f = document.querySelector('#form-compra'), lineas = document.querySelector('#lineas-compra'), pagos = document.querySelector('#pagos-compra');
+  if (!f || !lineas || !pagos || !lineas.querySelectorAll) return;
+  const pon = (id, t) => { const el = document.getElementById && document.getElementById(id); if (el) el.textContent = t; };
+  const n = v => Number(v || 0), valor = (li, c) => n((li.querySelector(c) || {}).value);
+  const filas = [...lineas.querySelectorAll('li.linea')];
+  let suma = 0;
+  filas.forEach(li => {
+    const importe = valor(li, '.cantidad') * valor(li, '.costo');
+    suma += importe;
+    const el = li.querySelector('.cv-importe');
+    if (el) el.textContent = '$' + importe.toFixed(2);
+  });
+  suma = Math.round(suma * 100) / 100;
+  const lPagos = _leerPagosCompra(pagos), nPagos = pagos.querySelectorAll('li.pago').length;
+  pon('cv-lineas-cnt', filas.length ? filas.length + (filas.length === 1 ? ' producto' : ' productos') : 'opcional, se revisan en el ERP');
+  pon('cv-pagos-cnt', nPagos ? nPagos + (nPagos === 1 ? ' pago' : ' pagos') : 'si ya se pagó algo');
+  const total = n(f.total.value), saldo = Math.round((total - lPagos.reduce((a, p) => a + p.monto, 0)) * 100) / 100;
+  const cubierto = total > 0 && Math.abs(saldo) < 0.005, caja = document.getElementById && document.getElementById('cv-saldo-linea');
+  if (caja && caja.classList) { caja.classList.toggle('ok', cubierto); if (caja.firstElementChild) caja.firstElementChild.textContent = cubierto ? '✓ Compra cubierta por los pagos' : saldo < 0 ? 'Los pagos superan el total por' : 'Saldo pendiente'; }
+  pon('cv-saldo-val', '$' + Math.abs(saldo).toFixed(2));
+  // La suma de líneas nunca pisa el subtotal sola: se ofrece con un botón.
+  const usar = document.getElementById && document.getElementById('cv-suma-lineas');
+  if (usar && usar.dataset) {
+    usar.hidden = !(suma > 0 && Math.abs(suma - n(f.subtotal.value)) >= 0.005);
+    usar.dataset.suma = suma.toFixed(2);
+    usar.textContent = 'Usar suma de líneas $' + suma.toFixed(2) + ' como subtotal';
+  }
+  const hayProv = !!String((f.proveedor || {}).value || '').trim();
+  const pasos = [hayProv, filas.some(li => valor(li, '.costo') > 0), nPagos > 0 || (f.condicion.value === 'CREDITO' && total > 0), hayProv && total > 0];
+  const barra = document.getElementById && document.getElementById('cv-barra');
+  if (barra && barra.style) barra.style.width = Math.max(8, (pasos.lastIndexOf(true) + 1) * 25) + '%';
+  document.querySelectorAll('.cv-pasos span').forEach((x, i) => x.classList.toggle('hecho', !!pasos[i]));
 }
 
 function _mostrarResultadoCompra_(msg, esError) {
@@ -1018,10 +1253,14 @@ function activarComprasDireccion() {
 
   // IVA en chips: calcula el IVA sobre el subtotal y lo escribe en el mismo
   // campo de siempre (se puede corregir a mano con el del ticket).
+  if (f.dataset) delete f.dataset.ivaPct;
   document.querySelectorAll('.compras-chip').forEach(b => b.onclick = () => {
-    const sub = Number(f.subtotal.value || 0);
-    f.iva.value = (sub * Number(b.dataset.pct)).toFixed(2);
-    f.iva.dispatchEvent(new Event('input', { bubbles: true }));
+    if (f.subtotal.value !== '') {
+      f.iva.value = (Number(f.subtotal.value || 0) * Number(b.dataset.pct)).toFixed(2);
+      f.iva.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (f.dataset) f.dataset.ivaPct = b.dataset.pct;   // se elige a propósito: sin toque no hay tasa
+    _pintarTotalVivoCompra_();
   });
   // Condición segmentada: escribe el mismo <select name="condicion">.
   document.querySelectorAll('.compras-seg').forEach(b => b.onclick = () => {
@@ -1042,6 +1281,15 @@ function activarComprasDireccion() {
       document.querySelector('#panel-historial').hidden = btn.dataset.panel !== 'historial';
     };
   });
+
+  // Líneas, pagos y «Más campos» se ven siempre (como en el diseño): su encabezado no los esconde.
+  document.querySelectorAll('#form-compra summary').forEach(x => x.addEventListener('click', e => e.preventDefault()));
+  const usarSuma = document.querySelector('#cv-suma-lineas');
+  if (usarSuma) usarSuma.onclick = () => {
+    f.subtotal.value = usarSuma.dataset.suma;
+    if (f.dataset.ivaPct !== undefined) f.iva.value = (Number(f.subtotal.value) * Number(f.dataset.ivaPct)).toFixed(2);
+    f.subtotal.dispatchEvent(new Event('input', { bubbles: true }));
+  };
 
   // El UUID del CFDI solo aplica cuando ya está facturado -- mismo criterio
   // que ya valida nuevaCompraCampo, aquí solo se refleja en la vista.
@@ -1064,16 +1312,21 @@ function activarComprasDireccion() {
   // closest('.quitar'), no e.target.classList: el botón lleva un ícono
   // adentro (<i class="bi ...">) -- un toque justo sobre el ícono pone el
   // ícono como e.target, no el botón.
-  const quitar = e => { const b = e.target.closest('.quitar'); if (b) b.closest('li').remove(); _actualizarResumenPagos_(); _guardarBorradorCompra_(f); };
+  const quitar = e => { const b = e.target.closest('.quitar'); if (b) b.closest('li').remove(); _actualizarResumenPagos_(); _guardarBorradorCompra_(f); if (b) _pintarCapturaCompra_(); };
 
-  document.querySelector('#agregar-linea').onclick = () => { lineas.insertAdjacentHTML('beforeend', _filaLineaCompra()); _guardarBorradorCompra_(f); };
-  document.querySelector('#agregar-pago').onclick = () => { pagos.insertAdjacentHTML('beforeend', _filaPagoCompra()); _actualizarResumenPagos_(); _guardarBorradorCompra_(f); };
+  document.querySelector('#agregar-linea').onclick = () => { lineas.insertAdjacentHTML('beforeend', _filaLineaCompra()); _guardarBorradorCompra_(f); _pintarCapturaCompra_(); };
+  document.querySelector('#agregar-pago').onclick = () => { pagos.insertAdjacentHTML('beforeend', _filaPagoCompra()); _actualizarResumenPagos_(); _guardarBorradorCompra_(f); _pintarCapturaCompra_(); };
   lineas.onclick = quitar;
   pagos.onclick = quitar;
   pagos.oninput = _actualizarResumenPagos_;
   _actualizarResumenPagos_();
 
-  f.subtotal.oninput = f.iva.oninput = () => {
+  f.subtotal.oninput = f.iva.oninput = e => {
+    const campo = e && e.target;
+    if (campo && f.dataset) {
+      if (campo === f.iva) delete f.dataset.ivaPct;   // IVA escrito a mano (el del ticket): manda ese
+      else if (campo === f.subtotal && e.isTrusted && f.dataset.ivaPct !== undefined) f.iva.value = (Number(f.subtotal.value || 0) * Number(f.dataset.ivaPct)).toFixed(2);
+    }
     f.total.value = (Number(f.subtotal.value || 0) + Number(f.iva.value || 0)).toFixed(2);
     _actualizarResumenPagos_();
   };
@@ -1130,13 +1383,17 @@ function activarComprasDireccion() {
       localStorage.removeItem(CLAVE_BORRADOR_COMPRA);
       lineas.innerHTML = '';
       pagos.innerHTML = '';
-      document.querySelectorAll('#form-compra details').forEach(d => { d.open = false; });
+      document.querySelectorAll('#form-compra details').forEach(d => { d.open = true; });
+      if (f.dataset) delete f.dataset.ivaPct;
       sincronizarUuid();
       _resetFotoCompra_();
       _renderHistorialComprasDireccion_();
       _actualizarBotonEnviar_();
       _actualizarResumenPagos_();
       _pintarTotalVivoCompra_();
+      if (typeof SMX !== 'undefined') SMX.exito('Compra guardada', (d.proveedor || '') + ' · $' + Number(d.total || 0).toFixed(2) + ' · Pendiente de ERP', [
+        { texto: 'Nueva compra', alTocar: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+        { texto: 'Ver historial', clase: 'btn-success', alTocar: () => document.querySelector('.compras-tab[data-panel=historial]').click() }]);
     } catch (err) {
       _mostrarResultadoCompra_(err.message, true);
     }
@@ -1411,6 +1668,7 @@ async function _leerTicketCompraConIA_() {
     }
     _compraTocadaPorOcr = true;
     const f = document.querySelector('#form-compra');
+    if (f.dataset) delete f.dataset.ivaPct;   // lo que dice el papel manda sobre la tasa tocada
     if (r.proveedor && f.proveedor) { f.proveedor.value = r.proveedor; _marcarTocadoPorIACompra_(f.proveedor); }
     if (r.fecha && f.fecha) { f.fecha.value = r.fecha; _marcarTocadoPorIACompra_(f.fecha); }
     if (r.subtotal != null && f.subtotal) { f.subtotal.value = r.subtotal.toFixed(2); _marcarTocadoPorIACompra_(f.subtotal); }
@@ -1426,6 +1684,7 @@ async function _leerTicketCompraConIA_() {
       f.situacionFactura.dispatchEvent(new Event('change'));
       f.uuidCfdi.value = r.uuid; _marcarTocadoPorIACompra_(f.uuidCfdi);
     }
+    _pintarTotalVivoCompra_();
     if (estado) estado.textContent = r.uuid ? '✅ IA — leí el UUID de la factura. Revísalo antes de guardar.' : '✅ IA — revísalo antes de guardar.';
   } catch (e) {
     if (!vigente()) return;
@@ -1445,7 +1704,7 @@ async function _leerTicketCompraConIA_() {
 // servidor no contesta (la comprobación pide el PIN y usa el token real, así
 // que también confirma que la sesión sirve). Doble confirmación: aviso +
 // teclear BORRAR. Nunca toca colas, borrador de compra, PIN ni vinculación.
-const _CLAVES_CACHE_COMPRAS = ['sumetec_compras_snapshot_cache', 'sumetec_compras_listas_cache', 'sumetec_compras_historial_compras'];
+const _CLAVES_CACHE_COMPRAS = ['sumetec_compras_snapshot_cache', 'sumetec_compras_listas_cache', 'sumetec_compras_historial_compras', 'sumetec_compras_historial_detalle'];
 // Un borrador cuenta como pendiente solo si tiene algo capturado: la app lo guarda aunque esté vacío (solo con la fecha y los
 // valores de fábrica), y eso no es trabajo que se pierda.
 function _borradorCompraConContenido_() {
@@ -1678,7 +1937,7 @@ async function _enviarAbonosCompra_(pin){
       const {error,_retryAt,detenido,estadoServidor,...limpio}=d;
       const {r,sinRed}=await sumetecPostJsonSeguro(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...limpio,token})});
       const cola=_leerAbonosCompra_();
-      if(!sinRed&&r.ok&&r.estado==='APLICADO')localStorage.setItem('sumetec_compras_abonos',JSON.stringify(cola.filter(x=>x.id!==d.id)));
+      if(!sinRed&&r.ok&&r.estado==='APLICADO'){localStorage.setItem('sumetec_compras_abonos',JSON.stringify(cola.filter(x=>x.id!==d.id)));const det=_leerDetallesCompras_();if(det[d.documento]){det[d.documento].abonado=Number(det[d.documento].abonado||0)+Number(d.monto||0);_guardarDetallesCompras_(det);}}
       else localStorage.setItem('sumetec_compras_abonos',JSON.stringify(cola.map(x=>x.id===d.id?{...x,error:sinRed?'Sin respuesta':r.error,_retryAt:Date.now()+30000,estadoServidor:sinRed?'':r.estado,detenido:!sinRed&&['CONFLICTO_ID','RECHAZADO'].includes(r.estado)}:x)));
       if(sinRed)break;
     }
