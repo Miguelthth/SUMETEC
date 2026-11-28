@@ -218,7 +218,6 @@ async function enviarComprasCampo(pin, manual) {
   if (_enviandoCompras) return leer(COLAS.compras).length;
   _enviandoCompras = true;
   const idsEnviados = [];
-  const enviadasOk = [];
   const conflictos = [];
   const fallos = [];   // {id, motivo, transitorio}: lo que el SERVIDOR contestó con error (2026-09-29, incidente REM-0020)
   try {
@@ -235,7 +234,11 @@ async function enviarComprasCampo(pin, manual) {
       if (sinRed) { fallos.push({ id: compra.id, motivo: 'sin respuesta del servidor', transitorio: true }); break; }
       if (r.ok && (r.estado === 'CREADO' || r.estado === 'YA_EXISTIA')) {
         idsEnviados.push(compra.id);
-        enviadasOk.push(compra);
+        // 26/nov: se anota en el historial en cuanto se confirma, no al terminar TODA la cola (con varias pendientes la compra
+        // enviada seguía sin botón «Abonar» por minutos). Se quita de la cola vigente en el mismo paso.
+        localStorage.setItem(COLAS.compras, JSON.stringify(leer(COLAS.compras).filter(c => c.id !== compra.id)));
+        _registrarEnvioCompras_([compra]);
+        estado();
       } else if (r.estado === 'CONFLICTO_ID') {
         conflictos.push({ id: compra.id, motivo: r.error });   // mismo ID con otro contenido: se pide revisión, no se reenvía ni se descarta
       } else {
@@ -260,7 +263,6 @@ async function enviarComprasCampo(pin, manual) {
     return y;
   });
   localStorage.setItem(COLAS.compras, JSON.stringify(pendientes));
-  _registrarEnvioCompras_(enviadasOk);
   estado();
   return pendientes.length;
 }

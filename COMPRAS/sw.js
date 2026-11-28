@@ -3,7 +3,7 @@
 // verdad. Dos cachés (mismo criterio que Dirección, punto 7 del checklist
 // pwa-actualizacion-sin-cache): el shell de código cambia seguido; las
 // fuentes del tema (~220 KB) casi nunca cambian.
-const CACHE = 'sumetec-compras-2d09e03461';
+const CACHE = 'sumetec-compras-30bea958de';
 const CACHE_ASSETS = 'sumetec-compras-assets-87acca9c8d';
 const PREFIJO = 'sumetec-compras-';
 
